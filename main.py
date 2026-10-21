@@ -117,7 +117,7 @@ def sha256_file(path: Path) -> str:
 
 def validate_generation_environment() -> None:
     required = [
-        "GEMINI_API_KEY", "QF_CLIENT_ID", "QF_CLIENT_SECRET", "QURAN_TEXT_LICENSE_URL", "RECITATION_ID",
+        "GEMINI_API_KEY", "QF_CLIENT_ID", "QF_CLIENT_SECRET", "QURAN_TEXT_LICENSE_URL", "CHAPTER_RECITER_ID",
         "RECITATION_LICENSE_URL", "RECITATION_ALLOWLIST", "TAFSIR_ID", "TAFSIR_LICENSE_URL",
         "TAFSIR_ALLOWLIST", "PEXELS_API_KEY", "TTS_LICENSE_URL",
     ]

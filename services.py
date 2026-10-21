@@ -15,7 +15,7 @@ import time
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -138,24 +138,6 @@ def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: 
     return result
 
 
-def _arabic_word_tokens(text: str) -> list[str]:
-    normalized = normalize_arabic(text)
-    return re.findall(r"[\u0621-\u064a\u0671-\u06d3\u06fa-\u06fc]+", normalized)
-
-
-def validate_audio_transcription(transcript: str, expected_text: str | Iterable[str], *,
-                                 contains_other_speech: bool = False, uncertain: bool = False) -> dict[str, Any]:
-    if contains_other_speech or uncertain:
-        raise ServiceError("تفريغ التلاوة غير مؤكد أو يتضمن كلامًا إضافيًا؛ رُفض المرشح.")
-    heard = _arabic_word_tokens(transcript)
-    variants = [expected_text] if isinstance(expected_text, str) else list(expected_text)
-    expected_variants = [_arabic_word_tokens(variant) for variant in variants if isinstance(variant, str)]
-    matched = next((expected for expected in expected_variants if expected and heard == expected), None)
-    if not matched or not heard:
-        raise ServiceError("التفريغ الصوتي لا يطابق كلمات الآية بالترتيب؛ رُفض المرشح.")
-    return {"status": "exact_match", "word_count": len(matched), "transcription": transcript.strip()}
-
-
 @dataclass
 class QuranVerse:
     chapter: int
@@ -164,7 +146,6 @@ class QuranVerse:
     text_uthmani: str
     verse_id: int | None
     chapter_name: str = ""
-    text_imlaei: str = ""
 
 
 @dataclass
@@ -272,7 +253,7 @@ class QuranFoundationClient:
     def get_verse(self, chapter: int, verse: int) -> QuranVerse:
         key = verse_key(chapter, verse)
         payload = self._get_json(f"verses/by_key/{key}", {
-            "fields": "text_uthmani,text_imlaei,verse_key,verse_number,chapter_id,id",
+            "fields": "text_uthmani,verse_key,verse_number,chapter_id,id",
         })
         item = payload.get("verse")
         if not isinstance(item, dict):
@@ -282,12 +263,9 @@ class QuranFoundationClient:
         text = item.get("text_uthmani")
         if not isinstance(text, str) or not text.strip() or "�" in text:
             raise ServiceError("النص العثماني مفقود أو تالف.")
-        imlaei = item.get("text_imlaei")
-        if not isinstance(imlaei, str) or not imlaei.strip() or "�" in imlaei:
-            raise ServiceError("النص الإملائي اللازم لمقارنة التفريغ الصوتي مفقود أو تالف.")
         verse_id = item.get("id")
         return QuranVerse(int(chapter), int(verse), key, text.strip(),
-                          int(verse_id) if verse_id is not None else None, text_imlaei=imlaei.strip())
+                          int(verse_id) if verse_id is not None else None)
 
     def get_recitation(self, chapter: int, verse: int, audio_dir: Path) -> tuple[QuranRecitation, Path]:
         key = verse_key(chapter, verse)
@@ -466,17 +444,6 @@ REVIEW_SCHEMA = {
     },
     "required": ["grounded_in_source", "no_unsupported_claims", "no_contradiction", "needs_review", "reason"],
 }
-AUDIO_TRANSCRIPTION_SCHEMA = {
-    "type": "OBJECT",
-    "properties": {
-        "transcript": {"type": "STRING"},
-        "contains_other_speech": {"type": "BOOLEAN"},
-        "uncertain": {"type": "BOOLEAN"},
-    },
-    "required": ["transcript", "contains_other_speech", "uncertain"],
-}
-
-
 def validate_generated_content(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ServiceError("مخرجات النموذج ليست كائن JSON.")
@@ -555,44 +522,6 @@ class GeminiContentService:
         if not isinstance(data, dict):
             raise ServiceError("استجابة Gemini لا تطابق الكائن المتوقع.")
         return data
-
-    def verify_recitation_audio(self, audio_path: Path, expected_text: str | Iterable[str]) -> dict[str, Any]:
-        if not audio_path.is_file() or audio_path.stat().st_size < 4096:
-            raise ServiceError("ملف التلاوة غير صالح لفحص المحتوى الصوتي.")
-        if audio_path.stat().st_size > 14 * 1024 * 1024:
-            raise ServiceError("حجم التلاوة يتجاوز الحد الآمن للفحص الصوتي المستقل.")
-        prompt = (
-            "فرّغ التسجيل الصوتي المرفق فقط إلى الكلمات العربية المسموعة، من دون تخمين أو إكمال نص متوقع. "
-            "لا أرفق نص الآية عمدًا لتقليل الانحياز. أخرج التفريغ العربي الحرفي في transcript. "
-            "اجعل uncertain=true إذا تعذر تمييز كلمة بوضوح، وcontains_other_speech=true إذا وُجد كلام إضافي خارج التلاوة. "
-            "لا تصحح التسجيل ولا تضف أية كلمات غير مسموعة. أعد JSON فقط وفق المخطط."
-        )
-        try:
-            from google import genai
-            from google.genai import types
-            client = genai.Client(api_key=self.api_key)
-            response = client.models.generate_content(
-                model=self.model,
-                contents=[prompt, types.Part.from_bytes(data=audio_path.read_bytes(), mime_type="audio/mpeg")],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json", response_schema=AUDIO_TRANSCRIPTION_SCHEMA,
-                    temperature=0.0, max_output_tokens=512,
-                ),
-            )
-        except Exception as exc:
-            raise ServiceError(f"تعذر التحقق الصوتي المستقل عبر Gemini ({type(exc).__name__}).") from None
-        text = getattr(response, "text", None)
-        try:
-            data = json.loads(text) if isinstance(text, str) else None
-        except json.JSONDecodeError:
-            raise ServiceError("نتيجة التفريغ الصوتي ليست JSON صالحًا؛ رُفض المرشح.") from None
-        if not isinstance(data, dict) or not isinstance(data.get("transcript"), str):
-            raise ServiceError("نتيجة التفريغ الصوتي ناقصة؛ رُفض المرشح.")
-        if not isinstance(data.get("contains_other_speech"), bool) or not isinstance(data.get("uncertain"), bool):
-            raise ServiceError("علامات الثقة في التفريغ الصوتي غير صالحة؛ رُفض المرشح.")
-        return validate_audio_transcription(data["transcript"], expected_text,
-                                            contains_other_speech=data["contains_other_speech"],
-                                            uncertain=data["uncertain"])
 
     def create_and_review(self, verse: QuranVerse, tafsir: TafsirSource) -> dict[str, Any]:
         prompt = (
@@ -1008,16 +937,15 @@ if __name__ == "__main__":
             self.assertTrue(_is_mishary_reciter("مشاري راشد العفاسي"))
             self.assertFalse(_is_mishary_reciter("AbdulBaset AbdulSamad"))
 
-        def test_quran_verse_response_checks_key_and_uthmani_text(self):
+        def test_quran_verse_response_needs_only_uthmani_text(self):
             payload = {"verse": {"verse_key": "2:152", "verse_number": 152, "chapter_id": 2,
-                                 "id": 12345, "text_uthmani": "فَاذْكُرُونِي أَذْكُرْكُمْ",
-                                 "text_imlaei": "فاذكروني أذكركم"}}
+                                 "id": 12345, "text_uthmani": "فَاذْكُرُونِي أَذْكُرْكُمْ"}}
             client = self.ready_qf_client(self.FakeResponse(200, payload))
             verse = client.get_verse(2, 152)
             self.assertEqual(verse.key, "2:152")
             self.assertIn("text_uthmani", verse.__dict__)
-            self.assertEqual(verse.text_imlaei, "فاذكروني أذكركم")
-            self.assertIn("text_imlaei", client.session.get_calls[0][1]["params"]["fields"])
+            self.assertNotIn("text_imlaei", verse.__dict__)
+            self.assertNotIn("text_imlaei", client.session.get_calls[0][1]["params"]["fields"])
 
         def test_qf_client_credentials_requests_and_caches_access_token(self):
             session = self.FakeSession(self.FakeResponse(200, {"chapters": []}))
@@ -1087,21 +1015,6 @@ if __name__ == "__main__":
                 validate_word_segments([[0, 0, 100]], "بسم الله", 800)
             with self.assertRaises(ServiceError):
                 validate_word_segments([[0, 0, 300], [1, 200, 100]], "بسم الله", 800)
-
-        def test_audio_transcription_must_match_verse_words_in_order(self):
-            result = validate_audio_transcription("فاذكروني أذكركم واشكروا لي ولا تكفرون",
-                                                   "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ")
-            self.assertEqual(result["status"], "exact_match")
-            with self.assertRaises(ServiceError):
-                validate_audio_transcription("فاذكروني ولا تكفرون", "فَاذْكُرُونِي أَذْكُرْكُمْ")
-            with self.assertRaises(ServiceError):
-                validate_audio_transcription("فاذكروني", "فَاذْكُرُونِي", uncertain=True)
-            with self.assertRaises(ServiceError):
-                validate_audio_transcription("فاذكروني آمين", "فَاذْكُرُونِي", contains_other_speech=True)
-
-        def test_audio_transcription_accepts_imlaei_spelling_without_changing_display_text(self):
-            result = validate_audio_transcription("الصلاة", ["الصلوة", "الصلاة"])
-            self.assertEqual(result["status"], "exact_match")
 
         def test_generated_json_requires_five_distinct_scored_hooks(self):
             base = {"hook_candidates": [], "explanation": "شرح", "practical_benefit": "فائدة", "call_to_action": "شارك"}

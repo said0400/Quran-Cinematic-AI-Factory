@@ -1,0 +1,530 @@
+{
+  "runs": [
+    {
+      "attempt_count": 1,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:25:40.612874+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-9b91421dac-report.json",
+      "run_id": "2026-10-21-39-53-9b91421dac",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:40.976779+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:25:40.979483+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-c703171c6c-report.json",
+      "run_id": "2026-10-21-39-53-c703171c6c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.125295+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:25:41.128399+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-1b5dbc4a83-report.json",
+      "run_id": "2026-10-21-39-53-1b5dbc4a83",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.279316+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:25:41.282465+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-3d176903ad-report.json",
+      "run_id": "2026-10-21-49-13-3d176903ad",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.432446+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:25:41.435421+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-7c5b434753-report.json",
+      "run_id": "2026-10-21-49-13-7c5b434753",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.600716+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:25:41.604043+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-c39760bf40-report.json",
+      "run_id": "2026-10-21-49-13-c39760bf40",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.742510+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:25:41.745682+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-25c47df357-report.json",
+      "run_id": "2026-10-21-64-16-25c47df357",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:41.900844+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:25:41.904485+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-c299652d51-report.json",
+      "run_id": "2026-10-21-64-16-c299652d51",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.056752+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:25:42.060320+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-1f1c24ce43-report.json",
+      "run_id": "2026-10-21-64-16-1f1c24ce43",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.208874+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:25:42.212416+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-9402e46c27-report.json",
+      "run_id": "2026-10-21-94-5-9402e46c27",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.363140+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:25:42.367054+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-abc8592dcd-report.json",
+      "run_id": "2026-10-21-94-5-abc8592dcd",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.537559+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:25:42.541275+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-db1ca4a732-report.json",
+      "run_id": "2026-10-21-94-5-db1ca4a732",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.704286+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:25:42.708268+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-fc4e512543-report.json",
+      "run_id": "2026-10-21-2-152-fc4e512543",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:42.874990+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:25:42.879040+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-9c7b292699-report.json",
+      "run_id": "2026-10-21-2-152-9c7b292699",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:43.031953+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:25:43.036018+00:00",
+      "last_error": "خدمة مصادقة Quran Foundation أعادت HTTP 401.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-e7059e8704-report.json",
+      "run_id": "2026-10-21-2-152-e7059e8704",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:25:43.180244+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    }
+  ],
+  "version": 1
+}

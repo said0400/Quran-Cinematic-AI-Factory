@@ -1,1 +1,10 @@
-
+# Python 3.11; pinned direct dependencies used by the five source files.
+requests==2.32.4
+Pillow==11.3.0
+arabic-reshaper==3.0.0
+python-bidi==0.6.6
+edge-tts==7.2.3
+google-genai==1.30.0
+google-api-python-client==2.178.0
+google-auth==2.40.3
+google-auth-httplib2==0.2.0

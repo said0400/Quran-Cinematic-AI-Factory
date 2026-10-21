@@ -395,18 +395,28 @@ class QuranFoundationClient:
         if not _license_allowlist_contains("TAFSIR_ALLOWLIST", resource_id, license_url):
             raise ServiceError("معرّف التفسير ورابط ترخيصه غير موجودين في TAFSIR_ALLOWLIST؛ رُفض الاستخدام.")
         source_url = f"{QF_API}/tafsirs/{resource_id}/by_ayah/{key}"
-        payload = self._get_json(f"tafsirs/{resource_id}/by_ayah/{key}", {"fields": "verse_key,resource_name,id"})
+        payload = self._get_json(f"tafsirs/{resource_id}/by_ayah/{key}", {
+            "fields": "verse_key,resource_name,id,language_name,language_id",
+        })
         item = payload.get("tafsir")
         if not isinstance(item, dict) or not isinstance(item.get("text"), str):
             raise ServiceError("استجابة التفسير لا تطابق بنية tafsir الموثقة.")
         if item.get("resource_id") != resource_id:
             raise ServiceError("معرّف مصدر التفسير في الاستجابة لا يطابق المورد المطلوب.")
-        verse_ids = item.get("verses")
-        if not isinstance(verse_ids, dict) or key not in verse_ids:
-            raise ServiceError("الاستجابة لا تثبت أن نص التفسير يخص مفتاح الآية المطلوب.")
         source_name = item.get("resource_name")
         if not isinstance(source_name, str) or not source_name.strip():
             raise ServiceError("اسم مصدر التفسير غير متوفر.")
+        language_name = item.get("language_name")
+        if not isinstance(language_name, str) or language_name.strip().lower() != "arabic":
+            detected_language = language_name.strip() if isinstance(language_name, str) and language_name.strip() else "غير محددة"
+            hint = " مورد التفسير الميسر العربي في Quran.com هو TAFSIR_ID=16." if resource_id == 169 else ""
+            raise ServiceError(
+                f"TAFSIR_ID={resource_id} ({source_name}) لغته {detected_language} وليس تفسيرًا عربيًا؛ "
+                f"اختر موردًا عربيًا وحدّث TAFSIR_ALLOWLIST إلى معرّفه بعد التحقق من الترخيص.{hint}"
+            )
+        verse_ids = item.get("verses")
+        if not isinstance(verse_ids, dict) or key not in verse_ids:
+            raise ServiceError("الاستجابة لا تثبت أن نص التفسير يخص مفتاح الآية المطلوب.")
         text = _plain_text(item["text"])
         if len(text) < 30:
             raise ServiceError("نص التفسير قصير أو فارغ ولا يكفي للتلخيص.")
@@ -1041,7 +1051,8 @@ if __name__ == "__main__":
 
         def test_tafsir_requires_allowlisted_source_and_arabic_text(self):
             payload = {"tafsir": {"resource_id": 7, "verses": {"1:1": {"id": 99}},
-                                   "resource_name": "مصدر تفسير موثق", "text": "هذا تفسير عربي موثق يشرح معنى الآية ضمن سياقها."}}
+                                   "resource_name": "مصدر تفسير موثق", "language_name": "arabic",
+                                   "text": "هذا تفسير عربي موثق يشرح معنى الآية ضمن سياقها."}}
             client = self.ready_qf_client(self.FakeResponse(200, payload))
             env = {"TAFSIR_ID": "7", "TAFSIR_LICENSE_URL": "https://example.org/license",
                    "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true", "TAFSIR_ALLOWLIST": "7|https://example.org/license"}
@@ -1049,6 +1060,20 @@ if __name__ == "__main__":
                 result = client.get_tafsir("1:1")
             self.assertEqual(result.resource_id, 7)
             self.assertEqual(result.source_name, "مصدر تفسير موثق")
+            requested_fields = client.session.get_calls[0][1]["params"]["fields"]
+            self.assertIn("language_name", requested_fields)
+
+        def test_english_tafsir_resource_169_fails_with_arabic_muyassar_guidance(self):
+            payload = {"tafsir": {"resource_id": 169, "verses": {"2:3": {"id": 99}},
+                                   "resource_name": "Ibn Kathir (Abridged)", "language_name": "english",
+                                   "text": "English tafsir content long enough to be processed safely."}}
+            client = self.ready_qf_client(self.FakeResponse(200, payload))
+            env = {"TAFSIR_ID": "169", "TAFSIR_LICENSE_URL": "https://example.org/license",
+                   "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true",
+                   "TAFSIR_ALLOWLIST": "169|https://example.org/license"}
+            with patch.dict(os.environ, env):
+                with self.assertRaisesRegex(ServiceError, "TAFSIR_ID=169.*TAFSIR_ID=16"):
+                    client.get_tafsir("2:3")
 
         def test_tts_requires_seal_once_in_standalone_segment(self):
             import tempfile

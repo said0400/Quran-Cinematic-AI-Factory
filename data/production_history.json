@@ -1079,6 +1079,561 @@
       "verse_key": "2:152",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:34:24.094022+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (23).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-a1392cc64f-report.json",
+      "run_id": "2026-10-21-39-53-a1392cc64f",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:26.570978+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:34:26.576593+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (23).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-f31de0a21a-report.json",
+      "run_id": "2026-10-21-39-53-f31de0a21a",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:28.367865+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:34:28.373328+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (23).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-5592ee72ff-report.json",
+      "run_id": "2026-10-21-39-53-5592ee72ff",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:29.422557+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:34:29.428250+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (22).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-f2de090236-report.json",
+      "run_id": "2026-10-21-49-13-f2de090236",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:30.958987+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:34:30.964872+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (22).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-899373d09a-report.json",
+      "run_id": "2026-10-21-49-13-899373d09a",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:32.379535+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:34:32.385417+00:00",
+      "last_error": "عدد التوقيتات (20) لا يطابق عدد كلمات الآية (22).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-dc09775232-report.json",
+      "run_id": "2026-10-21-49-13-dc09775232",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:33.410885+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:34:33.417115+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-962e584f7d-report.json",
+      "run_id": "2026-10-21-64-16-962e584f7d",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:34.612669+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:34:34.619328+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-d74a630ded-report.json",
+      "run_id": "2026-10-21-64-16-d74a630ded",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:35.581460+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:34:35.587684+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-252f2fa6ac-report.json",
+      "run_id": "2026-10-21-64-16-252f2fa6ac",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:36.574478+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:34:36.580777+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-9679576f43-report.json",
+      "run_id": "2026-10-21-94-5-9679576f43",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:37.595451+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:34:37.601597+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-33ec88410c-report.json",
+      "run_id": "2026-10-21-94-5-33ec88410c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:38.366271+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:34:38.372530+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-33afab9ea0-report.json",
+      "run_id": "2026-10-21-94-5-33afab9ea0",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:39.102556+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:34:39.109059+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-0de07f354e-report.json",
+      "run_id": "2026-10-21-2-152-0de07f354e",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:40.899532+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:34:40.906005+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-ec1753558c-report.json",
+      "run_id": "2026-10-21-2-152-ec1753558c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:42.352240+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:34:42.359199+00:00",
+      "last_error": "صيغة توقيت الكلمة لا تطابق [word_index,start_ms,end_ms].",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-60d06f2d2b-report.json",
+      "run_id": "2026-10-21-2-152-60d06f2d2b",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:34:43.291782+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

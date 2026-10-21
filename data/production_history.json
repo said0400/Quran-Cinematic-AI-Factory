@@ -4154,6 +4154,46 @@
       "verse_key": "2:3",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-21T17:32:39.120007+00:00",
+      "last_error": "تعذر التحقق الصوتي المستقل عبر Gemini (ServerError).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-3-63c1138e46-report.json",
+      "run_id": "2026-10-21-2-3-63c1138e46",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T17:32:44.792495+00:00",
+      "verification": {
+        "checks": {
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.938,
+          "verse_source_and_key": true,
+          "word_segments_valid": 8
+        },
+        "status": "failed"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

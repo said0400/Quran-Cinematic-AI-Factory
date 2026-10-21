@@ -10,6 +10,7 @@ import html
 import json
 import os
 import re
+import subprocess
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -287,94 +288,110 @@ class QuranFoundationClient:
 
     def get_recitation(self, chapter: int, verse: int, audio_dir: Path) -> tuple[QuranRecitation, Path]:
         key = verse_key(chapter, verse)
-        recitation_id = int(_required_env("RECITATION_ID"))
+        reciter_id = int(_required_env("CHAPTER_RECITER_ID"))
         if not env_bool("RECITATION_LICENSE_CONFIRMED"):
             raise ServiceError("رفض استخدام التلاوة: RECITATION_LICENSE_CONFIRMED=true مطلوب بعد التحقق من حق إعادة النشر.")
         license_url = _required_env("RECITATION_LICENSE_URL")
         if urlparse(license_url).scheme != "https":
             raise ServiceError("RECITATION_LICENSE_URL يجب أن يكون HTTPS.")
-        if not _license_allowlist_contains("RECITATION_ALLOWLIST", recitation_id, license_url):
+        if not _license_allowlist_contains("RECITATION_ALLOWLIST", reciter_id, license_url):
             raise ServiceError("معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.")
-        catalog = self._get_json("resources/recitations", {"language": "en"})
-        recitations = catalog.get("recitations")
-        if not isinstance(recitations, list):
-            raise ServiceError("كتالوج التلاوات لا يحتوي الحقل الموثق recitations.")
-        match = next((item for item in recitations if isinstance(item, dict) and item.get("id") == recitation_id), None)
-        name = match.get("reciter_name") if isinstance(match, dict) else None
-        if not isinstance(name, str) or not name.strip():
-            raise ServiceError(f"معرّف التلاوة {recitation_id} غير موجود في كتالوج Quran Foundation.")
-        reciter_name = name.strip()
+
+        catalog = self._get_json("resources/chapter_reciters", {"language": "en"})
+        reciters = catalog.get("reciters")
+        if not isinstance(reciters, list):
+            raise ServiceError("كتالوج قراء السور لا يحتوي الحقل الموثق reciters.")
+        selected = next((item for item in reciters if isinstance(item, dict) and item.get("id") == reciter_id), None)
+        reciter_name = selected.get("name", "").strip() if isinstance(selected, dict) and isinstance(selected.get("name"), str) else ""
         if not reciter_name:
-            raise ServiceError(f"معرّف التلاوة {recitation_id} غير موجود في كتالوج Quran Foundation.")
-        if env_bool("RECITATION_REQUIRE_MISHARY", True):
-            if not _is_mishary_reciter(reciter_name):
-                raise ServiceError("المعرّف المحدد لا يطابق القارئ مشاري العفاسي؛ عطّل RECITATION_REQUIRE_MISHARY فقط إذا ضبطت قارئًا مرخصًا بديلًا.")
-        audio_url = ""
-        segments: Any = None
-        duration_hint: int | None = None
-        source_url = f"{QF_API}/recitations/{recitation_id}/by_chapter/{chapter}"
-        # The documented endpoint is paginated (50 records per request). Do not assume every
-        # recitation exposes segments; an absent/malformed segment list is a hard failure.
-        for page in range(1, 7):
-            payload = self._get_json(f"recitations/{recitation_id}/by_chapter/{chapter}", {
-                "fields": "verse_key,url,segments,duration",
-                "page": page,
-                "per_page": 50,
-            })
-            entries = payload.get("audio_files")
-            if not isinstance(entries, list):
-                raise ServiceError("استجابة التلاوة لا تحتوي audio_files كما في التوثيق.")
-            match = next((entry for entry in entries if isinstance(entry, dict) and entry.get("verse_key") == key), None)
-            if match:
-                audio_url = match.get("url", "")
-                segments = match.get("segments")
-                raw_duration = match.get("duration")
-                try:
-                    duration_hint = abs(int(raw_duration)) if raw_duration is not None else None
-                except (ValueError, TypeError):
-                    duration_hint = None
-                break
-            pagination = payload.get("pagination", {})
-            if not isinstance(pagination, dict) or not pagination.get("next_page"):
-                break
-        if not isinstance(audio_url, str) or not audio_url:
-            raise ServiceError(f"لم يُعثر على صوت موثق للآية {key} في معرف التلاوة {recitation_id}.")
-        full_url = urljoin("https://verses.quran.foundation/", audio_url)
+            raise ServiceError(f"CHAPTER_RECITER_ID={reciter_id} غير موجود في كتالوج قراء السور؛ لا تستخدم RECITATION_ID من كتالوج مختلف.")
+        if env_bool("RECITATION_REQUIRE_MISHARY", True) and not _is_mishary_reciter(reciter_name):
+            raise ServiceError("المعرّف المحدد لا يطابق مشاري العفاسي؛ اختر قارئ سورة مرخصًا أو عطّل RECITATION_REQUIRE_MISHARY بعد التحقق.")
+
+        source_url = f"{QF_API}/chapter_recitations/{reciter_id}/{chapter}?segments=true"
+        payload = self._get_json(f"chapter_recitations/{reciter_id}/{chapter}", {"segments": "true"})
+        audio_file = payload.get("audio_file")
+        if not isinstance(audio_file, dict):
+            raise ServiceError("استجابة chapter_recitations لا تحتوي audio_file.")
+        audio_url = audio_file.get("audio_url")
+        timestamps = audio_file.get("timestamps")
+        if not isinstance(audio_url, str) or not audio_url or not isinstance(timestamps, list):
+            raise ServiceError("مصدر التلاوة لا يوفر audio_url وtimestamps؛ لا يمكن مزامنة الكلمات بأمان.")
+        verse_timing = next((row for row in timestamps if isinstance(row, dict) and row.get("verse_key") == key), None)
+        if not isinstance(verse_timing, dict):
+            raise ServiceError(f"لا توجد توقيتات موثقة للآية {key} في صوت السورة.")
+        try:
+            verse_start = int(verse_timing["timestamp_from"])
+            verse_end = int(verse_timing["timestamp_to"])
+        except (KeyError, TypeError, ValueError):
+            raise ServiceError(f"حدود توقيت الآية {key} غير صالحة في استجابة المصدر.") from None
+        if verse_start < 0 or verse_end <= verse_start:
+            raise ServiceError(f"حدود توقيت الآية {key} غير مرتبة.")
+        raw_segments = verse_timing.get("segments")
+        if not isinstance(raw_segments, list):
+            raise ServiceError(f"المصدر لا يوفر قائمة توقيتات كلمات للآية {key}.")
+        segments: list[list[int]] = []
+        for row in raw_segments:
+            if not isinstance(row, (list, tuple)) or len(row) != 3:
+                raise ServiceError(f"المصدر لم يقدّم توقيت كلمة ثلاثيًا للآية {key}؛ اختر قارئ سورة يوفر word-level timestamps.")
+            try:
+                word_index, start_ms, end_ms = (int(value) for value in row)
+            except (TypeError, ValueError):
+                raise ServiceError(f"المصدر أعاد توقيت كلمة غير رقمي للآية {key}.") from None
+            # The API returns chapter-global milliseconds; convert to the cropped verse timeline.
+            segments.append([word_index, start_ms - verse_start, end_ms - verse_start])
+
+        full_url = audio_url if audio_url.startswith("https://") else urljoin("https://verses.quran.foundation/", audio_url)
         parsed = urlparse(full_url)
-        if parsed.scheme != "https" or parsed.hostname != "verses.quran.foundation":
-            raise ServiceError("رابط التلاوة لا يطابق CDN الرسمي الموثق.")
+        allowed_hosts = {"verses.quran.foundation", "download.quranicaudio.com"}
+        if parsed.scheme != "https" or parsed.hostname not in allowed_hosts:
+            raise ServiceError("رابط صوت السورة ليس HTTPS على مضيف موثق ومسموح.")
         audio_dir.mkdir(parents=True, exist_ok=True)
+        chapter_audio = audio_dir / f"chapter-recitation-{reciter_id}-{chapter}.mp3"
         destination = audio_dir / f"recitation-{chapter}-{verse}.mp3"
         try:
-            response = self.session.get(full_url, headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"},
-                                        timeout=(20, 120), stream=True)
+            response = self.session.get(full_url, headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}, timeout=(20, 120), stream=True)
             response.raise_for_status()
             final_host = urlparse(getattr(response, "url", full_url)).hostname
             content_type = (response.headers.get("Content-Type", "") or "").split(";", 1)[0].lower()
-            if final_host != "verses.quran.foundation":
+            if final_host not in allowed_hosts:
                 raise ServiceError("تنزيل التلاوة أعاد تحويلًا إلى مضيف غير مصرح.")
             if content_type and not (content_type.startswith("audio/") or content_type == "application/octet-stream"):
                 raise ServiceError("استجابة CDN ليست نوع ملف صوتيًا.")
             total = 0
-            with destination.open("wb") as out:
+            with chapter_audio.open("wb") as out:
                 for chunk in response.iter_content(1024 * 1024):
                     if chunk:
                         total += len(chunk)
-                        if total > 14 * 1024 * 1024:
-                            raise ServiceError("ملف التلاوة يتجاوز حد الفحص الصوتي البالغ 14 MiB.")
+                        if total > 160 * 1024 * 1024:
+                            raise ServiceError("ملف السورة يتجاوز حد التنزيل الآمن البالغ 160 MiB.")
                         out.write(chunk)
         except ServiceError:
-            destination.unlink(missing_ok=True)
+            chapter_audio.unlink(missing_ok=True)
             raise
         except requests.RequestException as exc:
-            destination.unlink(missing_ok=True)
+            chapter_audio.unlink(missing_ok=True)
             raise ServiceError(f"تعذر تنزيل التلاوة ({type(exc).__name__}).") from None
+        if not chapter_audio.is_file() or chapter_audio.stat().st_size < 4096:
+            chapter_audio.unlink(missing_ok=True)
+            raise ServiceError("ملف صوت السورة فارغ أو غير مكتمل.")
+        try:
+            subprocess.run([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-i", str(chapter_audio), "-ss", f"{verse_start / 1000:.3f}",
+                "-t", f"{(verse_end - verse_start) / 1000:.3f}", "-vn",
+                "-c:a", "libmp3lame", "-q:a", "2", str(destination),
+            ], check=True, capture_output=True, text=True, timeout=180)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+            destination.unlink(missing_ok=True)
+            chapter_audio.unlink(missing_ok=True)
+            raise ServiceError("تعذر اقتطاع الآية من صوت السورة؛ تحقق من تثبيت FFmpeg وصلاحية ملف الصوت.") from None
         if not destination.is_file() or destination.stat().st_size < 4096:
             destination.unlink(missing_ok=True)
-            raise ServiceError("ملف التلاوة فارغ أو غير مكتمل.")
-        return QuranRecitation(recitation_id, reciter_name,
-                               full_url, segments if isinstance(segments, list) else [], source_url,
-                               duration_hint), destination
+            chapter_audio.unlink(missing_ok=True)
+            raise ServiceError("ملف التلاوة المقتطع فارغ أو غير مكتمل.")
+        chapter_audio.unlink(missing_ok=True)
+        return QuranRecitation(reciter_id, reciter_name, full_url, segments, source_url, verse_end - verse_start), destination
 
     def get_tafsir(self, key: str) -> TafsirSource:
         resource_id = int(_required_env("TAFSIR_ID"))
@@ -1006,6 +1023,45 @@ if __name__ == "__main__":
             client = self.ready_qf_client(self.FakeResponse(503, {}))
             with self.assertRaises(ServiceError):
                 client.get_verse(2, 152)
+
+        def test_chapter_recitation_extracts_ayah_and_offsets_word_segments(self):
+            import tempfile
+            class DownloadResponse:
+                url = "https://download.quranicaudio.com/test/chapter.mp3"
+                headers = {"Content-Type": "audio/mpeg"}
+                def raise_for_status(self):
+                    return None
+                def iter_content(self, _size):
+                    return [b"x" * 6000]
+
+            class DownloadSession:
+                def get(self, *args, **kwargs):
+                    return DownloadResponse()
+
+            client = self.ready_qf_client(self.FakeResponse(200, {}))
+            client.session = DownloadSession()
+            catalog = {"reciters": [{"id": 7, "name": "Mishari Rashid al-`Afasy"}]}
+            chapter_data = {"audio_file": {
+                "audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
+                "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000,
+                                "timestamp_to": 13000,
+                                "segments": [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000]]}],
+            }}
+            with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {
+                "CHAPTER_RECITER_ID": "7", "RECITATION_LICENSE_URL": "https://example.org/license",
+                "RECITATION_LICENSE_CONFIRMED": "true", "RECITATION_ALLOWLIST": "7|https://example.org/license",
+                "RECITATION_REQUIRE_MISHARY": "true",
+            }):
+                with patch.object(client, "_get_json", side_effect=[catalog, chapter_data]) as api_call:
+                    def fake_ffmpeg(command, **kwargs):
+                        Path(command[-1]).write_bytes(b"y" * 5000)
+                    with patch("services.subprocess.run", side_effect=fake_ffmpeg) as ffmpeg:
+                        recitation, path = client.get_recitation(2, 3, Path(temp))
+                self.assertEqual(api_call.call_args_list[1].args[0], "chapter_recitations/7/2")
+                self.assertEqual(recitation.segments, [[1, 0, 1000], [2, 1000, 2000], [3, 2000, 3000]])
+                self.assertEqual(recitation.duration_hint, 3000)
+                self.assertTrue(path.is_file())
+                self.assertIn("10.000", ffmpeg.call_args.args[0])
 
         def test_word_timings_accept_contiguous_one_based_and_map_to_zero_based(self):
             got = validate_word_segments([[1, 0, 250], [2, 250, 700]], "بسم الله", 800)

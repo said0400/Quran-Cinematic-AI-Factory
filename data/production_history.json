@@ -4279,6 +4279,57 @@
       "verse_key": "2:3",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-21T19:04:54.064396+00:00",
+      "last_error": "فشل استدعاء Gemini (ClientError).",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-3-a531ba5d43-report.json",
+      "run_id": "2026-10-21-2-3-a531ba5d43",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+      },
+      "status": "failed",
+      "updated_at": "2026-10-21T19:04:56.978507+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.938,
+          "verse_source_and_key": true,
+          "word_segments_valid": 8
+        },
+        "status": "failed"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

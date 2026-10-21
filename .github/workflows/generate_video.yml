@@ -1,1 +1,169 @@
+name: Quran Cinematic AI Factory
 
+on:
+  schedule:
+    # GitHub may delay scheduled runs. The application also enforces one auto run per Casablanca date.
+    - cron: '17 12 * * *'
+      timezone: 'Africa/Casablanca'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'طريقة اختيار الآية'
+        type: choice
+        required: true
+        default: auto
+        options:
+          - auto
+          - manual
+      chapter:
+        description: 'رقم السورة عند اختيار manual'
+        type: number
+        required: false
+      verse:
+        description: 'رقم الآية عند اختيار manual'
+        type: number
+        required: false
+      reprocess:
+        description: 'السماح بإعادة إنشاء فيديو آية سبق إنتاجها (لا يكرر وجهة منشورة)'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: quran-cinematic-ai-factory
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: write # Required only to persist data/production_history.json between scheduled runs.
+
+jobs:
+  produce:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TZ: Africa/Casablanca
+      DAILY_VIDEO_COUNT: ${{ vars.DAILY_VIDEO_COUNT || '1' }}
+      VIDEO_WIDTH: ${{ vars.VIDEO_WIDTH || '1080' }}
+      VIDEO_HEIGHT: ${{ vars.VIDEO_HEIGHT || '1920' }}
+      VIDEO_FPS: ${{ vars.VIDEO_FPS || '30' }}
+      TARGET_MIN_DURATION: ${{ vars.TARGET_MIN_DURATION || '45' }}
+      TARGET_MAX_DURATION: ${{ vars.TARGET_MAX_DURATION || '60' }}
+      MAX_CANDIDATES_PER_RUN: ${{ vars.MAX_CANDIDATES_PER_RUN || '5' }}
+      MAX_RETRIES: ${{ vars.MAX_RETRIES || '3' }}
+      TTS_VOICE: ${{ vars.TTS_VOICE || 'ar-EG-ShakerNeural' }}
+      ARABIC_FONT: ${{ vars.ARABIC_FONT }}
+      ARABIC_FONT_LICENSE_URL: ${{ vars.ARABIC_FONT_LICENSE_URL }}
+      ARABIC_FONT_LICENSE_CONFIRMED: ${{ vars.ARABIC_FONT_LICENSE_CONFIRMED }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+      QF_CLIENT_ID: ${{ secrets.QF_CLIENT_ID }}
+      QF_CLIENT_SECRET: ${{ secrets.QF_CLIENT_SECRET }}
+      QF_ENV: ${{ vars.QF_ENV || 'production' }}
+      QURAN_ATTRIBUTION: ${{ vars.QURAN_ATTRIBUTION }}
+      QURAN_TEXT_LICENSE_URL: ${{ vars.QURAN_TEXT_LICENSE_URL }}
+      QURAN_TEXT_LICENSE_CONFIRMED: ${{ vars.QURAN_TEXT_LICENSE_CONFIRMED }}
+      RECITATION_ID: ${{ vars.RECITATION_ID }}
+      RECITATION_ALLOWLIST: ${{ vars.RECITATION_ALLOWLIST }}
+      RECITATION_REQUIRE_MISHARY: ${{ vars.RECITATION_REQUIRE_MISHARY || 'true' }}
+      RECITATION_LICENSE_CONFIRMED: ${{ vars.RECITATION_LICENSE_CONFIRMED }}
+      RECITATION_LICENSE_URL: ${{ vars.RECITATION_LICENSE_URL }}
+      RECITATION_ATTRIBUTION: ${{ vars.RECITATION_ATTRIBUTION }}
+      TAFSIR_ID: ${{ vars.TAFSIR_ID }}
+      TAFSIR_ALLOWLIST: ${{ vars.TAFSIR_ALLOWLIST }}
+      TAFSIR_COMMERCIAL_LICENSE_VERIFIED: ${{ vars.TAFSIR_COMMERCIAL_LICENSE_VERIFIED }}
+      TAFSIR_LICENSE_URL: ${{ vars.TAFSIR_LICENSE_URL }}
+      TAFSIR_ATTRIBUTION: ${{ vars.TAFSIR_ATTRIBUTION }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      PEXELS_LICENSE_CONFIRMED: ${{ vars.PEXELS_LICENSE_CONFIRMED }}
+      TTS_TERMS_CONFIRMED: ${{ vars.TTS_TERMS_CONFIRMED }}
+      TTS_LICENSE_URL: ${{ vars.TTS_LICENSE_URL }}
+      TTS_ATTRIBUTION: ${{ vars.TTS_ATTRIBUTION }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      YOUTUBE_PRIVACY_STATUS: ${{ vars.YOUTUBE_PRIVACY_STATUS || 'private' }}
+      META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
+      META_PAGE_ID: ${{ secrets.META_PAGE_ID }}
+      META_PUBLISH_ENABLED: ${{ vars.META_PUBLISH_ENABLED || 'false' }}
+      META_REELS_DISCLOSURE_CONFIRMED: ${{ vars.META_REELS_DISCLOSURE_CONFIRMED }}
+      META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION || 'v26.0' }}
+      MODE: ${{ inputs.mode || 'auto' }}
+      MANUAL_CHAPTER: ${{ inputs.chapter }}
+      MANUAL_VERSE: ${{ inputs.verse }}
+      REPROCESS: ${{ inputs.reprocess || 'false' }}
+      OUTPUT_DIR: output
+      HISTORY_FILE: data/production_history.json
+      FINAL_VIDEO_NAME: final_output.mp4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install FFmpeg and Arabic fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg fontconfig fonts-noto-core
+          command -v ffmpeg
+          command -v ffprobe
+          fc-match 'Noto Naskh Arabic' -f '%{file}\n'
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --requirement requirements.txt
+          python -c "import requests, PIL, arabic_reshaper, bidi, edge_tts; from google import genai; from googleapiclient.discovery import build; print('Python dependencies import successfully')"
+          python -c "from PIL import features; assert features.check('raqm'), 'Pillow RAQM support is required for Arabic shaping'; print('Pillow RAQM available')"
+
+      - name: Run offline unit tests
+        run: |
+          python services.py
+          python video_engine.py
+          python main.py --test
+
+      - name: Generate, validate, and publish
+        run: |
+          args=(--mode "$MODE")
+          if [[ "$MODE" == "manual" ]]; then
+            [[ -n "$MANUAL_CHAPTER" && -n "$MANUAL_VERSE" ]] || { echo 'manual mode requires chapter and verse' >&2; exit 2; }
+            args+=(--chapter "$MANUAL_CHAPTER" --verse "$MANUAL_VERSE")
+          fi
+          if [[ "$REPROCESS" == "true" ]]; then args+=(--reprocess); fi
+          python main.py "${args[@]}"
+
+      - name: Commit permanent production history without overwriting newer data
+        if: always() && hashFiles('data/production_history.json') != ''
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/production_history.json
+          if git diff --cached --quiet; then
+            echo 'Production history has no changes.'
+            exit 0
+          fi
+          git commit -m "Update permanent production history"
+          git fetch origin "+refs/heads/${GITHUB_REF_NAME}:refs/remotes/origin/${GITHUB_REF_NAME}"
+          git rebase "origin/$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+
+      - name: Upload video and diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quran-video-${{ github.run_id }}
+          path: |
+            output/final_output.mp4
+            output/reports/*.json
+          if-no-files-found: warn
+          retention-days: 30

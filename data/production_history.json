@@ -524,6 +524,561 @@
       "verse_key": "2:152",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:30:54.666753+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-fc23fbc4f1-report.json",
+      "run_id": "2026-10-21-39-53-fc23fbc4f1",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:30:56.868080+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:30:56.872514+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-a2d37a8c0c-report.json",
+      "run_id": "2026-10-21-39-53-a2d37a8c0c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:30:58.078254+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 39,
+      "created_at": "2026-10-21T16:30:58.082607+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-39-53-d9abd5ded9-report.json",
+      "run_id": "2026-10-21-39-53-d9abd5ded9",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:30:58.990246+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 53,
+      "verse_key": "39:53",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:30:58.994698+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-6a673a7af7-report.json",
+      "run_id": "2026-10-21-49-13-6a673a7af7",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:00.080301+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:31:00.085166+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-9aab4d413c-report.json",
+      "run_id": "2026-10-21-49-13-9aab4d413c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:00.654464+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 49,
+      "created_at": "2026-10-21T16:31:00.658988+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-49-13-1378fb1ad3-report.json",
+      "run_id": "2026-10-21-49-13-1378fb1ad3",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:01.561958+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 13,
+      "verse_key": "49:13",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:31:01.567175+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-cd5eadf08f-report.json",
+      "run_id": "2026-10-21-64-16-cd5eadf08f",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:02.820256+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:31:02.824759+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-084ac311f5-report.json",
+      "run_id": "2026-10-21-64-16-084ac311f5",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:03.448630+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 64,
+      "created_at": "2026-10-21T16:31:03.453060+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-64-16-df9de3146a-report.json",
+      "run_id": "2026-10-21-64-16-df9de3146a",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:04.545608+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:31:04.550463+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-948b4d6a0d-report.json",
+      "run_id": "2026-10-21-94-5-948b4d6a0d",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:05.438322+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:31:05.443035+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-ca5db1e64d-report.json",
+      "run_id": "2026-10-21-94-5-ca5db1e64d",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:06.386901+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 94,
+      "created_at": "2026-10-21T16:31:06.391995+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-94-5-8765d031ef-report.json",
+      "run_id": "2026-10-21-94-5-8765d031ef",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:06.977825+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:31:06.992191+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-c968171c72-report.json",
+      "run_id": "2026-10-21-2-152-c968171c72",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:07.773795+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:31:07.778832+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-138c7fffd6-report.json",
+      "run_id": "2026-10-21-2-152-138c7fffd6",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:08.408467+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 2,
+      "created_at": "2026-10-21T16:31:08.413728+00:00",
+      "last_error": "معرّف التلاوة ورابط ترخيصه غير موجودين في RECITATION_ALLOWLIST؛ رُفض الاستخدام.",
+      "local_date": "2026-10-21",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-21-2-152-a37adda896-report.json",
+      "run_id": "2026-10-21-2-152-a37adda896",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-21T16:31:08.991317+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 152,
+      "verse_key": "2:152",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

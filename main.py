@@ -452,10 +452,11 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["verification"]["checks"]["recitation_api_verse_key"] = verse.key
         row["verification"]["checks"]["word_segments_valid"] = len(timed_words)
         row["verification"]["checks"]["recitation_duration_seconds"] = round(recitation_duration, 3)
-        gemini = GeminiContentService()
-        row["verification"]["checks"]["audio_content_identity"] = gemini.verify_recitation_audio(
-            recitation_file, [verse.text_uthmani, verse.text_imlaei]
-        )
+        row["verification"]["checks"]["audio_content_identity"] = {
+            "status": "not_independently_transcribed",
+            "audio_sent_to_gemini": False,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+        }
         update_record(history, row, report_dir)
 
         tafsir = quran.get_tafsir(verse.key)
@@ -464,6 +465,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "source_url": tafsir.source_url, "license_url": tafsir.license_url,
             "commercial_license_verified_by_operator": tafsir.license_verified_by_operator,
         }
+        gemini = GeminiContentService()
         ai = gemini.create_and_review(verse, tafsir)
         row["verification"]["checks"]["model_content_schema"] = True
         row["verification"]["checks"]["model_source_review"] = ai["review"]

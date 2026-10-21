@@ -112,7 +112,10 @@ def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: 
         except (TypeError, ValueError):
             raise ServiceError("توقيت الكلمة يحتوي قيمة غير رقمية.") from None
         if start < 0 or end <= start or end > audio_duration_ms + end_tolerance_ms:
-            raise ServiceError("توقيت كلمة خارج مدة الصوت أو بترتيب غير صالح.")
+            raise ServiceError(
+                f"توقيت كلمة خارج مدة الصوت أو بترتيب غير صالح: index={idx}, start={start}ms, "
+                f"end={end}ms, audio_duration={audio_duration_ms}ms."
+            )
         parsed.append((idx, start, end))
     indexes = [row[0] for row in parsed]
     if indexes == list(range(len(words))):
@@ -330,7 +333,7 @@ class QuranFoundationClient:
         raw_segments = verse_timing.get("segments")
         if not isinstance(raw_segments, list):
             raise ServiceError(f"المصدر لا يوفر قائمة توقيتات كلمات للآية {key}.")
-        segments: list[list[int]] = []
+        absolute_segments: list[list[int]] = []
         for row in raw_segments:
             if not isinstance(row, (list, tuple)) or len(row) != 3:
                 raise ServiceError(f"المصدر لم يقدّم توقيت كلمة ثلاثيًا للآية {key}؛ اختر قارئ سورة يوفر word-level timestamps.")
@@ -338,8 +341,18 @@ class QuranFoundationClient:
                 word_index, start_ms, end_ms = (int(value) for value in row)
             except (TypeError, ValueError):
                 raise ServiceError(f"المصدر أعاد توقيت كلمة غير رقمي للآية {key}.") from None
-            # The API returns chapter-global milliseconds; convert to the cropped verse timeline.
-            segments.append([word_index, start_ms - verse_start, end_ms - verse_start])
+            if start_ms < 0 or end_ms <= start_ms:
+                raise ServiceError(f"المصدر أعاد نطاق توقيت غير صالح لكلمة في الآية {key}.")
+            # Keep the exact API word bounds; the clip origin is derived from their union
+            # with the verse interval so small source/encoder boundary differences cannot
+            # make a valid first or last word fall outside the cropped MP3.
+            absolute_segments.append([word_index, start_ms, end_ms])
+        if not absolute_segments:
+            raise ServiceError(f"قائمة توقيتات الكلمات للآية {key} فارغة.")
+        clip_start_ms = max(0, min(verse_start, min(row[1] for row in absolute_segments)) - 200)
+        clip_end_ms = max(verse_end, max(row[2] for row in absolute_segments)) + 200
+        segments = [[index, start_ms - clip_start_ms, end_ms - clip_start_ms]
+                    for index, start_ms, end_ms in absolute_segments]
 
         full_url = audio_url if audio_url.startswith("https://") else urljoin("https://verses.quran.foundation/", audio_url)
         parsed = urlparse(full_url)
@@ -378,8 +391,8 @@ class QuranFoundationClient:
         try:
             subprocess.run([
                 "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                "-i", str(chapter_audio), "-ss", f"{verse_start / 1000:.3f}",
-                "-t", f"{(verse_end - verse_start) / 1000:.3f}", "-vn",
+                "-i", str(chapter_audio), "-ss", f"{clip_start_ms / 1000:.3f}",
+                "-t", f"{(clip_end_ms - clip_start_ms) / 1000:.3f}", "-vn",
                 "-c:a", "libmp3lame", "-q:a", "2", str(destination),
             ], check=True, capture_output=True, text=True, timeout=180)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
@@ -391,7 +404,8 @@ class QuranFoundationClient:
             chapter_audio.unlink(missing_ok=True)
             raise ServiceError("ملف التلاوة المقتطع فارغ أو غير مكتمل.")
         chapter_audio.unlink(missing_ok=True)
-        return QuranRecitation(reciter_id, reciter_name, full_url, segments, source_url, verse_end - verse_start), destination
+        return QuranRecitation(reciter_id, reciter_name, full_url, segments, source_url,
+                               clip_end_ms - clip_start_ms), destination
 
     def get_tafsir(self, key: str) -> TafsirSource:
         resource_id = int(_required_env("TAFSIR_ID"))
@@ -1045,7 +1059,7 @@ if __name__ == "__main__":
                 "audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
                 "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000,
                                 "timestamp_to": 13000,
-                                "segments": [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000]]}],
+                                "segments": [[1, 9900, 11000], [2, 11000, 12000], [3, 12000, 13100]]}],
             }}
             with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {
                 "CHAPTER_RECITER_ID": "7", "RECITATION_LICENSE_URL": "https://example.org/license",
@@ -1058,10 +1072,11 @@ if __name__ == "__main__":
                     with patch("services.subprocess.run", side_effect=fake_ffmpeg) as ffmpeg:
                         recitation, path = client.get_recitation(2, 3, Path(temp))
                 self.assertEqual(api_call.call_args_list[1].args[0], "chapter_recitations/7/2")
-                self.assertEqual(recitation.segments, [[1, 0, 1000], [2, 1000, 2000], [3, 2000, 3000]])
-                self.assertEqual(recitation.duration_hint, 3000)
+                self.assertEqual(recitation.segments, [[1, 200, 1300], [2, 1300, 2300], [3, 2300, 3400]])
+                self.assertEqual(recitation.duration_hint, 3600)
+                self.assertEqual(len(validate_word_segments(recitation.segments, "الأول الثاني الثالث", 3600)), 3)
                 self.assertTrue(path.is_file())
-                self.assertIn("10.000", ffmpeg.call_args.args[0])
+                self.assertIn("9.700", ffmpeg.call_args.args[0])
 
         def test_word_timings_accept_contiguous_one_based_and_map_to_zero_based(self):
             got = validate_word_segments([[1, 0, 250], [2, 250, 700]], "بسم الله", 800)

@@ -5,6 +5,7 @@ import argparse
 import fcntl
 import hashlib
 import json
+import math
 import os
 import sys
 import tempfile
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
 
 from services import (
     FacebookReelsPublisher, GeminiContentService, PexelsService, QuranFoundationClient,
@@ -50,6 +52,8 @@ class Config:
     history_file: Path
     final_video_name: str
     dim_strength: float = 0.30
+    background_clips: int = 3
+    background_speed: float = 0.75
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -109,6 +113,8 @@ class Config:
             history_file=history_file,
             final_video_name=final_name,
             dim_strength=decimal("VIDEO_DIM_STRENGTH", 0.30, 0.0, 0.8),
+            background_clips=integer("BACKGROUND_CLIP_COUNT", 3, 2, 5),
+            background_speed=decimal("BACKGROUND_SPEED", 0.75, 0.25, 1.0),
         )
 
 
@@ -381,8 +387,7 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
     return row
 
 
-def _record_sources(verse: Any, recitation: Any, tafsir: Any, media: dict[str, Any], tts_terms: str,
-                    tts_voice: str) -> list[dict[str, Any]]:
+def _record_sources(verse, recitation, tafsir, media_items, tts_terms, tts_voice):
     return [
         {"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
          "source_url": f"{QF_BASE}/verses/by_key/{verse.key}", "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
@@ -394,7 +399,7 @@ def _record_sources(verse: Any, recitation: Any, tafsir: Any, media: dict[str, A
         {"kind": "tafsir", "source_name": tafsir.source_name, "resource_id": tafsir.resource_id,
          "source_url": tafsir.source_url, "license_url": tafsir.license_url,
          "license_status": "operator-confirmed commercial reproduction permission"},
-        media,
+        *media_items,
         {"kind": "tts", "provider": "edge-tts", "voice": tts_voice,
          "license_url": tts_terms, "license_status": "operator-confirmed current usage terms"},
     ]
@@ -408,16 +413,12 @@ QF_BASE = os.getenv(
 ).rstrip("/")
 
 
-def _title_description(key: str, content: dict[str, Any], source_names: list[str],
-                       media: dict[str, Any] | None = None) -> tuple[str, str]:
-    media = media or {}
-    creator = media.get("creator")
-    source_page = media.get("source_page")
+def _title_description(key, content, source_names, media_items=None):
     credit = "خلفية مرئية من Pexels: https://www.pexels.com/"
-    if creator and source_page:
-        credit += f"\nالفيديو: {source_page} | المصور: {creator}"
-    elif source_page:
-        credit += f"\nالفيديو: {source_page}"
+    for item in media_items or []:
+        if item.get("source_page"):
+            credit += f"\nالفيديو: {item['source_page']}" + (f" | المصور: {item['creator']}" if item.get("creator") else "")
+
     required_attributions = [os.getenv(name, "").strip() for name in (
         "RECITATION_ATTRIBUTION", "TAFSIR_ATTRIBUTION", "QURAN_ATTRIBUTION", "TTS_ATTRIBUTION"
     ) if os.getenv(name, "").strip()]
@@ -489,7 +490,15 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
-        media = PexelsService().fetch_background(ai["explanation"] + " " + ai["practical_benefit"], work_dir / "background.mp4")
+        media_items = PexelsService().fetch_backgrounds(
+            ai["explanation"] + " " + ai["practical_benefit"], work_dir / "clips",
+            config.background_clips, config.background_speed)
+        per_clip = max(6.0, math.ceil(config.target_max * config.background_speed / len(media_items)) + 1)
+        background = work_dir / "background.mp4"
+        bg_info = compose_background([Path(m.pop("file")) for m in media_items], background,
+                                     config.width, config.height, config.fps,
+                                     speed=config.background_speed, source_seconds_each=per_clip)
+        row["verification"]["checks"]["background"] = bg_info
         tts = TTSService(config.tts_voice)
         speech_texts = {
             "hook": ai["hook"],
@@ -504,7 +513,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         # Quran word highlighting always uses the source timestamps; the commentary highlighting uses
         # the TTS word boundaries when valid and an estimate otherwise (reported in the video checks).
         video_validation = build_video(
-            media_path(media, work_dir), speech_files, timed_words, verse.text_uthmani, ai, output_path,
+            background, speech_files, timed_words, verse.text_uthmani, ai, output_path,
             width=config.width, height=config.height, fps=config.fps,
             target_min_duration=config.target_min, target_max_duration=config.target_max,
             tts_word_boundaries=tts.word_boundaries, chapter_name=verse.chapter_name,
@@ -515,12 +524,12 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["verification"]["checks"]["video"] = video_validation
         row["verification"]["status"] = "validated"
         row["status"] = "validated"
-        row["media_sources"] = _record_sources(verse, recitation, tafsir, media, tts.terms_url, tts.voice)
+        row["media_sources"] = _record_sources(verse, recitation, tafsir, media_items, tts.terms_url, tts.voice)
         font_source = video_validation.get("font_source", {})
         row["media_sources"].append({"kind": "font", **font_source})
         validated_video = True
         update_record(history, row, report_dir)
-        title, description = _title_description(verse.key, ai, [tafsir.source_name], media)
+        title, description = _title_description(verse.key, ai, [tafsir.source_name], media_items)
         row["publication_metadata"] = {"title": title, "description": description}
         update_record(history, row, report_dir)
         publish_platforms(output_path, row, history, report_dir, title, description,
@@ -712,7 +721,7 @@ if __name__ == "__main__":
                 verse = Obj(key="2:3")
                 recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
                 tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
-                sources = _record_sources(verse, recitation, tafsir, {"kind": "media"}, "https://terms", "ar-EG-ShakirNeural")
+                sources = _record_sources(verse, recitation, tafsir, [{"kind": "media"}], "https://terms", "ar-EG-ShakirNeural")
                 self.assertEqual([item for item in sources if item["kind"] == "tts"][0]["voice"], "ar-EG-ShakirNeural")
 
             def test_daily_guard_only_counts_auto_and_allows_retry_after_known_failure(self):

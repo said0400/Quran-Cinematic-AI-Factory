@@ -7081,6 +7081,170 @@
       "verse_key": "2:3",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "a4eee9d79afe31000288282a3aa77d75689e0ebf850e4afa974b49beae7562d5"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-22T04:41:27.702150+00:00",
+      "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+      "local_date": "2026-10-22",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/2:3",
+          "verse_key": "2:3"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/2?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/stunning-sunrise-over-indonesian-rice-fields-34418479/",
+          "creator": "Patusi 19",
+          "download_url": "https://videos.pexels.com/video-files/34418479/14580808_2160_3840_30fps.mp4",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/stunning-sunrise-over-indonesian-rice-fields-34418479/",
+          "video_id": 34418479
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+          "provider": "edge-tts",
+          "voice": "ar-EG-ShakerNeural"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 2,
+          "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+          "status": "failed",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "ما هي الركائز الثلاث التي تبني شخصية المؤمن الحقيقي؟\n\nشرح موجز مستند إلى تفسير المیسر. الآية: 2:3.\nالمحتوى للتعريف والتدبر، ولا يغني عن الرجوع إلى المصادر الشرعية المعتمدة.\n\nخلفية مرئية من Pexels: https://www.pexels.com/\nالفيديو: https://www.pexels.com/video/stunning-sunrise-over-indonesian-rice-fields-34418479/ | المصور: Patusi 19\nالمصدر: التفسير الميسر - Quran Foundation",
+        "title": "تدبر آية قرآنية | 2:3"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-22-2-3-5fe9e201a3-report.json",
+      "run_id": "2026-10-22-2-3-5fe9e201a3",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+      },
+      "status": "failed",
+      "updated_at": "2026-10-22T04:43:08.896000+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "The text accurately reflects the provided verse and the Tafsir Al-Muyassar, correctly identifying the three pillars (belief in the unseen, prayer, and spending) and their practical application as described in the source material."
+          },
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.938,
+          "verse_source_and_key": true,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 54.865,
+            "audio_segments": {
+              "benefit": {
+                "end": 47.746,
+                "start": 34.378
+              },
+              "cta": {
+                "end": 54.898,
+                "start": 47.746
+              },
+              "explanation": {
+                "end": 34.378,
+                "start": 18.778
+              },
+              "hook": {
+                "end": 4.44,
+                "start": 0.0
+              },
+              "recitation": {
+                "end": 16.378,
+                "start": 4.44
+              },
+              "seal": {
+                "end": 18.778,
+                "start": 16.378
+              }
+            },
+            "duration_seconds": 54.867,
+            "file_size_bytes": 52445064,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 11.938,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 8
+        },
+        "status": "validated"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "4cb2f84e2596be95958b8729f750c124a12013b4bd8b797d28f72243ef061cd6"
     }
   ],
   "version": 1

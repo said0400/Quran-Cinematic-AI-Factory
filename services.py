@@ -690,66 +690,53 @@ class GeminiContentService:
 
 
 class PexelsService:
+    QUERIES = {
+        "صبر": "quiet ocean sunrise nature", "رحمة": "soft forest sunlight nature",
+        "أمل": "sunrise landscape nature", "تفكر": "mountain lake nature",
+        "عدل": "calm nature landscape", "عمل": "green field sunrise nature",
+    }
+
     def __init__(self, session: requests.Session | None = None):
         self.key = _required_env("PEXELS_API_KEY")
         self.session = session or requests.Session()
         if not env_bool("PEXELS_LICENSE_CONFIRMED"):
             raise ServiceError("أكد مراجعة شروط Pexels قبل الاستخدام عبر PEXELS_LICENSE_CONFIRMED=true.")
 
-    def fetch_background(self, topic: str, destination: Path) -> dict[str, Any]:
-        queries = {
-            "صبر": "quiet ocean sunrise nature",
-            "رحمة": "soft forest sunlight nature",
-            "أمل": "sunrise landscape nature",
-            "تفكر": "mountain lake nature",
-            "عدل": "calm nature landscape",
-            "عمل": "green field sunrise nature",
-        }
-        query = next((q for label, q in queries.items() if label in topic), "calm nature landscape sunrise")
-        try:
-            response = self.session.get(PEXELS_SEARCH, headers={"Authorization": self.key},
-                                        params={"query": query, "orientation": "portrait", "size": "medium", "per_page": 20},
-                                        timeout=(15, 45))
-        except requests.RequestException as exc:
-            raise ServiceError(f"تعذر الاتصال بـPexels ({type(exc).__name__}).") from None
-        if response.status_code != 200:
-            raise ServiceError(f"Pexels أعاد HTTP {response.status_code}.")
-        try:
-            payload = response.json()
-        except ValueError:
-            raise ServiceError("استجابة بحث Pexels ليست JSON صالحًا.") from None
-        videos = payload.get("videos") if isinstance(payload, dict) else None
-        if not isinstance(videos, list) or not videos:
-            raise ServiceError("لم يُعثر على فيديو خلفية مرخّص في نتائج Pexels.")
-        candidates = []
-        for video in videos:
-            if not isinstance(video, dict) or not isinstance(video.get("video_files"), list):
+    def _query_for(self, topic: str) -> str:
+        return next((q for label, q in self.QUERIES.items() if label in topic), "calm nature landscape sunrise")
+
+    @staticmethod
+    def _pick_file(video: dict[str, Any]) -> dict[str, Any] | None:
+        files = []
+        for item in video.get("video_files") or []:
+            if not isinstance(item, dict) or not isinstance(item.get("link"), str):
                 continue
-            for item in video["video_files"]:
-                if not isinstance(item, dict) or not isinstance(item.get("link"), str):
-                    continue
-                parsed = urlparse(item["link"])
-                if parsed.scheme != "https" or not (parsed.hostname or "").endswith(".pexels.com"):
-                    continue
-                if item.get("file_type") not in ("video/mp4", "video/webm"):
-                    continue
-                width, height = item.get("width") or 0, item.get("height") or 0
-                candidates.append((int(width or 0) * int(height or 0), video, item))
-        if not candidates:
-            raise ServiceError("لم تُرجع Pexels رابط فيديو صالحًا على HTTPS.")
-        _, video, chosen = max(candidates, key=lambda row: row[0])
-        link = chosen["link"]
+            parsed = urlparse(item["link"])
+            if parsed.scheme != "https" or not (parsed.hostname or "").endswith(".pexels.com"):
+                continue
+            if item.get("file_type") != "video/mp4":
+                continue
+            files.append(item)
+        if not files:
+            return None
+        area = lambda f: int(f.get("width") or 0) * int(f.get("height") or 0)
+        # Prefer the smallest file that is still at least 1280px tall (avoids huge 4K downloads).
+        good = [f for f in files if int(f.get("height") or 0) >= 1280]
+        return min(good, key=area) if good else max(files, key=area)
+
+    def _download(self, link: str, destination: Path, limit: int = 150 * 1024 * 1024) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with self.session.get(link, stream=True, timeout=(20, 120), headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}) as file_response:
-                file_response.raise_for_status()
+            with self.session.get(link, stream=True, timeout=(20, 120),
+                                  headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}) as resp:
+                resp.raise_for_status()
                 total = 0
                 with destination.open("wb") as out:
-                    for chunk in file_response.iter_content(1024 * 1024):
+                    for chunk in resp.iter_content(1024 * 1024):
                         if chunk:
                             total += len(chunk)
-                            if total > 400 * 1024 * 1024:
-                                raise ServiceError("فيديو الخلفية تجاوز الحد الآمن 400 MiB.")
+                            if total > limit:
+                                raise ServiceError("فيديو الخلفية تجاوز الحد الآمن للتنزيل.")
                             out.write(chunk)
         except ServiceError:
             destination.unlink(missing_ok=True)
@@ -760,19 +747,52 @@ class PexelsService:
         if not destination.exists() or destination.stat().st_size < 4096:
             destination.unlink(missing_ok=True)
             raise ServiceError("فيديو الخلفية فارغ أو غير مكتمل.")
-        user = video.get("user") if isinstance(video.get("user"), dict) else {}
-        return {
-            "provider": "Pexels",
-            "query": query,
-            "video_id": video.get("id"),
-            "source_page": video.get("url"),
-            "download_url": link,
-            "creator": user.get("name"),
-            "license": "Pexels License (operator confirmed); commercial use subject to current terms",
-            "license_url": PEXELS_LICENSE,
-            "attribution": "Pexels video " + str(video.get("url", "")),
-        }
 
+    def fetch_backgrounds(self, topic: str, work_dir: Path, count: int = 3,
+                          speed: float = 0.75) -> list[dict[str, Any]]:
+        """Download `count` (2..5) distinct portrait clips. Returns metadata incl. local `file` path."""
+        import random
+        count = max(2, min(5, int(count)))
+        query = self._query_for(topic)
+        try:
+            response = self.session.get(PEXELS_SEARCH, headers={"Authorization": self.key},
+                                        params={"query": query, "orientation": "portrait",
+                                                "size": "medium", "per_page": 30}, timeout=(15, 45))
+        except requests.RequestException as exc:
+            raise ServiceError(f"تعذر الاتصال بـPexels ({type(exc).__name__}).") from None
+        if response.status_code != 200:
+            raise ServiceError(f"Pexels أعاد HTTP {response.status_code}.")
+        try:
+            payload = response.json()
+        except ValueError:
+            raise ServiceError("استجابة بحث Pexels ليست JSON صالحًا.") from None
+        videos = [v for v in (payload.get("videos") if isinstance(payload, dict) else []) or []
+                  if isinstance(v, dict) and self._pick_file(v)]
+        if len(videos) < 2:
+            raise ServiceError("لم يُعثر على مقطعين مرخّصين على الأقل في نتائج Pexels.")
+        random.Random(topic).shuffle(videos)       # deterministic per topic, varied between verses
+        results: list[dict[str, Any]] = []
+        seen: set[Any] = set()
+        for video in videos:
+            if len(results) >= count:
+                break
+            if video.get("id") in seen:
+                continue
+            seen.add(video.get("id"))
+            chosen = self._pick_file(video)
+            path = work_dir / f"clip-{len(results) + 1}.mp4"
+            self._download(chosen["link"], path)
+            user = video.get("user") if isinstance(video.get("user"), dict) else {}
+            results.append({
+                "kind": "background_video", "provider": "Pexels", "query": query, "file": str(path),
+                "video_id": video.get("id"), "source_page": video.get("url"), "download_url": chosen["link"],
+                "creator": user.get("name"), "playback_speed": speed,
+                "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+                "license_url": PEXELS_LICENSE,
+            })
+        if len(results) < 2:
+            raise ServiceError("تعذر تنزيل مقطعي خلفية على الأقل.")
+        return results
 
 class TTSService:
     """Speech for commentary only. Quran recitation must always remain source audio."""

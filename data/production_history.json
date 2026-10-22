@@ -7245,6 +7245,177 @@
       "verse_key": "2:3",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "4cb2f84e2596be95958b8729f750c124a12013b4bd8b797d28f72243ef061cd6"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 3,
+      "created_at": "2026-10-22T10:09:48.191632+00:00",
+      "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+      "local_date": "2026-10-22",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/3:3",
+          "verse_key": "3:3"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/3.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/3?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:3"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/tranquil-sunset-over-calm-ocean-waters-37535831/",
+          "creator": "AP Vibes",
+          "download_url": "https://videos.pexels.com/video-files/37535831/15904491_2160_3840_30fps.mp4",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "provider": "Pexels",
+          "query": "calm nature landscape sunrise",
+          "source_page": "https://www.pexels.com/video/tranquil-sunset-over-calm-ocean-waters-37535831/",
+          "video_id": 37535831
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+          "provider": "edge-tts",
+          "voice": "ar-EG-ShakirNeural"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 1,
+          "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+          "status": "failed",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "ما هي العلاقة بين القرآن والتوراة والإنجيل؟\n\nشرح موجز مستند إلى تفسير المیسر. الآية: 3:3.\nالمحتوى للتعريف والتدبر، ولا يغني عن الرجوع إلى المصادر الشرعية المعتمدة.\n\nخلفية مرئية من Pexels: https://www.pexels.com/\nالفيديو: https://www.pexels.com/video/tranquil-sunset-over-calm-ocean-waters-37535831/ | المصور: AP Vibes\nالمصدر: التفسير الميسر - Quran Foundation",
+        "title": "تدبر آية قرآنية | 3:3"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-22-3-3-07a109098f-report.json",
+      "run_id": "2026-10-22-3-3-07a109098f",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:3"
+      },
+      "status": "failed",
+      "updated_at": "2026-10-22T10:11:36.870714+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعتمد بشكل مباشر على الآية الكريمة والتفسير المرفق، حيث يوضح العلاقة بين القرآن والتوراة والإنجيل كما ورد في المصدر، ولا يحتوي على ادعاءات خارجة عن سياق التفسير المقدم."
+          },
+          "recitation_api_verse_key": "3:3",
+          "recitation_duration_seconds": 14.968,
+          "verse_source_and_key": true,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 50.023,
+            "audio_segments": {
+              "benefit": {
+                "end": 43.84,
+                "start": 34.336
+              },
+              "cta": {
+                "end": 50.056,
+                "start": 43.84
+              },
+              "explanation": {
+                "end": 34.336,
+                "start": 21.352
+              },
+              "hook": {
+                "end": 3.984,
+                "start": 0.0
+              },
+              "recitation": {
+                "end": 18.952,
+                "start": 3.984
+              },
+              "seal": {
+                "end": 21.352,
+                "start": 18.952
+              }
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 50.033,
+            "file_size_bytes": 25870454,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 14.968,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "benefit": "tts_word_boundary",
+              "cta": "tts_word_boundary",
+              "explanation": "tts_word_boundary",
+              "hook": "tts_word_boundary"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 11
+        },
+        "status": "validated"
+      },
+      "verse": 3,
+      "verse_key": "3:3",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "b4401bb485130d505b56c10a32728b6a3c84f039ee83875e008ef17e14298650"
     }
   ],
   "version": 1

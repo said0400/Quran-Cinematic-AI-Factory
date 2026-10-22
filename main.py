@@ -27,6 +27,7 @@ AUTO_VERSE_POOL = [
     (2, 152), (2, 153), (3, 139), (5, 8), (13, 28), (16, 90),
     (17, 23), (25, 63), (39, 53), (49, 13), (64, 16), (94, 5),
 ]
+DEFAULT_TTS_VOICE = "ar-EG-ShakirNeural"
 
 
 class FactoryError(RuntimeError):
@@ -48,6 +49,7 @@ class Config:
     output_dir: Path
     history_file: Path
     final_video_name: str
+    dim_strength: float = 0.30
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -57,6 +59,16 @@ class Config:
                 value = int(raw)
             except ValueError:
                 raise FactoryError(f"قيمة {name} يجب أن تكون عددًا صحيحًا.") from None
+            if not minimum <= value <= maximum:
+                raise FactoryError(f"قيمة {name} خارج المجال {minimum}..{maximum}.")
+            return value
+
+        def decimal(name: str, default: float, minimum: float, maximum: float) -> float:
+            raw = os.getenv(name, "").strip() or str(default)
+            try:
+                value = float(raw)
+            except ValueError:
+                raise FactoryError(f"قيمة {name} يجب أن تكون عددًا عشريًا.") from None
             if not minimum <= value <= maximum:
                 raise FactoryError(f"قيمة {name} خارج المجال {minimum}..{maximum}.")
             return value
@@ -92,10 +104,11 @@ class Config:
             target_max=target_max,
             max_candidates=integer("MAX_CANDIDATES_PER_RUN", 5, 1, 20),
             max_retries=integer("MAX_RETRIES", 3, 1, 8),
-            tts_voice=os.getenv("TTS_VOICE", "ar-EG-ShakerNeural").strip() or "ar-EG-ShakerNeural",
+            tts_voice=os.getenv("TTS_VOICE", DEFAULT_TTS_VOICE).strip() or DEFAULT_TTS_VOICE,
             output_dir=output_dir,
             history_file=history_file,
             final_video_name=final_name,
+            dim_strength=decimal("VIDEO_DIM_STRENGTH", 0.30, 0.0, 0.8),
         )
 
 
@@ -368,7 +381,8 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
     return row
 
 
-def _record_sources(verse: Any, recitation: Any, tafsir: Any, media: dict[str, Any], tts_terms: str) -> list[dict[str, Any]]:
+def _record_sources(verse: Any, recitation: Any, tafsir: Any, media: dict[str, Any], tts_terms: str,
+                    tts_voice: str) -> list[dict[str, Any]]:
     return [
         {"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
          "source_url": f"{QF_BASE}/verses/by_key/{verse.key}", "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
@@ -381,7 +395,7 @@ def _record_sources(verse: Any, recitation: Any, tafsir: Any, media: dict[str, A
          "source_url": tafsir.source_url, "license_url": tafsir.license_url,
          "license_status": "operator-confirmed commercial reproduction permission"},
         media,
-        {"kind": "tts", "provider": "edge-tts", "voice": os.getenv("TTS_VOICE", "ar-EG-ShakerNeural").strip(),
+        {"kind": "tts", "provider": "edge-tts", "voice": tts_voice,
          "license_url": tts_terms, "license_status": "operator-confirmed current usage terms"},
     ]
 
@@ -487,17 +501,21 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         speech_files = tts.synthesize(speech_texts, work_dir / "speech")
         speech_files["recitation"] = recitation_file
         output_path = config.output_dir / config.final_video_name
+        # Quran word highlighting always uses the source timestamps; the commentary highlighting uses
+        # the TTS word boundaries when valid and an estimate otherwise (reported in the video checks).
         video_validation = build_video(
             media_path(media, work_dir), speech_files, timed_words, verse.text_uthmani, ai, output_path,
             width=config.width, height=config.height, fps=config.fps,
             target_min_duration=config.target_min, target_max_duration=config.target_max,
+            tts_word_boundaries=tts.word_boundaries, chapter_name=verse.chapter_name,
+            verse_number=verse.verse, dim_strength=config.dim_strength,
         )
         row["video_path"] = str(output_path)
         row["video_sha256"] = sha256_file(output_path)
         row["verification"]["checks"]["video"] = video_validation
         row["verification"]["status"] = "validated"
         row["status"] = "validated"
-        row["media_sources"] = _record_sources(verse, recitation, tafsir, media, tts.terms_url)
+        row["media_sources"] = _record_sources(verse, recitation, tafsir, media, tts.terms_url, tts.voice)
         font_source = video_validation.get("font_source", {})
         row["media_sources"].append({"kind": "font", **font_source})
         validated_video = True
@@ -666,6 +684,36 @@ if __name__ == "__main__":
                 with patch.dict(os.environ, {"VIDEO_WIDTH": "1080", "VIDEO_HEIGHT": "1080"}):
                     with self.assertRaises(FactoryError):
                         Config.from_env(Path("/tmp/project"))
+
+            def test_default_voice_is_the_valid_microsoft_name(self):
+                with patch.dict(os.environ, {}, clear=False):
+                    os.environ.pop("TTS_VOICE", None)
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).tts_voice, "ar-EG-ShakirNeural")
+
+            def test_dim_strength_defaults_parses_and_rejects_out_of_range(self):
+                with patch.dict(os.environ, {}, clear=False):
+                    os.environ.pop("VIDEO_DIM_STRENGTH", None)
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).dim_strength, 0.30)
+                with patch.dict(os.environ, {"VIDEO_DIM_STRENGTH": "0.45"}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).dim_strength, 0.45)
+                with patch.dict(os.environ, {"VIDEO_DIM_STRENGTH": ""}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).dim_strength, 0.30)
+                with patch.dict(os.environ, {"VIDEO_DIM_STRENGTH": "0"}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).dim_strength, 0.0)
+                for bad in ("0.95", "-0.1", "dark"):
+                    with patch.dict(os.environ, {"VIDEO_DIM_STRENGTH": bad}):
+                        with self.assertRaises(FactoryError):
+                            Config.from_env(Path("/tmp/project"))
+
+            def test_record_sources_logs_the_voice_actually_used(self):
+                class Obj:
+                    def __init__(self, **kwargs):
+                        self.__dict__.update(kwargs)
+                verse = Obj(key="2:3")
+                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
+                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
+                sources = _record_sources(verse, recitation, tafsir, {"kind": "media"}, "https://terms", "ar-EG-ShakirNeural")
+                self.assertEqual([item for item in sources if item["kind"] == "tts"][0]["voice"], "ar-EG-ShakirNeural")
 
             def test_daily_guard_only_counts_auto_and_allows_retry_after_known_failure(self):
                 published = new_run_record("auto-ok", 2, 152, "auto", "2026-10-21", 1)

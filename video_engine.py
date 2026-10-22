@@ -13,15 +13,16 @@ from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageFont, features
 
-try:
-    import arabic_reshaper
-    from bidi.algorithm import get_display
-except ImportError as exc:  # pragma: no cover - installation error is reported clearly
-    raise RuntimeError("ثبت arabic-reshaper وpython-bidi من requirements.txt") from exc
-
 
 class VideoError(RuntimeError):
     """Video generation or validation failed."""
+
+
+# Arabic is shaped and ordered by Pillow's RAQM layout engine (HarfBuzz + FriBiDi) directly from
+# the logical (canonical) text. Pre-shaping with arabic-reshaper/python-bidi must NOT be combined
+# with RAQM: the text would be processed twice, giving reversed order and unjoined letters.
+TEXT_DIRECTION = "rtl"
+TEXT_LANGUAGE = "ar"
 
 
 def run_checked(command: list[str], timeout: int = 900) -> subprocess.CompletedProcess[str]:
@@ -98,9 +99,23 @@ def _font_license_metadata(font_path: str) -> dict[str, str]:
 
 
 def _visual(text: str) -> str:
-    # This transforms only the drawing representation, never the canonical text or API data.
-    shaped = arabic_reshaper.reshape(text)
-    return get_display(shaped)
+    # Deliberately the identity: RAQM receives the canonical logical text and performs shaping
+    # and bidirectional ordering itself (see TEXT_DIRECTION above). Kept as a single choke point
+    # so no caller can accidentally reintroduce a second shaping pass.
+    return text
+
+
+def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> float:
+    """Advance width of Arabic text as laid out by RAQM (includes side bearings, so it matches draw.text)."""
+    return draw.textlength(_visual(text), font=font, direction=TEXT_DIRECTION, language=TEXT_LANGUAGE)
+
+
+def _draw_text(draw: ImageDraw.ImageDraw, xy: tuple[float, float], text: str, font: ImageFont.FreeTypeFont,
+               fill: tuple[int, int, int, int], stroke: bool = True) -> None:
+    kwargs: dict[str, Any] = {"font": font, "fill": fill, "direction": TEXT_DIRECTION, "language": TEXT_LANGUAGE}
+    if stroke:
+        kwargs.update(stroke_width=1, stroke_fill=(0, 0, 0, 255))
+    draw.text(xy, _visual(text), **kwargs)
 
 
 def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
@@ -119,9 +134,7 @@ def _wrap_words(words: list[str], font: ImageFont.FreeTypeFont, max_width: int, 
     current: list[int] = []
     width = 0
     for index, word in enumerate(words):
-        shown = _visual(word)
-        box = draw.textbbox((0, 0), shown, font=font, direction="ltr")
-        word_width = box[2] - box[0]
+        word_width = _text_width(draw, word, font)
         if current and width + gap + word_width > max_width:
             lines.append(current)
             current, width = [], 0
@@ -160,10 +173,7 @@ def render_verse_overlay(text: str, current_word: int | None, destination: Path,
     if draw_background:
         draw.rounded_rectangle((left, top - 44, right, top + content_height + 44), radius=34, fill=(0, 0, 0, 155))
     for row, indexes in enumerate(lines):
-        widths = []
-        for index in indexes:
-            bbox = draw.textbbox((0, 0), _visual(words[index]), font=font, direction="ltr")
-            widths.append(bbox[2] - bbox[0])
+        widths = [_text_width(draw, words[index], font) for index in indexes]
         total = sum(widths) + gap * max(0, len(widths) - 1)
         cursor = (width + total) / 2
         y = top + row * line_height
@@ -172,11 +182,9 @@ def render_verse_overlay(text: str, current_word: int | None, destination: Path,
             if highlight_only and index != current_word:
                 cursor -= word_width + gap
                 continue
-            shown = _visual(words[index])
             cursor -= word_width
             color = (255, 218, 74, 255) if index == current_word else (255, 255, 255, 255)
-            draw.text((cursor, y), shown, font=font, fill=color, direction="ltr", stroke_width=1,
-                      stroke_fill=(0, 0, 0, 255))
+            _draw_text(draw, (cursor, y), words[index], font, color)
             cursor -= gap
     destination.parent.mkdir(parents=True, exist_ok=True)
     image.save(destination, "PNG", optimize=True)
@@ -201,8 +209,7 @@ def render_text_overlay(text: str, destination: Path, label: str = "", width: in
         current: list[str] = []
         for word in logical:
             attempt = " ".join(current + [word])
-            box = draw.textbbox((0, 0), _visual(attempt), font=candidate, direction="ltr")
-            if current and box[2] - box[0] > int(width * 0.84):
+            if current and _text_width(draw, attempt, candidate) > int(width * 0.84):
                 candidate_lines.append(" ".join(current))
                 current = [word]
             else:
@@ -214,7 +221,6 @@ def render_text_overlay(text: str, destination: Path, label: str = "", width: in
             break
     if font is None:
         raise VideoError("النص أطول من مساحة الشاشة؛ رُفض بدل إسقاط كلمات.")
-    label_text = _visual(label) if label else ""
     label_y = int(height * 0.34)
     body_y = label_y + (76 if label else 0)
     line_height = int(size * 1.55)
@@ -223,16 +229,12 @@ def render_text_overlay(text: str, destination: Path, label: str = "", width: in
     draw.rounded_rectangle((int(width * .06), top - 46, int(width * .94), top + block_height + 50),
                            radius=34, fill=(0, 0, 0, 158))
     if label:
-        bbox = draw.textbbox((0, 0), label_text, font=label_font, direction="ltr")
-        draw.text(((width - (bbox[2] - bbox[0])) / 2, top + 8), label_text,
-                  font=label_font, fill=(255, 218, 74, 255), direction="ltr")
+        label_width = _text_width(draw, label, label_font)
+        _draw_text(draw, ((width - label_width) / 2, top + 8), label, label_font, (255, 218, 74, 255), stroke=False)
     start_y = top + (78 if label else 20)
     for idx, line in enumerate(lines):
-        shown = _visual(line)
-        bbox = draw.textbbox((0, 0), shown, font=font, direction="ltr")
-        draw.text(((width - (bbox[2] - bbox[0])) / 2, start_y + idx * line_height), shown,
-                  font=font, fill=(255, 255, 255, 255), direction="ltr", stroke_width=1,
-                  stroke_fill=(0, 0, 0, 255))
+        line_width = _text_width(draw, line, font)
+        _draw_text(draw, ((width - line_width) / 2, start_y + idx * line_height), line, font, (255, 255, 255, 255))
     destination.parent.mkdir(parents=True, exist_ok=True)
     image.save(destination, "PNG", optimize=True)
 
@@ -484,5 +486,36 @@ if __name__ == "__main__":
                 result = validate_video(path, expected_duration=1.5)
                 self.assertEqual(result["video_codec"], "h264")
                 self.assertEqual(result["audio_codec"], "aac")
+
+        # ----- Arabic rendering regressions (double shaping / reversed, unjoined letters) -----
+        def test_text_is_passed_to_raqm_unmodified(self):
+            # Pre-shaped or pre-reversed text would be shaped/reordered a second time by RAQM.
+            sample = "فكرة الآية"
+            self.assertEqual(_visual(sample), sample)
+
+        def test_rendering_uses_rtl_direction_and_arabic_language(self):
+            calls = []
+            real_text = ImageDraw.ImageDraw.text
+            def spy(self, xy, text, *args, **kwargs):
+                calls.append((text, kwargs.get("direction"), kwargs.get("language")))
+                return real_text(self, xy, text, *args, **kwargs)
+            with tempfile.TemporaryDirectory() as temp, patch.object(ImageDraw.ImageDraw, "text", spy):
+                render_text_overlay("ما هو الإيمان بالغيب؟", Path(temp) / "t.png", "فكرة الآية", width=540, height=960)
+                render_verse_overlay("بسم الله الرحمن", None, Path(temp) / "v.png", width=540, height=960)
+            self.assertTrue(calls)
+            for text, direction, language in calls:
+                self.assertEqual(direction, "rtl")
+                self.assertEqual(language, "ar")
+                # Canonical logical text only: never presentation forms (U+FB50-U+FDFF, U+FE70-U+FEFF).
+                self.assertFalse(any("\ufb50" <= ch <= "\ufdff" or "\ufe70" <= ch <= "\ufeff" for ch in text), text)
+
+        def test_joined_word_is_narrower_than_its_isolated_letters(self):
+            # Proof that contextual shaping is applied: a connected word is not a row of isolated glyphs.
+            font = _font(discover_font(), 60)
+            draw = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
+            word = "بببب"
+            joined = _text_width(draw, word, font)
+            isolated = 4 * _text_width(draw, "ب", font)
+            self.assertLess(joined, isolated)
 
     unittest.main()

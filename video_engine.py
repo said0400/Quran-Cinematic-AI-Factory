@@ -2,7 +2,9 @@
 
 Rendering model
 ---------------
-* The background is processed by FFmpeg (cover-crop, slow time-based zoom, light dark filter).
+* The background is one or several stock clips merged by `compose_background` (cover-crop each
+  clip to the vertical frame, slow it down, concatenate), then processed by FFmpeg again in
+  `build_video` (slow time-based zoom, light dark filter).
 * All text is drawn here with Pillow/RAQM as RGBA frames and piped to FFmpeg as raw video, so the
   number of FFmpeg inputs does not grow with the number of words.
 * The Quran verse sits on an ornamental card and is highlighted word by word using the source
@@ -52,6 +54,10 @@ FADE_STEPS = 8                           # alpha is quantised so identical frame
 MAX_DIM_STRENGTH = 0.80
 ORNATE_OPEN_BRACKET = "\ufd3f"
 ORNATE_CLOSE_BRACKET = "\ufd3e"
+
+MIN_BACKGROUND_CLIPS = 1
+MAX_BACKGROUND_CLIPS = 5
+DEFAULT_BACKGROUND_SPEED = 0.75          # 0.75 = 25% slower than the original footage
 
 
 def run_checked(command: list[str], timeout: int = 900) -> subprocess.CompletedProcess[str]:
@@ -561,6 +567,69 @@ def _probe_audio_seconds(path: Path) -> float:
     return media_duration(path)
 
 
+# --------------------------------------------------------------------------------------------
+# Multi-clip background
+# --------------------------------------------------------------------------------------------
+def compose_background(clips: list[Path], destination: Path, width: int = 1080, height: int = 1920,
+                       fps: int = 30, speed: float = DEFAULT_BACKGROUND_SPEED,
+                       target_duration: float | None = None,
+                       source_seconds_each: float = 20.0) -> dict[str, Any]:
+    """Merge 1..5 stock clips into one vertical background slowed to `speed` (0.75 = 25% slower).
+
+    Every clip is cover-cropped to width x height, slowed by stretching its timestamps (frames are
+    repeated by the fps filter, never interpolated) and concatenated in the given order. Audio of the
+    stock footage is dropped. When `target_duration` (seconds of OUTPUT) is given, each clip
+    contributes an equal share of it; otherwise at most `source_seconds_each` seconds of every source
+    clip are used. If the result is shorter than the target, `build_video` loops it, which is
+    reported through `will_loop`.
+    """
+    if not isinstance(clips, list) or not clips:
+        raise VideoError("لا توجد مقاطع خلفية للدمج.")
+    if len(clips) > MAX_BACKGROUND_CLIPS:
+        raise VideoError(f"عدد مقاطع الخلفية يجب ألا يتجاوز {MAX_BACKGROUND_CLIPS}.")
+    if isinstance(speed, bool) or not isinstance(speed, (int, float)) or not 0.25 <= speed <= 1.0:
+        raise VideoError("سرعة الخلفية يجب أن تكون بين 0.25 و1.0.")
+    if width <= 0 or height <= 0 or width % 2 or height % 2 or fps <= 0:
+        raise VideoError("أبعاد أو معدل إطارات الخلفية غير صالح.")
+    if target_duration is not None:
+        if target_duration <= 0:
+            raise VideoError("المدة المطلوبة للخلفية يجب أن تكون موجبة.")
+        # Output seconds = source seconds / speed, so each clip needs target*speed/n source seconds.
+        source_seconds_each = math.ceil(target_duration * speed / len(clips)) + 1
+    if source_seconds_each <= 0:
+        raise VideoError("المدة المأخوذة من كل مقطع يجب أن تكون موجبة.")
+    for clip in clips:
+        data = probe(Path(clip))
+        if not any(s.get("codec_type") == "video" for s in data.get("streams", [])):
+            raise VideoError(f"الملف لا يحتوي مسار فيديو: {Path(clip).name}")
+    inputs: list[str] = []
+    filters: list[str] = []
+    for index, clip in enumerate(clips):
+        inputs.extend(["-i", str(clip)])
+        filters.append(
+            f"[{index}:v]trim=duration={source_seconds_each:.3f},setpts=PTS-STARTPTS,"
+            f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1,"
+            f"setpts=PTS/{speed:.6f},fps={fps},format=yuv420p[v{index}]"
+        )
+    filters.append("".join(f"[v{index}]" for index in range(len(clips))) + f"concat=n={len(clips)}:v=1:a=0[vout]")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs,
+                 "-filter_complex", ";".join(filters), "-map", "[vout]", "-an",
+                 "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
+                 str(destination)], timeout=1200)
+    if not destination.is_file():
+        raise VideoError("لم ينتج FFmpeg ملف الخلفية المدموج.")
+    duration = media_duration(destination)
+    return {
+        "clips": len(clips),
+        "speed": float(speed),
+        "source_seconds_per_clip": float(source_seconds_each),
+        "duration_seconds": round(duration, 3),
+        "target_duration_seconds": None if target_duration is None else round(float(target_duration), 3),
+        "will_loop": bool(target_duration is not None and duration + 0.25 < float(target_duration)),
+    }
+
+
 def build_video(background: Path, audio_files: dict[str, Path], recitation_segments: list[dict[str, int]],
                 verse_text: str, content: dict[str, Any], output_path: Path,
                 width: int = 1080, height: int = 1920, fps: int = 30,
@@ -905,6 +974,73 @@ if __name__ == "__main__":
             self.assertEqual(frames[39], blank)                     # after the scene
             self.assertIs(frames[10], frames[11])                   # same word, reused bytes
 
+        # ----- Multi-clip slowed background -----
+        @staticmethod
+        def _make_clip(path: Path, size: str, seconds: float, color: str, rate: int = 10) -> None:
+            run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                         "-i", f"color=c={color}:s={size}:r={rate}:d={seconds}",
+                         "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", str(seconds),
+                         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", str(path)])
+
+        def test_compose_background_slows_each_clip_and_concatenates(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                clips = []
+                for index, (size, color) in enumerate((("320x568", "red"), ("640x360", "green"), ("360x640", "blue"))):
+                    clip = temp_path / f"c{index}.mp4"
+                    self._make_clip(clip, size, 2.0, color)
+                    clips.append(clip)
+                output = temp_path / "background.mp4"
+                info = compose_background(clips, output, 270, 480, 10, speed=0.75, source_seconds_each=2.0)
+                # 3 clips x 2s of source at 0.75x speed = 8s of output.
+                self.assertAlmostEqual(info["duration_seconds"], 8.0, delta=0.4)
+                self.assertEqual(info["clips"], 3)
+                self.assertEqual(info["speed"], 0.75)
+                streams = probe(output)["streams"]
+                video = next(s for s in streams if s["codec_type"] == "video")
+                self.assertEqual((int(video["width"]), int(video["height"])), (270, 480))
+                self.assertFalse(any(s["codec_type"] == "audio" for s in streams))
+
+        def test_compose_background_target_duration_sets_per_clip_share(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                clips = []
+                for index in range(2):
+                    clip = temp_path / f"c{index}.mp4"
+                    self._make_clip(clip, "320x568", 12.0, "gray")
+                    clips.append(clip)
+                info = compose_background(clips, temp_path / "bg.mp4", 270, 480, 10, speed=0.75, target_duration=8.0)
+                # ceil(8 * 0.75 / 2) + 1 = 4 source seconds per clip -> about 4 / 0.75 = 5.3s each.
+                self.assertEqual(info["source_seconds_per_clip"], 4.0)
+                self.assertGreaterEqual(info["duration_seconds"], 8.0)
+                self.assertFalse(info["will_loop"])
+
+        def test_compose_background_reports_when_the_result_must_loop(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                clip = temp_path / "short.mp4"
+                self._make_clip(clip, "320x568", 2.0, "gray")
+                info = compose_background([clip], temp_path / "bg.mp4", 270, 480, 10, speed=0.75, target_duration=30.0)
+                self.assertTrue(info["will_loop"])
+
+        def test_compose_background_rejects_bad_arguments(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                clip = temp_path / "c.mp4"
+                self._make_clip(clip, "320x568", 1.0, "gray")
+                destination = temp_path / "bg.mp4"
+                with self.assertRaises(VideoError):
+                    compose_background([], destination)
+                for bad_speed in (0.1, 1.5, True):
+                    with self.assertRaises(VideoError):
+                        compose_background([clip], destination, 270, 480, 10, speed=bad_speed)  # type: ignore[arg-type]
+                with self.assertRaises(VideoError):
+                    compose_background([clip] * (MAX_BACKGROUND_CLIPS + 1), destination, 270, 480, 10)
+                with self.assertRaises(VideoError):
+                    compose_background([clip], destination, 271, 480, 10)
+                with self.assertRaises(VideoError):
+                    compose_background([clip], destination, 270, 480, 10, target_duration=-1)
+
         # ----- Whole pipeline at a small size -----
         def test_full_build_uses_card_dim_and_reports_timing_sources(self):
             with tempfile.TemporaryDirectory() as temp:
@@ -949,6 +1085,30 @@ if __name__ == "__main__":
                 # The dark filter darkens the plain background (0x30 = 48) at the very top of the frame.
                 top_pixel = recitation_frame.getpixel((135, 2))
                 self.assertLess(top_pixel[0], 44)
+
+        def test_full_build_accepts_a_composed_multi_clip_background(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                clips = []
+                for index, color in enumerate(("0x203040", "0x304020")):
+                    clip = temp_path / f"c{index}.mp4"
+                    self._make_clip(clip, "360x640", 3.0, color)
+                    clips.append(clip)
+                background = temp_path / "background.mp4"
+                compose_background(clips, background, 270, 480, 10, speed=0.75, target_duration=8.0)
+                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "explanation": 2.0, "benefit": 1.5, "cta": 1.0}
+                audio = {}
+                for name, seconds in lengths.items():
+                    audio[name] = temp_path / f"{name}.wav"
+                    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                                 "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
+                segments = [{"word_index": i, "start_ms": 100 + i * 450, "end_ms": 500 + i * 450} for i in range(4)]
+                content = {"hook": "هل تعلم معنى هذه الآية؟", "explanation": "شرح موجز للآية الكريمة",
+                           "practical_benefit": "فائدة عملية قصيرة", "call_to_action": "شارك الفائدة"}
+                result = build_video(background, audio, segments, "بسم الله الرحمن الرحيم", content,
+                                     temp_path / "final_output.mp4", width=270, height=480, fps=10,
+                                     target_min_duration=8, target_max_duration=60)
+                self.assertTrue(result["valid"])
 
         def test_encoder_failure_is_reported_as_video_error(self):
             frames = iter([bytes(16)] * 3)

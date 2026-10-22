@@ -330,7 +330,7 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
                       make_publisher: Callable[[str], Any] = publisher_factory,
                       retries: int = 3) -> dict[str, Any]:
     """Publish destinations independently; never re-upload a destination already confirmed."""
-if env_bool("MAKE_PUBLISH_ENABLED"):
+    if env_bool("MAKE_PUBLISH_ENABLED"):
         targets = ["make"]
         for legacy in ("youtube", "facebook"):      # Make handles every destination
             state = row.setdefault("platforms", {}).get(legacy)

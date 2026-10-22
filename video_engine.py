@@ -1,4 +1,14 @@
-"""Vertical video engine. Quran text is rendered as supplied; no audio is sped up or cut."""
+"""Vertical video engine. Quran text is rendered as supplied; no audio is sped up or cut.
+
+Rendering model
+---------------
+* The background is processed by FFmpeg (cover-crop, slow time-based zoom, light dark filter).
+* All text is drawn here with Pillow/RAQM as RGBA frames and piped to FFmpeg as raw video, so the
+  number of FFmpeg inputs does not grow with the number of words.
+* The Quran verse sits on an ornamental card and is highlighted word by word using the source
+  timestamps. Commentary texts (hook, explanation, benefit, call to action) stay fully visible on a
+  plain card with the current spoken word highlighted.
+"""
 from __future__ import annotations
 
 import json
@@ -7,8 +17,12 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
+import threading
+import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import urlparse
 
 from PIL import Image, ImageDraw, ImageFont, features
@@ -23,6 +37,21 @@ class VideoError(RuntimeError):
 # with RAQM: the text would be processed twice, giving reversed order and unjoined letters.
 TEXT_DIRECTION = "rtl"
 TEXT_LANGUAGE = "ar"
+
+WHITE = (255, 255, 255, 255)
+GOLD = (212, 175, 55, 255)
+GOLD_SOFT = (150, 122, 38, 255)
+LABEL_COLOR = (255, 218, 74, 255)
+VERSE_CARD_FILL = (9, 26, 34, 240)
+PLAIN_CARD_FILL = (0, 0, 0, 158)
+VERSE_HIGHLIGHT = (120, 240, 160, 255)   # light green: stands out from the gold frame
+PLAIN_HIGHLIGHT = (255, 218, 74, 255)    # yellow
+FADE_SECONDS = 0.20
+HIGHLIGHT_LINGER_SECONDS = 0.40          # keep the last word lit through short pauses between words
+FADE_STEPS = 8                           # alpha is quantised so identical frames can be reused
+MAX_DIM_STRENGTH = 0.80
+ORNATE_OPEN_BRACKET = "\ufd3f"
+ORNATE_CLOSE_BRACKET = "\ufd3e"
 
 
 def run_checked(command: list[str], timeout: int = 900) -> subprocess.CompletedProcess[str]:
@@ -110,6 +139,12 @@ def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFo
     return draw.textlength(_visual(text), font=font, direction=TEXT_DIRECTION, language=TEXT_LANGUAGE)
 
 
+def _text_center_offset(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> float:
+    """Vertical distance from the drawing origin to the optical middle of the text."""
+    box = draw.textbbox((0, 0), _visual(text), font=font, direction=TEXT_DIRECTION, language=TEXT_LANGUAGE)
+    return (box[1] + box[3]) / 2
+
+
 def _draw_text(draw: ImageDraw.ImageDraw, xy: tuple[float, float], text: str, font: ImageFont.FreeTypeFont,
                fill: tuple[int, int, int, int], stroke: bool = True) -> None:
     kwargs: dict[str, Any] = {"font": font, "fill": fill, "direction": TEXT_DIRECTION, "language": TEXT_LANGUAGE}
@@ -128,16 +163,20 @@ def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
             raise VideoError("تعذر تحميل الخط العربي المحدد.") from exc
 
 
+def _arabic_indic(number: int) -> str:
+    return str(int(number)).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
+
+
 def _wrap_words(words: list[str], font: ImageFont.FreeTypeFont, max_width: int, draw: ImageDraw.ImageDraw,
                 gap: int) -> list[list[int]]:
     lines: list[list[int]] = []
     current: list[int] = []
-    width = 0
+    width = 0.0
     for index, word in enumerate(words):
         word_width = _text_width(draw, word, font)
         if current and width + gap + word_width > max_width:
             lines.append(current)
-            current, width = [], 0
+            current, width = [], 0.0
         current.append(index)
         width += word_width + (gap if len(current) > 1 else 0)
     if current:
@@ -145,98 +184,356 @@ def _wrap_words(words: list[str], font: ImageFont.FreeTypeFont, max_width: int, 
     return lines
 
 
-def render_verse_overlay(text: str, current_word: int | None, destination: Path,
-                          width: int = 1080, height: int = 1920, font_path: str | None = None,
-                          draw_background: bool = True, highlight_only: bool = False) -> None:
-    words = text.split()
-    if not words or (current_word is not None and not 0 <= current_word < len(words)):
+def _star_points(cx: float, cy: float, outer: float, inner: float, points: int = 8,
+                 rotation: float = -math.pi / 2) -> list[tuple[float, float]]:
+    result = []
+    for k in range(points * 2):
+        angle = rotation + k * math.pi / points
+        radius = outer if k % 2 == 0 else inner
+        result.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
+    return result
+
+
+# --------------------------------------------------------------------------------------------
+# Layouts: static card + word positions. A frame is the card plus the words with one highlighted.
+# --------------------------------------------------------------------------------------------
+@dataclass
+class TextLayout:
+    base: Image.Image                           # full-size RGBA: card, ornaments and labels, no words
+    font: ImageFont.FreeTypeFont
+    placements: list[tuple[float, float, str]]  # (x, y, word); list index == word index
+    highlight: tuple[int, int, int, int]
+    word_count: int
+
+
+def draw_layout(layout: TextLayout, current_word: int | None = None) -> Image.Image:
+    """Return the card with every word visible and `current_word` (if any) highlighted."""
+    if current_word is not None and not 0 <= current_word < layout.word_count:
         raise VideoError("نص الآية أو فهرس الكلمة المتلوة غير صالح.")
-    font_path = font_path or discover_font()
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    image = layout.base.copy()
     draw = ImageDraw.Draw(image)
-    # Adapt font size and lines to retain all words at a readable size.
-    selected = None
-    for size in range(66, 39, -2):
-        font = _font(font_path, size)
-        lines = _wrap_words(words, font, int(width * 0.86), draw, max(12, size // 3))
-        if len(lines) <= 5:
-            selected = (font, lines, size)
-            break
-    if selected is None:
-        raise VideoError("تعذر عرض الآية كاملة بخط مقروء ضمن مساحة الشاشة.")
-    font, lines, size = selected
-    gap = max(12, size // 3)
-    line_height = int(size * 1.65)
-    content_height = len(lines) * line_height
-    top = int(height * 0.36 - content_height / 2)
-    left, right = int(width * 0.055), int(width * 0.945)
-    if draw_background:
-        draw.rounded_rectangle((left, top - 44, right, top + content_height + 44), radius=34, fill=(0, 0, 0, 155))
+    for index, (x, y, word) in enumerate(layout.placements):
+        color = layout.highlight if index == current_word else WHITE
+        _draw_text(draw, (x, y), word, layout.font, color)
+    return image
+
+
+def _place_lines(words: list[str], lines: list[list[int]], font: ImageFont.FreeTypeFont, gap: int,
+                 draw: ImageDraw.ImageDraw, width: int, start_y: float,
+                 line_height: float) -> list[tuple[float, float, str]]:
+    positions: dict[int, tuple[float, float, str]] = {}
     for row, indexes in enumerate(lines):
         widths = [_text_width(draw, words[index], font) for index in indexes]
         total = sum(widths) + gap * max(0, len(widths) - 1)
         cursor = (width + total) / 2
-        y = top + row * line_height
-        # Logical Arabic order starts at the right; render each word as an independent unit.
+        y = start_y + row * line_height
+        # Logical Arabic order starts at the right; each word is drawn as an independent unit.
         for index, word_width in zip(indexes, widths):
-            if highlight_only and index != current_word:
-                cursor -= word_width + gap
-                continue
             cursor -= word_width
-            color = (255, 218, 74, 255) if index == current_word else (255, 255, 255, 255)
-            _draw_text(draw, (cursor, y), words[index], font, color)
+            positions[index] = (cursor, y, words[index])
             cursor -= gap
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    image.save(destination, "PNG", optimize=True)
+    return [positions[index] for index in range(len(words))]
 
 
-def render_text_overlay(text: str, destination: Path, label: str = "", width: int = 1080,
-                        height: int = 1920, font_path: str | None = None) -> None:
+def build_text_layout(text: str, label: str = "", width: int = 1080, height: int = 1920,
+                      font_path: str | None = None) -> TextLayout:
+    """Plain dark card for commentary text; the spoken word is highlighted in yellow."""
     if not isinstance(text, str) or not text.strip() or "�" in text:
         raise VideoError("نص المشهد فارغ أو يحوي رمزًا تالفًا.")
     font_path = font_path or discover_font()
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    label_font = _font(font_path, 42)
-    # Find a size that keeps all text on screen; explicit line wrapping preserves all words.
-    font = None
-    lines = []
-    size = 68
-    for try_size in range(74, 41, -2):
-        candidate = _font(font_path, try_size)
-        logical = text.split()
-        candidate_lines: list[str] = []
-        current: list[str] = []
-        for word in logical:
-            attempt = " ".join(current + [word])
-            if current and _text_width(draw, attempt, candidate) > int(width * 0.84):
-                candidate_lines.append(" ".join(current))
-                current = [word]
-            else:
-                current.append(word)
-        if current:
-            candidate_lines.append(" ".join(current))
-        if len(candidate_lines) <= 7:
-            font, lines, size = candidate, candidate_lines, try_size
+    s = width / 1080.0
+    probe_draw = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    words = text.split()
+    chosen = None
+    for size in range(74, 41, -2):
+        pixel_size = max(8, int(round(size * s)))
+        font = _font(font_path, pixel_size)
+        gap = max(4, pixel_size // 3)
+        lines = _wrap_words(words, font, int(width * 0.84), probe_draw, gap)
+        if len(lines) <= 7:
+            chosen = (font, lines, pixel_size, gap)
             break
-    if font is None:
+    if chosen is None:
         raise VideoError("النص أطول من مساحة الشاشة؛ رُفض بدل إسقاط كلمات.")
-    label_y = int(height * 0.34)
-    body_y = label_y + (76 if label else 0)
-    line_height = int(size * 1.55)
-    block_height = len(lines) * line_height + (75 if label else 0)
+    font, lines, pixel_size, gap = chosen
+    line_height = int(pixel_size * 1.55)
+    label_block = int(75 * s) if label else 0
+    block_height = len(lines) * line_height + label_block
     top = int(height * 0.48 - block_height / 2)
-    draw.rounded_rectangle((int(width * .06), top - 46, int(width * .94), top + block_height + 50),
-                           radius=34, fill=(0, 0, 0, 158))
+    side = int(width * 0.06)
+    base = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(base)
+    draw.rounded_rectangle((side, top - int(46 * s), width - side, top + block_height + int(50 * s)),
+                           radius=max(4, int(34 * s)), fill=PLAIN_CARD_FILL)
     if label:
+        label_font = _font(font_path, max(8, int(42 * s)))
         label_width = _text_width(draw, label, label_font)
-        _draw_text(draw, ((width - label_width) / 2, top + 8), label, label_font, (255, 218, 74, 255), stroke=False)
-    start_y = top + (78 if label else 20)
-    for idx, line in enumerate(lines):
-        line_width = _text_width(draw, line, font)
-        _draw_text(draw, ((width - line_width) / 2, start_y + idx * line_height), line, font, (255, 255, 255, 255))
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    image.save(destination, "PNG", optimize=True)
+        _draw_text(draw, ((width - label_width) / 2, top + int(8 * s)), label, label_font, LABEL_COLOR, stroke=False)
+    start_y = top + (int(78 * s) if label else int(20 * s))
+    placements = _place_lines(words, lines, font, gap, draw, width, start_y, line_height)
+    return TextLayout(base, font, placements, PLAIN_HIGHLIGHT, len(words))
+
+
+def build_verse_layout(text: str, chapter_name: str = "", verse_number: int | None = None,
+                       width: int = 1080, height: int = 1920, font_path: str | None = None) -> TextLayout:
+    """Ornamental Quran card: gold frame, corner stars, surah banner, verse-number medallion, ornate brackets."""
+    if not isinstance(text, str) or not text.strip() or "�" in text:
+        raise VideoError("نص الآية فارغ أو يحوي رمزًا تالفًا.")
+    font_path = font_path or discover_font()
+    s = width / 1080.0
+    probe_draw = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    words = text.split()
+    chosen = None
+    for size in range(66, 39, -2):
+        pixel_size = max(8, int(round(size * s)))
+        font = _font(font_path, pixel_size)
+        gap = max(4, pixel_size // 3)
+        lines = _wrap_words(words, font, int(width * 0.70), probe_draw, gap)
+        if len(lines) <= 6:
+            chosen = (font, lines, pixel_size, gap)
+            break
+    if chosen is None:
+        raise VideoError("تعذر عرض الآية كاملة بخط مقروء ضمن مساحة الشاشة.")
+    font, lines, pixel_size, gap = chosen
+    line_height = int(pixel_size * 1.70)
+    block_height = len(lines) * line_height
+    pad_top, pad_bottom = int(78 * s), int(82 * s)
+    card_height = pad_top + block_height + pad_bottom
+    card_left, card_right = int(width * 0.05), int(width * 0.95)
+    card_top = int(height * 0.40 - card_height / 2)
+    card_bottom = card_top + card_height
+    line_w = max(2, int(5 * s))
+    thin_w = max(1, int(2 * s))
+
+    base = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(base)
+    draw.rounded_rectangle((card_left, card_top, card_right, card_bottom), radius=max(6, int(40 * s)),
+                           fill=VERSE_CARD_FILL, outline=GOLD, width=line_w)
+    inset = int(18 * s)
+    inner = (card_left + inset, card_top + inset, card_right - inset, card_bottom - inset)
+    draw.rounded_rectangle(inner, radius=max(4, int(28 * s)), outline=GOLD_SOFT, width=thin_w)
+    # Corner stars sit on the corners of the inner frame.
+    for cx, cy in ((inner[0], inner[1]), (inner[2], inner[1]), (inner[0], inner[3]), (inner[2], inner[3])):
+        draw.polygon(_star_points(cx, cy, 22 * s, 9 * s), fill=GOLD, outline=VERSE_CARD_FILL)
+        draw.ellipse((cx - 4 * s, cy - 4 * s, cx + 4 * s, cy + 4 * s), fill=VERSE_CARD_FILL)
+
+    center_x = (card_left + card_right) / 2
+    if chapter_name.strip():
+        banner_font = _font(font_path, max(8, int(40 * s)))
+        banner_text = f"سورة {chapter_name.strip()}"
+        banner_text_width = _text_width(draw, banner_text, banner_font)
+        half_w, half_h = banner_text_width / 2 + 52 * s, 32 * s
+        cy = card_top
+        banner = [(center_x - half_w, cy), (center_x - half_w + half_h, cy - half_h),
+                  (center_x + half_w - half_h, cy - half_h), (center_x + half_w, cy),
+                  (center_x + half_w - half_h, cy + half_h), (center_x - half_w + half_h, cy + half_h)]
+        draw.polygon(banner, fill=VERSE_CARD_FILL, outline=GOLD, width=line_w)
+        offset = _text_center_offset(draw, banner_text, banner_font)
+        _draw_text(draw, (center_x - banner_text_width / 2, cy - offset), banner_text, banner_font, GOLD, stroke=False)
+    if verse_number is not None:
+        number_font = _font(font_path, max(8, int(36 * s)))
+        number_text = _arabic_indic(verse_number)
+        number_width = _text_width(draw, number_text, number_font)
+        radius = max(40 * s, number_width / 2 + 16 * s)
+        draw.polygon(_star_points(center_x, card_bottom, radius, radius * 0.84, points=12),
+                     fill=VERSE_CARD_FILL, outline=GOLD, width=line_w)
+        offset = _text_center_offset(draw, number_text, number_font)
+        _draw_text(draw, (center_x - number_width / 2, card_bottom - offset), number_text, number_font, GOLD, stroke=False)
+
+    # Ornate brackets flank the verse, vertically centred on the text block.
+    bracket_font = _font(font_path, max(10, int(150 * s)))
+    block_top = card_top + pad_top
+    middle = block_top + block_height / 2
+    bracket_offset = _text_center_offset(draw, ORNATE_OPEN_BRACKET, bracket_font)
+    open_width = _text_width(draw, ORNATE_OPEN_BRACKET, bracket_font)
+    _draw_text(draw, (card_right - inset - 14 * s - open_width, middle - bracket_offset),
+               ORNATE_OPEN_BRACKET, bracket_font, GOLD, stroke=False)
+    _draw_text(draw, (card_left + inset + 14 * s, middle - bracket_offset),
+               ORNATE_CLOSE_BRACKET, bracket_font, GOLD, stroke=False)
+
+    placements = _place_lines(words, lines, font, gap, draw, width, block_top, line_height)
+    return TextLayout(base, font, placements, VERSE_HIGHLIGHT, len(words))
+
+
+def build_dim_layer(width: int, height: int, strength: float) -> Image.Image:
+    """Light black filter for the whole video: slightly stronger around the text band than at the edges."""
+    if not isinstance(strength, (int, float)) or isinstance(strength, bool) or not 0 <= strength <= MAX_DIM_STRENGTH:
+        raise VideoError(f"شدة الفلتر الداكن يجب أن تكون بين 0 و{MAX_DIM_STRENGTH}.")
+    column = Image.new("L", (1, height))
+    values = []
+    for y in range(height):
+        bump = math.exp(-(((y / height) - 0.42) / 0.22) ** 2)
+        values.append(int(round(255 * min(0.95, strength * (0.80 + 0.45 * bump)))))
+    column.putdata(values)
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    layer.putalpha(column.resize((width, height)))
+    return layer
+
+
+# --------------------------------------------------------------------------------------------
+# Word timing for spoken commentary
+# --------------------------------------------------------------------------------------------
+def _word_weight(word: str) -> float:
+    letters = sum(1 for ch in word if unicodedata.category(ch).startswith("L"))
+    weight = float(max(1, letters))
+    if word and word[-1] in "،,.؟?!؛:":
+        weight += 1.5  # speakers pause after punctuation
+    return weight
+
+
+def estimate_word_timings(words: list[str], duration: float, lead: float = 0.08,
+                          tail: float = 0.12) -> list[tuple[float, float, int]]:
+    """Distribute `duration` over the words by length. An ESTIMATE, used only for commentary speech."""
+    if not words or duration <= 0:
+        raise VideoError("لا يمكن تقدير توقيت الكلمات بلا نص أو مدة.")
+    span = max(0.1, duration - lead - tail)
+    weights = [_word_weight(word) for word in words]
+    total = sum(weights)
+    result = []
+    cursor = lead
+    for index, weight in enumerate(weights):
+        length = span * weight / total
+        result.append((cursor, cursor + length, index))
+        cursor += length
+    return result
+
+
+def align_speech_words(text: str, boundaries: list[dict[str, Any]] | None,
+                       duration: float) -> tuple[list[tuple[float, float, int]], str]:
+    """Return ([(start_s, end_s, word_index)], source) for spoken commentary.
+
+    Real TTS word boundaries are used only when there is exactly one boundary per word and the
+    timings are ordered and inside the audio; otherwise the timings are an estimate. The source is
+    reported ("tts_word_boundary" or "estimated") so the production report stays honest.
+    """
+    words = text.split()
+    if not words:
+        raise VideoError("نص الكلام المنطوق فارغ.")
+    if boundaries and len(boundaries) == len(words):
+        rows: list[tuple[float, float, int]] = []
+        valid = True
+        previous_start = -1.0
+        for index, item in enumerate(boundaries):
+            try:
+                start = float(item["start_ms"]) / 1000.0
+                end = float(item["end_ms"]) / 1000.0
+            except (KeyError, TypeError, ValueError):
+                valid = False
+                break
+            if start < 0 or end <= start or start < previous_start or start > duration + 0.35:
+                valid = False
+                break
+            previous_start = start
+            rows.append((start, min(end, duration), index))
+        if valid and rows:
+            return rows, "tts_word_boundary"
+    return estimate_word_timings(words, duration), "estimated"
+
+
+# --------------------------------------------------------------------------------------------
+# Timeline and frames
+# --------------------------------------------------------------------------------------------
+@dataclass
+class Scene:
+    name: str
+    start: float
+    end: float
+    layout: TextLayout
+    words: list[tuple[float, float, int]]   # absolute (start_s, end_s, word_index), sorted by start
+    fade_in: float = FADE_SECONDS
+    fade_out: float = FADE_SECONDS
+
+
+def scene_word_at(scene: Scene, t: float) -> int | None:
+    current: tuple[float, int] | None = None
+    for start, end, index in scene.words:
+        if start <= t:
+            current = (end, index)
+        else:
+            break
+    if current is not None and t <= current[0] + HIGHLIGHT_LINGER_SECONDS:
+        return current[1]
+    return None
+
+
+def scene_alpha(scene: Scene, t: float) -> float:
+    value = 1.0
+    if scene.fade_in > 0:
+        value = min(value, (t - scene.start) / scene.fade_in)
+    if scene.fade_out > 0:
+        value = min(value, (scene.end - t) / scene.fade_out)
+    value = max(0.0, min(1.0, value))
+    return round(value * FADE_STEPS) / FADE_STEPS
+
+
+def _with_alpha(image: Image.Image, alpha: float) -> Image.Image:
+    result = image.copy()
+    result.putalpha(image.getchannel("A").point(lambda value, k=alpha: int(value * k)))
+    return result
+
+
+def render_frames(scenes: list[Scene], total_frames: int, fps: int, width: int, height: int) -> Iterator[bytes]:
+    """Yield one raw RGBA frame per output frame; identical consecutive states reuse the same bytes."""
+    blank = bytes(width * height * 4)
+    last_key: tuple[Any, ...] | None = None
+    last_bytes = blank
+    cached_state: tuple[int, int | None] | None = None
+    cached_image: Image.Image | None = None
+    for n in range(total_frames):
+        t = n / fps
+        scene = next((item for item in scenes if item.start <= t < item.end), None)
+        if scene is None:
+            key: tuple[Any, ...] | None = None
+        else:
+            alpha = scene_alpha(scene, t)
+            key = None if alpha <= 0 else (id(scene), scene_word_at(scene, t), alpha)
+        if key != last_key:
+            if key is None or scene is None:
+                last_bytes = blank
+            else:
+                state = (key[0], key[1])
+                if state != cached_state or cached_image is None:
+                    cached_image = draw_layout(scene.layout, key[1])
+                    cached_state = state
+                image = cached_image if key[2] >= 1.0 else _with_alpha(cached_image, key[2])
+                last_bytes = image.tobytes()
+            last_key = key
+        yield last_bytes
+
+
+def _encode_with_overlay_pipe(command: list[str], frames: Iterator[bytes], timeout: int) -> None:
+    """Run FFmpeg, feeding the overlay frames to its stdin. Any failure becomes a VideoError."""
+    with tempfile.TemporaryFile() as stderr_file:
+        try:
+            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=stderr_file)
+        except FileNotFoundError:
+            raise VideoError("الأداة المطلوبة غير مثبتة: ffmpeg") from None
+        watchdog = threading.Timer(timeout, process.kill)
+        watchdog.start()
+        pipe_closed_early = False
+        try:
+            assert process.stdin is not None
+            for chunk in frames:
+                process.stdin.write(chunk)
+        except (BrokenPipeError, OSError):
+            pipe_closed_early = True
+        except BaseException:
+            process.kill()
+            raise
+        finally:
+            try:
+                if process.stdin is not None:
+                    process.stdin.close()
+            except OSError:
+                pass
+            return_code = process.wait()
+            watchdog.cancel()
+        if return_code != 0 or pipe_closed_early:
+            stderr_file.seek(0)
+            lines = stderr_file.read().decode("utf-8", errors="replace").strip().splitlines()
+            detail = lines[-1][-300:] if lines else "لا توجد تفاصيل"
+            reason = "انتهت المهلة" if return_code == -9 else f"برمز {return_code}"
+            raise VideoError(f"فشل ffmpeg {reason}: {detail}")
 
 
 def _audio_concat(audio_files: list[Path], destination: Path) -> float:
@@ -267,7 +564,10 @@ def _probe_audio_seconds(path: Path) -> float:
 def build_video(background: Path, audio_files: dict[str, Path], recitation_segments: list[dict[str, int]],
                 verse_text: str, content: dict[str, Any], output_path: Path,
                 width: int = 1080, height: int = 1920, fps: int = 30,
-                target_min_duration: float = 45, target_max_duration: float = 60) -> dict[str, Any]:
+                target_min_duration: float = 45, target_max_duration: float = 60,
+                tts_word_boundaries: dict[str, list[dict[str, Any]]] | None = None,
+                chapter_name: str = "", verse_number: int | None = None,
+                dim_strength: float = 0.30) -> dict[str, Any]:
     """Build exactly ordered scenes without cropping or speeding up the recitation."""
     required = ["hook", "explanation", "practical_benefit", "call_to_action"]
     if not all(isinstance(content.get(key), str) and content[key].strip() for key in required):
@@ -279,6 +579,7 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
         raise VideoError("مقاطع الصوت الستة المطلوبة غير مكتملة.")
     if not recitation_segments:
         raise VideoError("توقيتات الكلمات الحقيقية غير متاحة.")
+    dim_layer = build_dim_layer(width, height, float(dim_strength))  # validates the strength early
     bg_probe = probe(background)
     if not any(s.get("codec_type") == "video" for s in bg_probe.get("streams", [])):
         raise VideoError("ملف الخلفية لا يحتوي مسار فيديو.")
@@ -308,64 +609,82 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
     if total_audio > float(target_max_duration):
         # Longer output is permitted only because the complete recitation must not be truncated.
         video_duration = total_audio
-    overlays: list[tuple[Path, float, float]] = []
+
+    boundaries = tts_word_boundaries or {}
+    timing_sources: dict[str, str] = {}
+    scenes: list[Scene] = []
+
+    # Hook: the first scene appears immediately (no fade-in) so the opening frame is never empty.
     hook_start, hook_end = stage_intervals["hook"]
-    hook_png = work / "hook.png"
-    render_text_overlay(content["hook"], hook_png, "فكرة الآية", width, height, font_path)
-    overlays.append((hook_png, hook_start, hook_end))
+    hook_timings, timing_sources["hook"] = align_speech_words(content["hook"], boundaries.get("hook"), durations["hook"])
+    scenes.append(Scene("hook", hook_start, hook_end,
+                        build_text_layout(content["hook"], "فكرة الآية", width, height, font_path),
+                        [(hook_start + a, hook_start + b, i) for a, b, i in hook_timings], fade_in=0.0))
+
+    # Quran verse: ornamental card, words highlighted with the real source timestamps only.
     rec_start, rec_end = stage_intervals["recitation"]
-    base_verse = work / "verse-base.png"
-    render_verse_overlay(verse_text, None, base_verse, width, height, font_path)
-    overlays.append((base_verse, rec_start, rec_end))
-    words = verse_text.split()
-    for index, segment in enumerate(recitation_segments):
+    verse_words = verse_text.split()
+    recitation_timings: list[tuple[float, float, int]] = []
+    for segment in recitation_segments:
         word_index = int(segment["word_index"])
-        if not 0 <= word_index < len(words):
+        if not 0 <= word_index < len(verse_words):
             raise VideoError("فهرس توقيت كلمة خارج نص الآية.")
         start = rec_start + int(segment["start_ms"]) / 1000.0
         end = rec_start + int(segment["end_ms"]) / 1000.0
         if start < rec_start or end > rec_end + 0.3 or end <= start:
             raise VideoError("توقيت الكلمة لا يقع داخل مقطع التلاوة.")
-        frame = work / f"word-{index:04d}.png"
-        render_verse_overlay(verse_text, word_index, frame, width, height, font_path,
-                             draw_background=False, highlight_only=True)
-        overlays.append((frame, start, end))
+        recitation_timings.append((start, end, word_index))
+    recitation_timings.sort(key=lambda row: row[0])
+    scenes.append(Scene("recitation", rec_start, rec_end,
+                        build_verse_layout(verse_text, chapter_name, verse_number, width, height, font_path),
+                        recitation_timings))
+
+    # The closing phrase is short and always fully visible, without a moving highlight.
     seal_start, seal_end = stage_intervals["seal"]
-    seal_png = work / "seal.png"
-    render_text_overlay("صدق الله العظيم", seal_png, "", width, height, font_path)
-    overlays.append((seal_png, seal_start, seal_end))
-    for key, label in (("explanation", "المعنى"), ("benefit", "فائدة عملية"), ("cta", "شارك الفائدة")):
+    scenes.append(Scene("seal", seal_start, seal_end,
+                        build_text_layout("صدق الله العظيم", "", width, height, font_path), []))
+
+    for key, label, text_key in (("explanation", "المعنى", "explanation"),
+                                 ("benefit", "فائدة عملية", "practical_benefit"),
+                                 ("cta", "شارك الفائدة", "call_to_action")):
         start, end = stage_intervals[key]
-        if key == "cta" and video_duration > total_audio:
-            # Keep the final call-to-action on screen over any deliberate minimum-length padding.
-            end = video_duration
-        text_key = {"explanation": "explanation", "benefit": "practical_benefit", "cta": "call_to_action"}[key]
-        frame = work / f"{key}.png"
-        render_text_overlay(content[text_key], frame, label, width, height, font_path)
-        overlays.append((frame, start, end))
-    command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-stream_loop", "-1", "-i", str(background), "-i", str(combined_audio)]
-    for frame, start, end in overlays:
-        frame_duration = max(0.08, end - start + 0.08)
-        command.extend(["-loop", "1", "-framerate", str(fps), "-t", f"{frame_duration:.6f}", "-i", str(frame)])
+        timings, timing_sources[key] = align_speech_words(content[text_key], boundaries.get(key), durations[key])
+        fade_out = FADE_SECONDS
+        if key == "cta":
+            if video_duration > total_audio:
+                # Keep the final call-to-action on screen over any deliberate minimum-length padding.
+                end = video_duration
+            fade_out = 0.0
+        scenes.append(Scene(key, start, end, build_text_layout(content[text_key], label, width, height, font_path),
+                            [(start + a, start + b, i) for a, b, i in timings], fade_out=fade_out))
+
+    total_frames = int(math.ceil(video_duration * fps))
+    zoom = f"(1+0.08*min(t/{max(video_duration, 1.0):.3f},1))"
+    dim_path = work / "dim.png"
+    use_dim = float(dim_strength) > 0
+    if use_dim:
+        dim_layer.save(dim_path, "PNG")
+    command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+               "-stream_loop", "-1", "-i", str(background), "-i", str(combined_audio),
+               "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}", "-framerate", str(fps), "-i", "pipe:0"]
+    if use_dim:
+        command.extend(["-loop", "1", "-framerate", str(fps), "-i", str(dim_path)])
     filters = [
-        f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},"
-        f"zoompan=z='min(zoom+0.00015,1.08)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={width}x{height}:fps={fps},"
-        "eq=contrast=1.03:saturation=1.06,format=yuv420p[base]"
+        f"[0:v]scale=w='trunc({width}*{zoom}/2)*2':h='trunc({height}*{zoom}/2)*2':eval=frame:"
+        f"force_original_aspect_ratio=increase,crop={width}:{height},setsar=1,"
+        "eq=contrast=1.03:saturation=1.06,format=yuv420p[bg]"
     ]
-    current = "base"
-    for index, (_, start, end) in enumerate(overlays):
-        # PNG inputs are placed at their real timeline offset; no inferred word timings are used.
-        nxt = f"v{index}"
-        input_index = 2 + index
-        filters.append(f"[{input_index}:v]format=rgba,setpts=PTS-STARTPTS+{start:.6f}/TB[ov{index}]")
-        filters.append(f"[{current}][ov{index}]overlay=0:0:eof_action=pass:enable='between(t,{start:.6f},{end:.6f})'[{nxt}]")
-        current = nxt
+    current = "bg"
+    if use_dim:
+        filters.append(f"[{current}][3:v]overlay=0:0[dimmed]")
+        current = "dimmed"
+    filters.append(f"[{current}][2:v]overlay=0:0:eof_action=pass,format=yuv420p[vout]")
     filters.append(f"[1:a]apad=whole_dur={video_duration:.6f},atrim=duration={video_duration:.6f},asetpts=PTS-STARTPTS[aout]")
-    command.extend(["-filter_complex", ";".join(filters), "-map", f"[{current}]", "-map", "[aout]",
+    command.extend(["-filter_complex", ";".join(filters), "-map", "[vout]", "-map", "[aout]",
                     "-t", f"{video_duration:.6f}", "-r", str(fps), "-c:v", "libx264", "-preset", "medium",
                     "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
                     "-ar", "48000", "-movflags", "+faststart", str(output_path)])
-    run_checked(command, timeout=1800)
+    _encode_with_overlay_pipe(command, render_frames(scenes, total_frames, fps, width, height), timeout=3000)
     if not output_path.is_file():
         raise VideoError("لم ينتج FFmpeg ملف الفيديو النهائي.")
     validation = validate_video(output_path, width, height, fps, expected_duration=video_duration)
@@ -373,6 +692,8 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                        "recitation_duration_seconds": round(rec_duration, 3),
                        "target_duration_met": video_duration >= target_min_duration,
                        "padding_seconds": round(max(0, video_duration - total_audio), 3),
+                       "dim_strength": float(dim_strength),
+                       "tts_word_timing": dict(timing_sources),
                        "font_source": {"path": font_path, **_font_license_metadata(font_path)}})
     return validation
 
@@ -427,32 +748,33 @@ def validate_video(path: Path, width: int = 1080, height: int = 1920, fps: int =
 
 # Tests are embedded to keep the requested source-file count at five.
 if __name__ == "__main__":
-    import tempfile
     import unittest
     from unittest.mock import patch
 
     class VideoEngineTests(unittest.TestCase):
-        def test_text_overlay_rejects_empty_text(self):
-            with tempfile.TemporaryDirectory() as temp:
-                with self.assertRaises(VideoError):
-                    render_text_overlay("", Path(temp) / "empty.png")
+        def test_text_layout_rejects_empty_text(self):
+            with self.assertRaises(VideoError):
+                build_text_layout("")
+            with self.assertRaises(VideoError):
+                build_verse_layout("   ")
 
         def test_verse_highlight_index_must_be_valid(self):
-            with tempfile.TemporaryDirectory() as temp:
-                with self.assertRaises(VideoError):
-                    render_verse_overlay("بسم الله", 2, Path(temp) / "bad.png")
+            layout = build_verse_layout("بسم الله", width=540, height=960)
+            with self.assertRaises(VideoError):
+                draw_layout(layout, 2)
+            with self.assertRaises(VideoError):
+                draw_layout(layout, -1)
 
-        def test_word_highlight_layer_is_transparent_and_does_not_repeat_card_background(self):
-            with tempfile.TemporaryDirectory() as temp:
-                base = Path(temp) / "base.png"
-                word = Path(temp) / "word.png"
-                render_verse_overlay("بسم الله", None, base, width=540, height=960)
-                render_verse_overlay("بسم الله", 0, word, width=540, height=960,
-                                     draw_background=False, highlight_only=True)
-                with Image.open(base) as base_image, Image.open(word) as word_image:
-                    base_alpha = base_image.getchannel("A").histogram()
-                    word_alpha = word_image.getchannel("A").histogram()
-                    self.assertGreater(sum(base_alpha[1:]), sum(word_alpha[1:]))
+        def test_highlight_changes_only_the_current_word_and_keeps_the_card(self):
+            layout = build_verse_layout("بسم الله الرحمن", chapter_name="الفاتحة", verse_number=1, width=540, height=960)
+            plain = draw_layout(layout, None)
+            lit = draw_layout(layout, 1)
+            self.assertEqual(plain.size, lit.size)
+            plain_bytes, lit_bytes = plain.tobytes(), lit.tobytes()
+            changed = sum(1 for i in range(0, len(plain_bytes), 4) if plain_bytes[i:i + 4] != lit_bytes[i:i + 4])
+            total_ink = sum(1 for i in range(3, len(plain_bytes), 4) if plain_bytes[i] > 0)
+            self.assertGreater(changed, 0)
+            self.assertLess(changed, total_ink * 0.25)
 
         def test_custom_font_requires_explicit_license(self):
             with patch.dict(os.environ, {"ARABIC_FONT": ""}):
@@ -499,15 +821,19 @@ if __name__ == "__main__":
             def spy(self, xy, text, *args, **kwargs):
                 calls.append((text, kwargs.get("direction"), kwargs.get("language")))
                 return real_text(self, xy, text, *args, **kwargs)
-            with tempfile.TemporaryDirectory() as temp, patch.object(ImageDraw.ImageDraw, "text", spy):
-                render_text_overlay("ما هو الإيمان بالغيب؟", Path(temp) / "t.png", "فكرة الآية", width=540, height=960)
-                render_verse_overlay("بسم الله الرحمن", None, Path(temp) / "v.png", width=540, height=960)
+            with patch.object(ImageDraw.ImageDraw, "text", spy):
+                plain = build_text_layout("ما هو الإيمان بالغيب؟", "فكرة الآية", width=540, height=960)
+                verse = build_verse_layout("بسم الله الرحمن", "الفاتحة", 1, width=540, height=960)
+                draw_layout(plain, 0)
+                draw_layout(verse, 1)
             self.assertTrue(calls)
+            allowed_ornate = {ORNATE_OPEN_BRACKET, ORNATE_CLOSE_BRACKET}
             for text, direction, language in calls:
                 self.assertEqual(direction, "rtl")
                 self.assertEqual(language, "ar")
-                # Canonical logical text only: never presentation forms (U+FB50-U+FDFF, U+FE70-U+FEFF).
-                self.assertFalse(any("\ufb50" <= ch <= "\ufdff" or "\ufe70" <= ch <= "\ufeff" for ch in text), text)
+                # Canonical logical text only: never Arabic presentation forms (the ornate brackets are punctuation).
+                self.assertFalse(any(("\ufb50" <= ch <= "\ufdff" or "\ufe70" <= ch <= "\ufeff") and ch not in allowed_ornate
+                                     for ch in text), text)
 
         def test_joined_word_is_narrower_than_its_isolated_letters(self):
             # Proof that contextual shaping is applied: a connected word is not a row of isolated glyphs.
@@ -517,5 +843,117 @@ if __name__ == "__main__":
             joined = _text_width(draw, word, font)
             isolated = 4 * _text_width(draw, "ب", font)
             self.assertLess(joined, isolated)
+
+        # ----- Dark filter -----
+        def test_dim_layer_is_light_black_and_strongest_near_the_text_band(self):
+            layer = build_dim_layer(100, 400, 0.30)
+            alpha = layer.getchannel("A")
+            top, middle = alpha.getpixel((50, 2)), alpha.getpixel((50, int(400 * 0.42)))
+            self.assertGreater(middle, top)
+            self.assertLessEqual(alpha.getextrema()[1], int(255 * 0.30 * 1.25) + 2)
+            self.assertEqual(layer.getpixel((50, 200))[:3], (0, 0, 0))
+
+        def test_dim_strength_must_be_in_range(self):
+            for bad in (-0.1, 0.9, True, "0.3"):
+                with self.assertRaises(VideoError):
+                    build_dim_layer(10, 10, bad)  # type: ignore[arg-type]
+            self.assertEqual(build_dim_layer(10, 10, 0).getchannel("A").getextrema()[1], 0)
+
+        # ----- Commentary word timing -----
+        def test_estimated_timings_cover_duration_in_order_and_weight_by_length(self):
+            words = ["في", "الاستقامة", "خير"]
+            rows = estimate_word_timings(words, 3.0)
+            self.assertEqual([r[2] for r in rows], [0, 1, 2])
+            self.assertTrue(all(a < b for a, b, _ in rows))
+            self.assertTrue(all(rows[i][1] <= rows[i + 1][0] + 1e-9 for i in range(2)))
+            self.assertGreater(rows[1][1] - rows[1][0], rows[0][1] - rows[0][0])
+            self.assertLessEqual(rows[-1][1], 3.0)
+
+        def test_real_boundaries_are_used_only_when_count_and_bounds_match(self):
+            text = "كلمة اولى وثانية"
+            good = [{"start_ms": 100, "end_ms": 500}, {"start_ms": 600, "end_ms": 900}, {"start_ms": 1000, "end_ms": 1400}]
+            rows, source = align_speech_words(text, good, 1.6)
+            self.assertEqual(source, "tts_word_boundary")
+            self.assertEqual(rows[1], (0.6, 0.9, 1))
+            _, source = align_speech_words(text, good[:2], 1.6)
+            self.assertEqual(source, "estimated")
+            _, source = align_speech_words(text, None, 1.6)
+            self.assertEqual(source, "estimated")
+            unordered = [good[1], good[0], good[2]]
+            _, source = align_speech_words(text, unordered, 1.6)
+            self.assertEqual(source, "estimated")
+            beyond = [{"start_ms": 100, "end_ms": 500}, {"start_ms": 600, "end_ms": 900}, {"start_ms": 9000, "end_ms": 9400}]
+            _, source = align_speech_words(text, beyond, 1.6)
+            self.assertEqual(source, "estimated")
+
+        # ----- Timeline -----
+        def test_timeline_highlight_fade_and_blank_gaps(self):
+            layout = build_text_layout("كلمة اولى ثانية", width=270, height=480)
+            scene = Scene("x", 1.0, 3.0, layout, [(1.0, 1.5, 0), (1.5, 2.0, 1), (2.0, 2.5, 2)], fade_in=0.0)
+            self.assertIsNone(scene_word_at(scene, 0.9))
+            self.assertEqual(scene_word_at(scene, 1.2), 0)
+            self.assertEqual(scene_word_at(scene, 1.6), 1)
+            self.assertEqual(scene_word_at(scene, 2.7), 2)       # lingers just after the last word
+            self.assertIsNone(scene_word_at(scene, 2.95))
+            self.assertEqual(scene_alpha(scene, 1.0), 1.0)         # no fade-in
+            self.assertLess(scene_alpha(scene, 2.95), 1.0)         # fading out
+            frames = list(render_frames([scene], 40, 10, 270, 480))  # 4 seconds at 10 fps
+            self.assertEqual(len(frames), 40)
+            blank = bytes(270 * 480 * 4)
+            self.assertEqual(frames[0], blank)                      # before the scene
+            self.assertNotEqual(frames[15], blank)                  # inside the scene
+            self.assertEqual(frames[39], blank)                     # after the scene
+            self.assertIs(frames[10], frames[11])                   # same word, reused bytes
+
+        # ----- Whole pipeline at a small size -----
+        def test_full_build_uses_card_dim_and_reports_timing_sources(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                             "-i", "color=c=0x303030:s=360x640:r=10:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                             str(temp_path / "bg.mp4")])
+                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "explanation": 2.0, "benefit": 1.5, "cta": 1.0}
+                audio = {}
+                for name, seconds in lengths.items():
+                    audio[name] = temp_path / f"{name}.wav"
+                    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                                 "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
+                segments = [{"word_index": i, "start_ms": 100 + i * 450, "end_ms": 500 + i * 450} for i in range(4)]
+                content = {"hook": "هل تعلم معنى هذه الآية؟", "explanation": "شرح موجز للآية الكريمة",
+                           "practical_benefit": "فائدة عملية قصيرة", "call_to_action": "شارك الفائدة"}
+                hook_boundaries = [{"start_ms": 50 + i * 150, "end_ms": 180 + i * 150} for i in range(5)]
+                output = temp_path / "final_output.mp4"
+                result = build_video(temp_path / "bg.mp4", audio, segments, "بسم الله الرحمن الرحيم", content, output,
+                                     width=270, height=480, fps=10, target_min_duration=8, target_max_duration=60,
+                                     tts_word_boundaries={"hook": hook_boundaries}, chapter_name="الفاتحة",
+                                     verse_number=1, dim_strength=0.30)
+                self.assertTrue(result["valid"])
+                self.assertEqual(result["tts_word_timing"]["hook"], "tts_word_boundary")
+                self.assertEqual(result["tts_word_timing"]["explanation"], "estimated")
+                self.assertEqual(result["dim_strength"], 0.30)
+
+                def frame_at(second: float) -> Image.Image:
+                    frame = temp_path / f"frame-{second}.png"
+                    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", str(second),
+                                 "-i", str(output), "-frames:v", "1", str(frame)])
+                    with Image.open(frame) as image:
+                        return image.convert("RGB").copy()
+                def gold_pixels(image: Image.Image) -> int:
+                    data = image.tobytes()
+                    return sum(1 for i in range(0, len(data), 3)
+                               if data[i] > 150 and 110 < data[i + 1] < 210 and data[i + 2] < 130)
+                recitation_frame = frame_at(2.0)
+                # The recitation card shows gold ornaments; a hook frame does not (solid background).
+                self.assertGreater(gold_pixels(recitation_frame), 40)
+                self.assertLess(gold_pixels(frame_at(0.4)), gold_pixels(recitation_frame) / 2)
+                # The dark filter darkens the plain background (0x30 = 48) at the very top of the frame.
+                top_pixel = recitation_frame.getpixel((135, 2))
+                self.assertLess(top_pixel[0], 44)
+
+        def test_encoder_failure_is_reported_as_video_error(self):
+            frames = iter([bytes(16)] * 3)
+            with self.assertRaises(VideoError):
+                _encode_with_overlay_pipe(["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", "does-not-exist.mp4",
+                                           "-f", "null", "-"], frames, timeout=30)
 
     unittest.main()

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -32,12 +33,31 @@ YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 YOUTUBE_READ_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
 YOUTUBE_UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 
+# Gemini: delays (seconds) between attempts. len(delays)+1 attempts in total.
+GEMINI_RETRY_DELAYS = (2.0, 6.0, 15.0, 30.0)
+GEMINI_REQUEST_TIMEOUT_MS = 90_000
+# Exceptions without an HTTP code (network layer) are retried when their class
+# hierarchy contains one of these names (httpx / aiohttp / builtins).
+GEMINI_TRANSIENT_EXCEPTION_NAMES = {
+    "TransportError", "TimeoutException", "ConnectionError", "TimeoutError",
+    "ServerDisconnectedError", "ClientConnectionError",
+}
+
+# edge-tts: delays between synthesis attempts for one text segment.
+TTS_RETRY_DELAYS = (2.0, 5.0)
+# Known misspellings of Microsoft voice names, corrected before the availability check.
+TTS_VOICE_ALIASES = {"ar-EG-ShakerNeural": "ar-EG-ShakirNeural"}
+
 
 class ServiceError(RuntimeError):
     """A sanitized, user-safe service or validation failure."""
     def __init__(self, message: str, platform_state: dict[str, Any] | None = None):
         super().__init__(message)
         self.platform_state = platform_state or {}
+
+
+class _GeminiTransient(Exception):
+    """Internal marker: a Gemini failure that is worth retrying."""
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -379,7 +399,6 @@ class QuranFoundationClient:
             raise ServiceError("تعذر اقتطاع الآية من صوت السورة؛ تحقق من تثبيت FFmpeg وصلاحية ملف الصوت.") from None
         if not destination.is_file() or destination.stat().st_size < 4096:
             destination.unlink(missing_ok=True)
-            chapter_audio.unlink(missing_ok=True)
             raise ServiceError("ملف التلاوة المقتطع فارغ أو غير مكتمل.")
         chapter_audio.unlink(missing_ok=True)
         return QuranRecitation(reciter_id, reciter_name, full_url, segments, source_url,
@@ -497,18 +516,74 @@ def validate_generated_content(data: Any) -> dict[str, Any]:
             "call_to_action": data["call_to_action"].strip()}
 
 
+def _gemini_exception_info(exc: BaseException) -> tuple[bool, int | None, str]:
+    """Classify a Gemini SDK/network exception as (retryable, http_code, status_text).
+
+    google-genai API errors expose `.code` (HTTP status) and `.status` (e.g. UNAVAILABLE).
+    Network-layer errors have no code and are recognised by class name.
+    """
+    code = getattr(exc, "code", None)
+    if isinstance(code, bool) or not isinstance(code, int):
+        code = None
+    status = getattr(exc, "status", None)
+    status_text = status if isinstance(status, str) else ""
+    if code is not None:
+        return (code in {408, 425, 429} or 500 <= code <= 599), code, status_text
+    names = {cls.__name__ for cls in type(exc).__mro__}
+    return bool(names & GEMINI_TRANSIENT_EXCEPTION_NAMES), None, status_text
+
+
+def _describe_gemini_exception(exc: BaseException, api_key: str, code: int | None, status: str) -> str:
+    """Diagnostic text for logs: class, HTTP code, status and a redacted, truncated message."""
+    message = getattr(exc, "message", None)
+    if not isinstance(message, str) or not message.strip():
+        message = str(exc)
+    message = re.sub(r"\s+", " ", message).strip()
+    if api_key:
+        message = message.replace(api_key, "***")
+    message = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "***", message)
+    parts = [type(exc).__name__]
+    if code is not None:
+        parts.append(f"code={code}")
+    if status:
+        parts.append(f"status={status}")
+    detail = ", ".join(parts)
+    if message:
+        detail += f": {message[:200]}"
+    return detail
+
+
+def _gemini_finish_reason(response: Any) -> str:
+    try:
+        reason = response.candidates[0].finish_reason
+        return str(getattr(reason, "name", reason))
+    except Exception:
+        return "unknown"
+
+
 class GeminiContentService:
+    # Class attributes so tests (and callers) can override them per instance.
+    retry_delays = GEMINI_RETRY_DELAYS
+    _sleep = staticmethod(time.sleep)
+
     def __init__(self, model: str | None = None):
         self.api_key = _required_env("GEMINI_API_KEY")
         self.model = (model or os.getenv("GEMINI_MODEL", "gemini-3.8-flash")).strip()
         if not self.model:
             raise ServiceError("GEMINI_MODEL لا يمكن أن يكون فارغًا.")
 
-    def _generate_json(self, prompt: str, schema: dict[str, Any], max_tokens: int) -> dict[str, Any]:
+    def _generate_json_once(self, prompt: str, schema: dict[str, Any], max_tokens: int) -> dict[str, Any]:
+        """One Gemini call. Raises _GeminiTransient for retryable failures, ServiceError otherwise."""
         try:
             from google import genai
             from google.genai import types
-            client = genai.Client(api_key=self.api_key)
+        except Exception as exc:
+            raise ServiceError(f"تعذر استيراد مكتبة Gemini ({type(exc).__name__}).") from None
+        try:
+            client = genai.Client(
+                api_key=self.api_key,
+                http_options=types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
+            )
             response = client.models.generate_content(
                 model=self.model,
                 contents=prompt,
@@ -520,18 +595,40 @@ class GeminiContentService:
                 ),
             )
         except Exception as exc:
-            # Do not include exception text; SDK errors may contain request details.
-            raise ServiceError(f"فشل استدعاء Gemini ({type(exc).__name__}).") from None
-        text = getattr(response, "text", None)
+            retryable, code, status = _gemini_exception_info(exc)
+            detail = _describe_gemini_exception(exc, self.api_key, code, status)
+            if retryable:
+                raise _GeminiTransient(detail) from None
+            raise ServiceError(f"فشل استدعاء Gemini دون قابلية لإعادة المحاولة ({detail}).") from None
+        try:
+            text = getattr(response, "text", None)
+        except Exception:
+            text = None
         if not isinstance(text, str) or not text.strip():
-            raise ServiceError("أعاد Gemini استجابة فارغة.")
+            raise _GeminiTransient(f"استجابة فارغة (finish_reason={_gemini_finish_reason(response)})")
         try:
             data = json.loads(text)
         except json.JSONDecodeError:
-            raise ServiceError("استجابة Gemini ليست JSON خالصًا صالحًا.") from None
+            raise _GeminiTransient(
+                f"استجابة ليست JSON صالحًا (finish_reason={_gemini_finish_reason(response)})"
+            ) from None
         if not isinstance(data, dict):
-            raise ServiceError("استجابة Gemini لا تطابق الكائن المتوقع.")
+            raise _GeminiTransient("استجابة Gemini لا تطابق الكائن المتوقع.")
         return data
+
+    def _generate_json(self, prompt: str, schema: dict[str, Any], max_tokens: int) -> dict[str, Any]:
+        """Call Gemini with exponential-style backoff on transient failures (5xx, 429, timeouts, empty output)."""
+        attempts = len(self.retry_delays) + 1
+        for attempt in range(1, attempts + 1):
+            try:
+                return self._generate_json_once(prompt, schema, max_tokens)
+            except _GeminiTransient as exc:
+                detail = str(exc)
+                print(f"Gemini المحاولة {attempt}/{attempts} فشلت (مؤقت): {detail}", file=sys.stderr)
+                if attempt == attempts:
+                    raise ServiceError(f"فشل استدعاء Gemini بعد {attempts} محاولات: {detail}") from None
+                self._sleep(self.retry_delays[attempt - 1])
+        raise ServiceError("فشل استدعاء Gemini.")  # pragma: no cover - loop always returns or raises
 
     def create_and_review(self, verse: QuranVerse, tafsir: TafsirSource) -> dict[str, Any]:
         prompt = (
@@ -545,7 +642,9 @@ class GeminiContentService:
             f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
             f"المصدر: {tafsir.source_name}\nنص التفسير المسترجع: {tafsir.text}"
         )
-        generated = validate_generated_content(self._generate_json(prompt, GENERATION_SCHEMA, 1800))
+        # Output budgets are generous because "thinking" models may spend part of the budget
+        # on reasoning tokens, which would otherwise truncate the JSON.
+        generated = validate_generated_content(self._generate_json(prompt, GENERATION_SCHEMA, 4096))
         review_prompt = (
             "راجع النص المقترح بمقارنته حصريًا بالنص التفسيري المرفق وبالآية الأصلية. أنت لست مفتيًا. "
             "اعتبر كل ادعاء ديني أو تفسيري غير موجود بوضوح في المصدر سببًا لرفضه أو طلب المراجعة. "
@@ -553,7 +652,7 @@ class GeminiContentService:
             f"الآية العثمانية: {verse.text_uthmani}\nالتفسير الأصلي من {tafsir.source_name}: {tafsir.text}\n"
             f"النص المراد مراجعته: {json.dumps(generated, ensure_ascii=False)}"
         )
-        review = self._generate_json(review_prompt, REVIEW_SCHEMA, 1000)
+        review = self._generate_json(review_prompt, REVIEW_SCHEMA, 2048)
         for key in ("grounded_in_source", "no_unsupported_claims", "no_contradiction", "needs_review"):
             if not isinstance(review.get(key), bool):
                 raise ServiceError("استجابة مراجعة Gemini تحتوي حقولًا منطقية غير صالحة.")
@@ -653,10 +752,19 @@ class PexelsService:
 
 class TTSService:
     """Speech for commentary only. Quran recitation must always remain source audio."""
+    retry_delays = TTS_RETRY_DELAYS
+    _sleep = staticmethod(time.sleep)
+
     def __init__(self, voice: str | None = None):
-        self.voice = (voice or os.getenv("TTS_VOICE", "ar-EG-ShakerNeural")).strip()
-        if not self.voice:
+        requested = (voice or os.getenv("TTS_VOICE", "ar-EG-ShakirNeural")).strip()
+        if not requested:
             raise ServiceError("TTS_VOICE فارغ.")
+        corrected = TTS_VOICE_ALIASES.get(requested)
+        if corrected:
+            print(f"تنبيه: اسم الصوت {requested} غير صحيح، سيُستخدم {corrected}. حدّث المتغير TTS_VOICE.",
+                  file=sys.stderr)
+            requested = corrected
+        self.voice = requested
         if not env_bool("TTS_TERMS_CONFIRMED"):
             raise ServiceError("أكد حقوق الاستخدام التجاري لمزوّد TTS عبر TTS_TERMS_CONFIRMED=true.")
         self.terms_url = _required_env("TTS_LICENSE_URL")
@@ -668,8 +776,13 @@ class TTSService:
         import edge_tts
         if not getattr(self, "_voice_checked", False):
             voices = await edge_tts.list_voices()
-            if self.voice not in {item.get("ShortName") for item in voices}:
-                raise ServiceError(f"صوت TTS_VOICE غير متاح حاليًا: {self.voice}.")
+            available = {item.get("ShortName") for item in voices}
+            if self.voice not in available:
+                arabic = sorted(name for name in available if isinstance(name, str) and name.startswith("ar-"))
+                listing = "، ".join(arabic) if arabic else "لا توجد أصوات عربية في القائمة"
+                raise ServiceError(
+                    f"صوت TTS_VOICE غير متاح حاليًا: {self.voice}. الأصوات العربية المتاحة: {listing}."
+                )
             self._voice_checked = True
         await edge_tts.Communicate(text=text, voice=self.voice, rate="+0%", pitch="+0Hz").save(str(path))
 
@@ -682,16 +795,25 @@ class TTSService:
                 raise ServiceError(f"نص TTS {key} فارغ أو يكرر العبارة المحجوزة.")
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {}
+        attempts = len(self.retry_delays) + 1
         for name, text in texts.items():
             path = output_dir / f"tts-{name}.mp3"
-            try:
-                asyncio.run(self._save(text, path))
-            except ServiceError:
-                path.unlink(missing_ok=True)
-                raise
-            except Exception as exc:
-                path.unlink(missing_ok=True)
-                raise ServiceError(f"فشل توليد TTS للمقطع {name} ({type(exc).__name__}).") from None
+            for attempt in range(1, attempts + 1):
+                try:
+                    asyncio.run(self._save(text, path))
+                    break
+                except ServiceError:
+                    path.unlink(missing_ok=True)
+                    raise
+                except Exception as exc:
+                    path.unlink(missing_ok=True)
+                    if attempt == attempts:
+                        raise ServiceError(
+                            f"فشل توليد TTS للمقطع {name} ({type(exc).__name__}) بعد {attempts} محاولات."
+                        ) from None
+                    print(f"TTS المقطع {name}: المحاولة {attempt}/{attempts} فشلت ({type(exc).__name__}).",
+                          file=sys.stderr)
+                    self._sleep(self.retry_delays[attempt - 1])
             if not path.is_file() or path.stat().st_size < 512:
                 path.unlink(missing_ok=True)
                 raise ServiceError(f"ملف TTS للمقطع {name} غير صالح.")
@@ -1090,5 +1212,132 @@ if __name__ == "__main__":
         def test_quran_key_rejects_out_of_range_chapter(self):
             with self.assertRaises(ServiceError):
                 verse_key(115, 1)
+
+        # ----- Gemini retry / diagnostics -----
+        @staticmethod
+        def make_gemini(once):
+            service = object.__new__(GeminiContentService)
+            service.api_key = "AIzaSyFAKEKEYFAKEKEYFAKEKEYFAKEKEY123"
+            service.model = "test-model"
+            service.sleeps = []
+            service._sleep = lambda seconds: service.sleeps.append(seconds)
+            service._generate_json_once = once
+            return service
+
+        def test_gemini_error_classification_uses_http_code_and_network_class_names(self):
+            class FakeAPIError(Exception):
+                def __init__(self, code, status):
+                    super().__init__("boom")
+                    self.code, self.status = code, status
+            self.assertEqual(_gemini_exception_info(FakeAPIError(503, "UNAVAILABLE")), (True, 503, "UNAVAILABLE"))
+            self.assertEqual(_gemini_exception_info(FakeAPIError(500, "INTERNAL")), (True, 500, "INTERNAL"))
+            self.assertEqual(_gemini_exception_info(FakeAPIError(429, "RESOURCE_EXHAUSTED"))[0], True)
+            self.assertEqual(_gemini_exception_info(FakeAPIError(400, "INVALID_ARGUMENT"))[0], False)
+            self.assertEqual(_gemini_exception_info(FakeAPIError(404, "NOT_FOUND"))[0], False)
+            self.assertEqual(_gemini_exception_info(FakeAPIError(403, "PERMISSION_DENIED"))[0], False)
+            class TimeoutException(Exception):
+                pass
+            class ReadTimeout(TimeoutException):
+                pass
+            self.assertEqual(_gemini_exception_info(ReadTimeout("slow"))[0], True)
+            self.assertEqual(_gemini_exception_info(ValueError("programming error"))[0], False)
+
+        def test_gemini_error_description_redacts_api_key_and_truncates(self):
+            key = "AIzaSyFAKEKEYFAKEKEYFAKEKEYFAKEKEY123"
+            error = RuntimeError(f"request to https://x/?key={key} failed " + "x" * 500)
+            detail = _describe_gemini_exception(error, key, 503, "UNAVAILABLE")
+            self.assertNotIn(key, detail)
+            self.assertIn("code=503", detail)
+            self.assertIn("status=UNAVAILABLE", detail)
+            self.assertLessEqual(len(detail), 260)
+
+        def test_gemini_retries_transient_failures_with_backoff_then_succeeds(self):
+            calls = []
+            def once(prompt, schema, max_tokens):
+                calls.append(1)
+                if len(calls) < 3:
+                    raise _GeminiTransient("code=503, status=UNAVAILABLE")
+                return {"ok": True}
+            service = self.make_gemini(once)
+            self.assertEqual(service._generate_json("p", {}, 10), {"ok": True})
+            self.assertEqual(len(calls), 3)
+            self.assertEqual(service.sleeps, [GEMINI_RETRY_DELAYS[0], GEMINI_RETRY_DELAYS[1]])
+
+        def test_gemini_does_not_retry_permanent_errors(self):
+            calls = []
+            def once(prompt, schema, max_tokens):
+                calls.append(1)
+                raise ServiceError("code=404 model not found")
+            service = self.make_gemini(once)
+            with self.assertRaisesRegex(ServiceError, "404"):
+                service._generate_json("p", {}, 10)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(service.sleeps, [])
+
+        def test_gemini_gives_up_after_all_attempts_and_reports_last_detail(self):
+            calls = []
+            def once(prompt, schema, max_tokens):
+                calls.append(1)
+                raise _GeminiTransient("code=503, status=UNAVAILABLE")
+            service = self.make_gemini(once)
+            with self.assertRaisesRegex(ServiceError, "code=503"):
+                service._generate_json("p", {}, 10)
+            self.assertEqual(len(calls), len(GEMINI_RETRY_DELAYS) + 1)
+            self.assertEqual(service.sleeps, list(GEMINI_RETRY_DELAYS))
+
+        # ----- TTS voice diagnostics / retry -----
+        def test_tts_misspelled_default_voice_is_corrected_to_shakir(self):
+            with patch.dict(os.environ, {"TTS_TERMS_CONFIRMED": "true",
+                                          "TTS_LICENSE_URL": "https://example.org/terms"}):
+                service = TTSService("ar-EG-ShakerNeural")
+            self.assertEqual(service.voice, "ar-EG-ShakirNeural")
+
+        def test_tts_unavailable_voice_lists_available_arabic_voices(self):
+            import tempfile
+            service = object.__new__(TTSService)
+            service.voice = "ar-XX-NopeNeural"
+            service._voice_checked = False
+            async def fake_list_voices():
+                return [{"ShortName": "ar-EG-SalmaNeural"}, {"ShortName": "ar-EG-ShakirNeural"},
+                        {"ShortName": "en-US-AriaNeural"}]
+            with tempfile.TemporaryDirectory() as temp, patch("edge_tts.list_voices", new=fake_list_voices):
+                with self.assertRaises(ServiceError) as caught:
+                    asyncio.run(service._save("نص", Path(temp) / "x.mp3"))
+            message = str(caught.exception)
+            self.assertIn("ar-EG-ShakirNeural", message)
+            self.assertIn("ar-EG-SalmaNeural", message)
+            self.assertNotIn("en-US-AriaNeural", message)
+
+        def test_tts_retries_transient_synthesis_failures(self):
+            import tempfile
+            service = object.__new__(TTSService)
+            sleeps, attempts = [], []
+            service._sleep = lambda seconds: sleeps.append(seconds)
+            async def flaky_save(text, path):
+                attempts.append(1)
+                if len(attempts) < 3:
+                    raise ConnectionError("temporary")
+                Path(path).write_bytes(b"x" * 600)
+            service._save = flaky_save
+            with tempfile.TemporaryDirectory() as temp:
+                saved = service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+            self.assertEqual(set(saved), {"seal"})
+            self.assertEqual(len(attempts), 3)
+            self.assertEqual(sleeps, list(TTS_RETRY_DELAYS))
+
+        def test_tts_voice_unavailable_is_not_retried(self):
+            import tempfile
+            service = object.__new__(TTSService)
+            sleeps, attempts = [], []
+            service._sleep = lambda seconds: sleeps.append(seconds)
+            async def bad_voice(text, path):
+                attempts.append(1)
+                raise ServiceError("صوت TTS_VOICE غير متاح")
+            service._save = bad_voice
+            with tempfile.TemporaryDirectory() as temp:
+                with self.assertRaises(ServiceError):
+                    service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+            self.assertEqual(len(attempts), 1)
+            self.assertEqual(sleeps, [])
 
     unittest.main()

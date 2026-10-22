@@ -19,6 +19,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+import hashlib
+GITHUB_API = "https://api.github.com"
+MAKE_ALLOWED_SUFFIXES = (".make.com", ".integromat.com")
+
 import requests
 
 QF_API = "https://apis.quran.foundation/content/api/v4"
@@ -1097,7 +1101,105 @@ class FacebookReelsPublisher:
         except ServiceError as exc:
             raise ServiceError(str(exc), platform_state={"status": "uploaded_unconfirmed", "video_id": str(video_id)}) from None
 
+class MakeWebhookPublisher:
+    """Uploads the MP4 to a public GitHub Release and notifies a Make.com webhook.
 
+    Make fans out to Facebook / YouTube / Instagram / TikTok. A 2xx answer proves delivery to Make,
+    not publication on each platform (that is Make's job and is visible in its execution history).
+    """
+    def __init__(self, session: requests.Session | None = None):
+        self.session = session or requests.Session()
+        self.webhook = _required_env("MAKE_WEBHOOK_URL")
+        parsed = urlparse(self.webhook)
+        host = parsed.hostname or ""
+        if parsed.scheme != "https" or not any(host.endswith(s) for s in MAKE_ALLOWED_SUFFIXES):
+            raise ServiceError("MAKE_WEBHOOK_URL يجب أن يكون رابط HTTPS على نطاق make.com.")
+        self.api_key = os.getenv("MAKE_WEBHOOK_API_KEY", "").strip()
+        self.token = _required_env("GITHUB_TOKEN")
+        self.repo = _required_env("GITHUB_REPOSITORY")
+        if not re.fullmatch(r"[\w.-]+/[\w.-]+", self.repo):
+            raise ServiceError("GITHUB_REPOSITORY غير صالح.")
+        self.platforms = [p.strip() for p in os.getenv(
+            "MAKE_PLATFORMS", "facebook,youtube,instagram,tiktok").split(",") if p.strip()]
+        self.retry_delay = 5.0
+
+    def _gh(self, method: str, url: str, **kwargs: Any) -> Any:
+        headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
+                   "X-GitHub-Api-Version": "2022-11-28", **kwargs.pop("headers", {})}
+        try:
+            return self.session.request(method, url, headers=headers, timeout=(20, 600), **kwargs)
+        except requests.RequestException as exc:
+            raise ServiceError(f"تعذر الاتصال بـGitHub ({type(exc).__name__}).") from None
+
+    def _ensure_asset(self, video_path: Path, tag: str, title: str) -> str:
+        """Idempotent: the tag derives from the file hash, so a retry reuses the same release/asset."""
+        asset_name = f"{tag}.mp4"
+        base = f"{GITHUB_API}/repos/{self.repo}/releases"
+        resp = self._gh("GET", f"{base}/tags/{tag}")
+        if resp.status_code == 404:
+            resp = self._gh("POST", base, json={"tag_name": tag, "name": title[:100],
+                                                "body": "Automated video release.", "draft": False,
+                                                "prerelease": False})
+        if resp.status_code not in (200, 201):
+            raise ServiceError(f"GitHub Release: HTTP {resp.status_code} (تحقق من permissions: contents: write).")
+        release = resp.json()
+        for asset in release.get("assets", []):
+            if asset.get("name") == asset_name and asset.get("state") == "uploaded":
+                return asset["browser_download_url"]
+        upload_url = str(release.get("upload_url", "")).split("{", 1)[0]
+        if urlparse(upload_url).hostname != "uploads.github.com":
+            raise ServiceError("رابط رفع GitHub غير متوقع.")
+        with video_path.open("rb") as stream:
+            up = self._gh("POST", upload_url, params={"name": asset_name}, data=stream,
+                          headers={"Content-Type": "video/mp4"})
+        if up.status_code not in (200, 201):
+            raise ServiceError(f"رفع الفيديو إلى GitHub Release أعاد HTTP {up.status_code}.")
+        return up.json()["browser_download_url"]
+
+    def _notify(self, payload: dict[str, Any]) -> None:
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["x-make-apikey"] = self.api_key
+        last = "unknown"
+        for attempt in range(3):
+            try:
+                resp = self.session.post(self.webhook, json=payload, headers=headers, timeout=(15, 60))
+            except requests.RequestException as exc:
+                last = type(exc).__name__
+            else:
+                if 200 <= resp.status_code < 300:
+                    return
+                last = f"HTTP {resp.status_code}"
+                if resp.status_code not in (408, 429) and resp.status_code < 500:
+                    break
+            if attempt < 2:
+                time.sleep(self.retry_delay)
+        raise ServiceError(f"فشل إرسال Webhook إلى Make ({last}).")
+
+    def publish_or_verify(self, video_path: Path, title: str, description: str,
+                          previous: dict[str, Any] | None = None) -> dict[str, Any]:
+        previous = previous or {}
+        if previous.get("status") == "published" and previous.get("video_id"):
+            return dict(previous)
+        if not video_path.is_file():
+            raise ServiceError("ملف الفيديو غير موجود لرفعه.")
+        digest = hashlib.sha256(video_path.read_bytes()).hexdigest()
+        tag = previous.get("video_id") or f"video-{digest[:16]}"
+        url = previous.get("video_url") or self._ensure_asset(video_path, tag, title)
+        state = {"status": "uploaded_unconfirmed", "video_id": tag, "video_url": url}
+        payload = {
+            "idempotency_key": tag, "video_url": url, "sha256": digest,
+            "title": title[:100], "description": description[:5000],
+            "caption": f"{title}\n\n{description}"[:2000],     # Instagram/TikTok caption limit
+            "platforms": self.platforms,
+            "youtube_privacy": os.getenv("YOUTUBE_PRIVACY_STATUS", "private"),
+        }
+        try:
+            self._notify(payload)
+        except ServiceError as exc:
+            raise ServiceError(str(exc), platform_state=state) from None
+        return {"status": "published", "video_id": tag, "video_url": url, "delivered_to": "make.com"}
+                              
 # Self-contained unit tests; external APIs are mocked and never called.
 if __name__ == "__main__":
     import unittest

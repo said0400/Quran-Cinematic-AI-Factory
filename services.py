@@ -43,6 +43,29 @@ GEMINI_TRANSIENT_EXCEPTION_NAMES = {
     "ServerDisconnectedError", "ClientConnectionError",
 }
 
+# Arabic names of the 114 surahs (index = chapter number - 1), shown on the verse card.
+SURAH_NAMES_AR = (
+    'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام',
+    'الأعراف', 'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف',
+    'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف',
+    'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور',
+    'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
+    'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس',
+    'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى',
+    'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح',
+    'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم', 'القمر',
+    'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
+    'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم',
+    'الملك', 'القلم', 'الحاقة', 'المعارج', 'نوح', 'الجن',
+    'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات', 'النبأ',
+    'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق',
+    'البروج', 'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
+    'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق',
+    'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر',
+    'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر',
+    'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس',
+)
+
 # edge-tts: delays between synthesis attempts for one text segment.
 TTS_RETRY_DELAYS = (2.0, 5.0)
 # Known misspellings of Microsoft voice names, corrected before the availability check.
@@ -285,7 +308,8 @@ class QuranFoundationClient:
             raise ServiceError("النص العثماني مفقود أو تالف.")
         verse_id = item.get("id")
         return QuranVerse(int(chapter), int(verse), key, text.strip(),
-                          int(verse_id) if verse_id is not None else None)
+                          int(verse_id) if verse_id is not None else None,
+                          SURAH_NAMES_AR[int(chapter) - 1])
 
     def get_recitation(self, chapter: int, verse: int, audio_dir: Path) -> tuple[QuranRecitation, Path]:
         key = verse_key(chapter, verse)
@@ -771,6 +795,18 @@ class TTSService:
         if urlparse(self.terms_url).scheme != "https":
             raise ServiceError("TTS_LICENSE_URL يجب أن يكون HTTPS.")
         self._voice_checked = False
+        # Raw per-word timings reported by the TTS service, by segment name (may be empty).
+        self.word_boundaries: dict[str, list[dict[str, Any]]] = {}
+        self._last_boundaries: list[dict[str, Any]] = []
+
+    @staticmethod
+    def _make_communicate(edge_tts_module: Any, text: str, voice: str) -> Any:
+        try:
+            return edge_tts_module.Communicate(text=text, voice=voice, rate="+0%", pitch="+0Hz",
+                                               boundary="WordBoundary")
+        except TypeError:
+            # Older edge-tts releases have no `boundary` option and emit word boundaries by default.
+            return edge_tts_module.Communicate(text=text, voice=voice, rate="+0%", pitch="+0Hz")
 
     async def _save(self, text: str, path: Path) -> None:
         import edge_tts
@@ -784,7 +820,19 @@ class TTSService:
                     f"صوت TTS_VOICE غير متاح حاليًا: {self.voice}. الأصوات العربية المتاحة: {listing}."
                 )
             self._voice_checked = True
-        await edge_tts.Communicate(text=text, voice=self.voice, rate="+0%", pitch="+0Hz").save(str(path))
+        communicate = self._make_communicate(edge_tts, text, self.voice)
+        boundaries: list[dict[str, Any]] = []
+        with Path(path).open("wb") as handle:
+            async for chunk in communicate.stream():
+                kind = chunk.get("type")
+                if kind == "audio":
+                    handle.write(chunk["data"])
+                elif kind == "WordBoundary":
+                    # edge-tts reports offset and duration in 100-nanosecond ticks.
+                    start_ms = int(round(float(chunk["offset"]) / 10_000.0))
+                    end_ms = start_ms + int(round(float(chunk["duration"]) / 10_000.0))
+                    boundaries.append({"text": str(chunk.get("text", "")), "start_ms": start_ms, "end_ms": end_ms})
+        self._last_boundaries = boundaries
 
     def synthesize(self, texts: dict[str, str], output_dir: Path) -> dict[str, Path]:
         forbidden = "صدق الله العظيم"
@@ -795,12 +843,15 @@ class TTSService:
                 raise ServiceError(f"نص TTS {key} فارغ أو يكرر العبارة المحجوزة.")
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {}
+        self.word_boundaries = {}
         attempts = len(self.retry_delays) + 1
         for name, text in texts.items():
             path = output_dir / f"tts-{name}.mp3"
             for attempt in range(1, attempts + 1):
                 try:
+                    self._last_boundaries = []
                     asyncio.run(self._save(text, path))
+                    self.word_boundaries[name] = list(getattr(self, "_last_boundaries", None) or [])
                     break
                 except ServiceError:
                     path.unlink(missing_ok=True)
@@ -1339,5 +1390,63 @@ if __name__ == "__main__":
                     service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
             self.assertEqual(len(attempts), 1)
             self.assertEqual(sleeps, [])
+
+
+        # ----- Surah names / TTS word boundaries -----
+        def test_surah_names_table_is_complete_and_used_for_verse_card(self):
+            self.assertEqual(len(SURAH_NAMES_AR), 114)
+            self.assertEqual((SURAH_NAMES_AR[0], SURAH_NAMES_AR[1], SURAH_NAMES_AR[113]), ("الفاتحة", "البقرة", "الناس"))
+            self.assertEqual(len(set(SURAH_NAMES_AR)), 114)
+            payload = {"verse": {"verse_key": "2:152", "verse_number": 152, "chapter_id": 2,
+                                 "id": 1, "text_uthmani": "فَاذْكُرُونِي أَذْكُرْكُمْ"}}
+            verse = self.ready_qf_client(self.FakeResponse(200, payload)).get_verse(2, 152)
+            self.assertEqual(verse.chapter_name, "البقرة")
+
+        def test_tts_save_requests_word_boundaries_and_collects_them(self):
+            import tempfile
+            class FakeCommunicate:
+                kwargs = {}
+                def __init__(self, **kwargs):
+                    FakeCommunicate.kwargs = kwargs
+                async def stream(self):
+                    yield {"type": "audio", "data": b"a" * 400}
+                    yield {"type": "WordBoundary", "offset": 10_000_000, "duration": 2_500_000, "text": "كلمة"}
+                    yield {"type": "SentenceBoundary", "offset": 0, "duration": 1, "text": "ignored"}
+                    yield {"type": "audio", "data": b"b" * 400}
+            service = object.__new__(TTSService)
+            service.voice, service._voice_checked = "ar-EG-ShakirNeural", True
+            with tempfile.TemporaryDirectory() as temp, patch("edge_tts.Communicate", FakeCommunicate):
+                target = Path(temp) / "x.mp3"
+                asyncio.run(service._save("كلمة", target))
+                self.assertEqual(target.stat().st_size, 800)
+            self.assertEqual(FakeCommunicate.kwargs["boundary"], "WordBoundary")
+            self.assertEqual(service._last_boundaries, [{"text": "كلمة", "start_ms": 1000, "end_ms": 1250}])
+
+        def test_tts_older_edge_tts_without_boundary_option_still_works(self):
+            import tempfile
+            class OldCommunicate:
+                def __init__(self, text, voice, rate="+0%", pitch="+0Hz"):
+                    self.text = text
+                async def stream(self):
+                    yield {"type": "audio", "data": b"a" * 600}
+                    yield {"type": "WordBoundary", "offset": 0, "duration": 1_000_000, "text": "x"}
+            service = object.__new__(TTSService)
+            service.voice, service._voice_checked = "ar-EG-ShakirNeural", True
+            with tempfile.TemporaryDirectory() as temp, patch("edge_tts.Communicate", OldCommunicate):
+                asyncio.run(service._save("x", Path(temp) / "x.mp3"))
+            self.assertEqual(service._last_boundaries, [{"text": "x", "start_ms": 0, "end_ms": 100}])
+
+        def test_tts_synthesize_exposes_boundaries_per_segment_and_empty_when_unavailable(self):
+            import tempfile
+            service = object.__new__(TTSService)
+            async def fake_save(text, path):
+                Path(path).write_bytes(b"x" * 600)
+                service._last_boundaries = [{"text": text, "start_ms": 0, "end_ms": 500}] if text == "هوك" else []
+            service._save = fake_save
+            with tempfile.TemporaryDirectory() as temp:
+                service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم", "cta": "شارك"}, Path(temp))
+            self.assertEqual(service.word_boundaries["hook"], [{"text": "هوك", "start_ms": 0, "end_ms": 500}])
+            self.assertEqual(service.word_boundaries["cta"], [])
+            self.assertEqual(set(service.word_boundaries), {"hook", "seal", "cta"})
 
     unittest.main()

@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
 
 from services import (
-    FacebookReelsPublisher, GeminiContentService, PexelsService, QuranFoundationClient,
+    FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService, QuranFoundationClient,
     ServiceError, TTSService, YouTubePublisher, env_bool, validate_word_segments,
 )
 from video_engine import VideoError, build_video, media_duration, validate_video
@@ -143,6 +143,10 @@ def validate_generation_environment() -> None:
     missing = [key for key in required if not os.getenv(key, "").strip()]
     if missing:
         raise FactoryError("إعدادات إنتاج مطلوبة غير موجودة: " + ", ".join(missing))
+    if env_bool("MAKE_PUBLISH_ENABLED"):
+        absent = [k for k in ("MAKE_WEBHOOK_URL", "GITHUB_TOKEN", "GITHUB_REPOSITORY") if not os.getenv(k, "").strip()]
+        if absent:
+            raise FactoryError("إعدادات Make مطلوبة غير موجودة: " + ", ".join(absent))
     if urlparse(os.getenv("QURAN_TEXT_LICENSE_URL", "").strip()).scheme != "https":
         raise FactoryError("QURAN_TEXT_LICENSE_URL يجب أن يكون رابط HTTPS.")
     confirmations = {
@@ -290,6 +294,7 @@ def new_run_record(run_id: str, chapter: int, verse: int, mode: str, local_date:
         "platforms": {
             "youtube": {"status": "not_started", "video_id": None, "attempts": 0},
             "facebook": {"status": "not_started", "video_id": None, "attempts": 0},
+            "make": {"status": "not_started", "video_id": None, "attempts": 0},
         },
         "attempt_count": attempt,
         "last_error": None,
@@ -315,6 +320,8 @@ def publisher_factory(name: str) -> Any:
         return YouTubePublisher()
     if name == "facebook":
         return FacebookReelsPublisher()
+    if name == "make":
+        return MakeWebhookPublisher()
     raise FactoryError(f"منصة غير معروفة: {name}")
 
 
@@ -323,13 +330,20 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
                       make_publisher: Callable[[str], Any] = publisher_factory,
                       retries: int = 3) -> dict[str, Any]:
     """Publish destinations independently; never re-upload a destination already confirmed."""
-    targets = ["youtube"]
-    if env_bool("META_PUBLISH_ENABLED"):
-        targets.append("facebook")
+    if env_bool("MAKE_PUBLISH_ENABLED"):
+        targets = ["make"]
+        for legacy in ("youtube", "facebook"):      # Make handles every destination
+            state = row.setdefault("platforms", {}).get(legacy)
+            if not isinstance(state, dict) or state.get("status") == "not_started":
+                row["platforms"][legacy] = {"status": "disabled", "video_id": None, "attempts": 0}
     else:
-        facebook_state = row.setdefault("platforms", {}).get("facebook")
-        if not isinstance(facebook_state, dict) or facebook_state.get("status") == "not_started":
-            row["platforms"]["facebook"] = {"status": "disabled", "video_id": None, "attempts": 0}
+        targets = ["youtube"]
+        if env_bool("META_PUBLISH_ENABLED"):
+            targets.append("facebook")
+        else:
+            facebook_state = row.setdefault("platforms", {}).get("facebook")
+            if not isinstance(facebook_state, dict) or facebook_state.get("status") == "not_started":
+                row["platforms"]["facebook"] = {"status": "disabled", "video_id": None, "attempts": 0}
     for name in targets:
         prior = row.setdefault("platforms", {}).setdefault(name, {"status": "not_started", "video_id": None, "attempts": 0})
         if prior.get("status") == "published" and prior.get("video_id"):
@@ -444,7 +458,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         # remain confirmed and are never uploaded again for this verse.
         row["platforms"] = row["platforms"] | {
             key: dict(value) for key, value in previous_row.get("platforms", {}).items()
-            if key in {"youtube", "facebook"} and isinstance(value, dict)
+            if key in {"youtube", "facebook", "make"} and isinstance(value, dict)
         }
     report_dir = config.output_dir / "reports"
     update_record(history, row, report_dir)

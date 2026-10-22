@@ -90,6 +90,13 @@ jobs:
       META_PUBLISH_ENABLED: ${{ vars.META_PUBLISH_ENABLED || 'false' }}
       META_REELS_DISCLOSURE_CONFIRMED: ${{ vars.META_REELS_DISCLOSURE_CONFIRMED }}
       META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION || 'v26.0' }}
+      BACKGROUND_CLIP_COUNT: ${{ vars.BACKGROUND_CLIP_COUNT || '3' }}
+      BACKGROUND_SPEED: ${{ vars.BACKGROUND_SPEED || '0.75' }}
+      MAKE_PUBLISH_ENABLED: ${{ vars.MAKE_PUBLISH_ENABLED || 'false' }}
+      MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+      MAKE_WEBHOOK_API_KEY: ${{ secrets.MAKE_WEBHOOK_API_KEY }}
+      MAKE_PLATFORMS: ${{ vars.MAKE_PLATFORMS || 'facebook,youtube,instagram,tiktok' }}
+      GITHUB_TOKEN: ${{ github.token }}
       MODE: ${{ inputs.mode || 'auto' }}
       MANUAL_CHAPTER: ${{ inputs.chapter }}
       MANUAL_VERSE: ${{ inputs.verse }}

@@ -7879,6 +7879,426 @@
       "verse_key": "3:6",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 64,
+      "created_at": "2026-10-23T05:36:52.147285+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-23",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-64-16-826c65ad1c-report.json",
+      "run_id": "2026-10-23-64-16-826c65ad1c",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-23T05:36:55.970807+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 64,
+      "created_at": "2026-10-23T05:36:55.994801+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-23",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-64-16-4618054df1-report.json",
+      "run_id": "2026-10-23-64-16-4618054df1",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-23T05:36:58.932769+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 64,
+      "created_at": "2026-10-23T05:36:58.957157+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-23",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-64-16-835530632f-report.json",
+      "run_id": "2026-10-23-64-16-835530632f",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-23T05:37:01.843057+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "chapter": 64,
+      "created_at": "2026-10-23T05:37:01.866709+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-23",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-64-16-62959b1d3d-report.json",
+      "run_id": "2026-10-23-64-16-62959b1d3d",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-23T05:37:03.868965+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "chapter": 64,
+      "created_at": "2026-10-23T05:37:03.892842+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (17).",
+      "local_date": "2026-10-23",
+      "media_sources": [],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-64-16-ce1c61ea05-report.json",
+      "run_id": "2026-10-23-64-16-ce1c61ea05",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-23T05:37:05.906801+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true
+        },
+        "status": "failed"
+      },
+      "verse": 16,
+      "verse_key": "64:16",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 94,
+      "created_at": "2026-10-23T05:37:05.930785+00:00",
+      "last_error": null,
+      "local_date": "2026-10-23",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/94:5",
+          "verse_key": "94:5"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/94.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/94?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/94:5"
+        },
+        {
+          "creator": "Julien R",
+          "download_url": "https://videos.pexels.com/video-files/24816130/11898123_720_1280_60fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/mit-der-drohne-uber-eine-strasse-in-der-toskana-24816130/",
+          "video_id": 24816130
+        },
+        {
+          "creator": "Luigi Ferrero",
+          "download_url": "https://videos.pexels.com/video-files/40110454/17123141_720_1280_60fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/scenic-rolling-hills-at-golden-sunset-40110454/",
+          "video_id": 40110454
+        },
+        {
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/33122071/14117699_720_1280_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/",
+          "video_id": 33122071
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+          "provider": "edge-tts",
+          "voice": "ar-EG-ShakirNeural"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "status": "published",
+          "video_id": "video-370a31a64c8dda64",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-370a31a64c8dda64/video-370a31a64c8dda64.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تعلم أن الفرج يأتي ملازماً للضيق؟\n\nشرح موجز مستند إلى تفسير المیسر. الآية: 94:5.\nالمحتوى للتعريف والتدبر، ولا يغني عن الرجوع إلى المصادر الشرعية المعتمدة.\n\nخلفية مرئية من Pexels: https://www.pexels.com/\nالفيديو: https://www.pexels.com/video/mit-der-drohne-uber-eine-strasse-in-der-toskana-24816130/ | المصور: Julien R\nالفيديو: https://www.pexels.com/video/scenic-rolling-hills-at-golden-sunset-40110454/ | المصور: Luigi Ferrero\nالفيديو: https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/ | المصور: Matthias Groeneveld\nالمصدر: التفسير الميسر - Quran Foundation",
+        "title": "تدبر آية قرآنية | 94:5"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-94-5-503cdbacae-report.json",
+      "run_id": "2026-10-23-94-5-503cdbacae",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/94:5"
+      },
+      "status": "published",
+      "updated_at": "2026-10-23T05:39:19.219161+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 64.1,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": false
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح والشرح يعكسان المعنى الوارد في الآية وتفسير الميسر بدقة، حيث تم ربط اقتران الفرج بالضيق بعدم الاستسلام والاستمرار في العمل كما ورد في التفسير."
+          },
+          "recitation_api_verse_key": "94:5",
+          "recitation_duration_seconds": 4.989,
+          "verse_source_and_key": true,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 45.0,
+            "audio_segments": {
+              "benefit": {
+                "end": 31.077,
+                "start": 21.669
+              },
+              "cta": {
+                "end": 36.669,
+                "start": 31.077
+              },
+              "explanation": {
+                "end": 21.669,
+                "start": 10.869
+              },
+              "hook": {
+                "end": 3.48,
+                "start": 0.0
+              },
+              "recitation": {
+                "end": 8.469,
+                "start": 3.48
+              },
+              "seal": {
+                "end": 10.869,
+                "start": 8.469
+              }
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 45.0,
+            "file_size_bytes": 33032045,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 8.365,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 4.989,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "benefit": "tts_word_boundary",
+              "cta": "tts_word_boundary",
+              "explanation": "tts_word_boundary",
+              "hook": "tts_word_boundary"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 4
+        },
+        "status": "validated"
+      },
+      "verse": 5,
+      "verse_key": "94:5",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "370a31a64c8dda64c7783b57a5b04df0a81865216117c14a8148f0f92627522c"
     }
   ],
   "version": 1

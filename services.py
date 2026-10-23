@@ -6,22 +6,23 @@ operators must configure and record the applicable source-specific permissions.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import html
+import io
 import json
 import os
+import random
 import re
 import subprocess
 import sys
 import time
 import unicodedata
+import wave
+from array import array
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
-
-import hashlib
-GITHUB_API = "https://api.github.com"
-MAKE_ALLOWED_SUFFIXES = (".make.com", ".integromat.com")
 
 import requests
 
@@ -36,6 +37,9 @@ PEXELS_LICENSE = "https://www.pexels.com/license/"
 YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 YOUTUBE_READ_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
 YOUTUBE_UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
+GITHUB_API = "https://api.github.com"
+# Make.com webhooks live under *.make.com (and legacy *.integromat.com).
+MAKE_ALLOWED_SUFFIXES = (".make.com", ".integromat.com")
 
 # Gemini: delays (seconds) between attempts. len(delays)+1 attempts in total.
 GEMINI_RETRY_DELAYS = (2.0, 6.0, 15.0, 30.0)
@@ -46,6 +50,19 @@ GEMINI_TRANSIENT_EXCEPTION_NAMES = {
     "TransportError", "TimeoutException", "ConnectionError", "TimeoutError",
     "ServerDisconnectedError", "ClientConnectionError",
 }
+
+# Gemini text-to-speech (commentary voice only; the recitation always stays source audio).
+# The TTS rate limits are tighter than text generation, hence the longer back-off.
+GEMINI_TTS_RETRY_DELAYS = (3.0, 10.0, 30.0, 60.0)
+DEFAULT_GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"
+DEFAULT_GEMINI_TTS_VOICE = "Algieba"
+GEMINI_TTS_TERMS = "https://ai.google.dev/gemini-api/terms"
+# Plausible speaking pace, used to reject truncated or runaway generations.
+TTS_MIN_SECONDS_PER_WORD = 0.12
+TTS_MAX_SECONDS_PER_WORD = 3.0
+TTS_MIN_SECONDS = 0.4
+TTS_MIN_PEAK = 500                      # of 32767; below this the audio is effectively silent
+TTS_PROVIDERS = ("edge", "gemini", "auto")
 
 # Arabic names of the 114 surahs (index = chapter number - 1), shown on the verse card.
 SURAH_NAMES_AR = (
@@ -694,11 +711,19 @@ class GeminiContentService:
 
 
 class PexelsService:
+    """Stock nature footage. `fetch_backgrounds` downloads 2..5 distinct portrait clips."""
     QUERIES = {
-        "صبر": "quiet ocean sunrise nature", "رحمة": "soft forest sunlight nature",
-        "أمل": "sunrise landscape nature", "تفكر": "mountain lake nature",
-        "عدل": "calm nature landscape", "عمل": "green field sunrise nature",
+        "صبر": "quiet ocean sunrise nature",
+        "رحمة": "soft forest sunlight nature",
+        "أمل": "sunrise landscape nature",
+        "تفكر": "mountain lake nature",
+        "عدل": "calm nature landscape",
+        "عمل": "green field sunrise nature",
     }
+    DEFAULT_QUERY = "calm nature landscape sunrise"
+    MIN_CLIPS, MAX_CLIPS = 2, 5
+    PREFERRED_MIN_DURATION = 8          # seconds of source footage; shorter clips are used last
+    PREFERRED_FILE_HEIGHT = 1920        # matches the 1080x1920 output without downloading 4K
 
     def __init__(self, session: requests.Session | None = None):
         self.key = _required_env("PEXELS_API_KEY")
@@ -707,10 +732,11 @@ class PexelsService:
             raise ServiceError("أكد مراجعة شروط Pexels قبل الاستخدام عبر PEXELS_LICENSE_CONFIRMED=true.")
 
     def _query_for(self, topic: str) -> str:
-        return next((q for label, q in self.QUERIES.items() if label in topic), "calm nature landscape sunrise")
+        return next((q for label, q in self.QUERIES.items() if label in topic), self.DEFAULT_QUERY)
 
-    @staticmethod
-    def _pick_file(video: dict[str, Any]) -> dict[str, Any] | None:
+    @classmethod
+    def _pick_file(cls, video: dict[str, Any]) -> dict[str, Any] | None:
+        """Best downloadable MP4 of a video: HTTPS on *.pexels.com; smallest file that is tall enough."""
         files = []
         for item in video.get("video_files") or []:
             if not isinstance(item, dict) or not isinstance(item.get("link"), str):
@@ -723,20 +749,20 @@ class PexelsService:
             files.append(item)
         if not files:
             return None
-        area = lambda f: int(f.get("width") or 0) * int(f.get("height") or 0)
-        # Prefer the smallest file that is still at least 1280px tall (avoids huge 4K downloads).
-        good = [f for f in files if int(f.get("height") or 0) >= 1280]
-        return min(good, key=area) if good else max(files, key=area)
+        def area(entry: dict[str, Any]) -> int:
+            return int(entry.get("width") or 0) * int(entry.get("height") or 0)
+        tall_enough = [f for f in files if int(f.get("height") or 0) >= cls.PREFERRED_FILE_HEIGHT]
+        return min(tall_enough, key=area) if tall_enough else max(files, key=area)
 
     def _download(self, link: str, destination: Path, limit: int = 150 * 1024 * 1024) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         try:
             with self.session.get(link, stream=True, timeout=(20, 120),
-                                  headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}) as resp:
-                resp.raise_for_status()
+                                  headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}) as file_response:
+                file_response.raise_for_status()
                 total = 0
                 with destination.open("wb") as out:
-                    for chunk in resp.iter_content(1024 * 1024):
+                    for chunk in file_response.iter_content(1024 * 1024):
                         if chunk:
                             total += len(chunk)
                             if total > limit:
@@ -754,14 +780,17 @@ class PexelsService:
 
     def fetch_backgrounds(self, topic: str, work_dir: Path, count: int = 3,
                           speed: float = 0.75) -> list[dict[str, Any]]:
-        """Download `count` (2..5) distinct portrait clips. Returns metadata incl. local `file` path."""
-        import random
-        count = max(2, min(5, int(count)))
+        """Download `count` (clamped to 2..5) distinct portrait clips.
+
+        Returns one metadata dict per clip, including the local path under "file" (the caller
+        removes it before the metadata is stored in the production report).
+        """
+        count = max(self.MIN_CLIPS, min(self.MAX_CLIPS, int(count)))
         query = self._query_for(topic)
         try:
             response = self.session.get(PEXELS_SEARCH, headers={"Authorization": self.key},
-                                        params={"query": query, "orientation": "portrait",
-                                                "size": "medium", "per_page": 30}, timeout=(15, 45))
+                                        params={"query": query, "orientation": "portrait", "size": "medium",
+                                                "per_page": 30}, timeout=(15, 45))
         except requests.RequestException as exc:
             raise ServiceError(f"تعذر الاتصال بـPexels ({type(exc).__name__}).") from None
         if response.status_code != 200:
@@ -770,11 +799,18 @@ class PexelsService:
             payload = response.json()
         except ValueError:
             raise ServiceError("استجابة بحث Pexels ليست JSON صالحًا.") from None
-        videos = [v for v in (payload.get("videos") if isinstance(payload, dict) else []) or []
-                  if isinstance(v, dict) and self._pick_file(v)]
-        if len(videos) < 2:
+        raw_videos = payload.get("videos") if isinstance(payload, dict) else None
+        videos = [video for video in (raw_videos or []) if isinstance(video, dict) and self._pick_file(video)]
+        if len(videos) < self.MIN_CLIPS:
             raise ServiceError("لم يُعثر على مقطعين مرخّصين على الأقل في نتائج Pexels.")
-        random.Random(topic).shuffle(videos)       # deterministic per topic, varied between verses
+        # Deterministic per topic (so a rerun of the same text is reproducible), varied between verses.
+        random.Random(topic).shuffle(videos)
+        def long_enough(video: dict[str, Any]) -> bool:
+            try:
+                return float(video.get("duration") or 0) >= self.PREFERRED_MIN_DURATION
+            except (TypeError, ValueError):
+                return False
+        videos = [v for v in videos if long_enough(v)] + [v for v in videos if not long_enough(v)]
         results: list[dict[str, Any]] = []
         seen: set[Any] = set()
         for video in videos:
@@ -784,23 +820,44 @@ class PexelsService:
                 continue
             seen.add(video.get("id"))
             chosen = self._pick_file(video)
+            if chosen is None:
+                continue
             path = work_dir / f"clip-{len(results) + 1}.mp4"
             self._download(chosen["link"], path)
             user = video.get("user") if isinstance(video.get("user"), dict) else {}
             results.append({
-                "kind": "background_video", "provider": "Pexels", "query": query, "file": str(path),
-                "video_id": video.get("id"), "source_page": video.get("url"), "download_url": chosen["link"],
-                "creator": user.get("name"), "playback_speed": speed,
+                "kind": "background_video",
+                "provider": "Pexels",
+                "query": query,
+                "file": str(path),
+                "video_id": video.get("id"),
+                "source_page": video.get("url"),
+                "download_url": chosen["link"],
+                "creator": user.get("name"),
+                "playback_speed": speed,
                 "license": "Pexels License (operator confirmed); commercial use subject to current terms",
                 "license_url": PEXELS_LICENSE,
+                "attribution": "Pexels video " + str(video.get("url", "")),
             })
-        if len(results) < 2:
+        if len(results) < self.MIN_CLIPS:
             raise ServiceError("تعذر تنزيل مقطعي خلفية على الأقل.")
         return results
 
+
+def _validate_tts_texts(texts: dict[str, str]) -> None:
+    """Shared by every TTS provider: the closing phrase is its own segment and appears exactly once."""
+    forbidden = "صدق الله العظيم"
+    if texts.get("seal") != forbidden or sum(value.count(forbidden) for value in texts.values() if isinstance(value, str)) != 1:
+        raise ServiceError("يجب إنشاء «صدق الله العظيم» مرة واحدة بالضبط في المقطع المستقل seal.")
+    for key, value in texts.items():
+        if not isinstance(value, str) or not value.strip() or (key != "seal" and forbidden in value):
+            raise ServiceError(f"نص TTS {key} فارغ أو يكرر العبارة المحجوزة.")
+
+
 class TTSService:
-    """Speech for commentary only. Quran recitation must always remain source audio."""
+    """Speech for commentary only (edge-tts). Quran recitation must always remain source audio."""
     retry_delays = TTS_RETRY_DELAYS
+    provider = "edge-tts"
     _sleep = staticmethod(time.sleep)
 
     def __init__(self, voice: str | None = None):
@@ -859,12 +916,7 @@ class TTSService:
         self._last_boundaries = boundaries
 
     def synthesize(self, texts: dict[str, str], output_dir: Path) -> dict[str, Path]:
-        forbidden = "صدق الله العظيم"
-        if texts.get("seal") != forbidden or sum(value.count(forbidden) for value in texts.values() if isinstance(value, str)) != 1:
-            raise ServiceError("يجب إنشاء «صدق الله العظيم» مرة واحدة بالضبط في المقطع المستقل seal.")
-        for key, value in texts.items():
-            if not isinstance(value, str) or not value.strip() or (key != "seal" and forbidden in value):
-                raise ServiceError(f"نص TTS {key} فارغ أو يكرر العبارة المحجوزة.")
+        _validate_tts_texts(texts)
         output_dir.mkdir(parents=True, exist_ok=True)
         results = {}
         self.word_boundaries = {}
@@ -894,6 +946,261 @@ class TTSService:
                 raise ServiceError(f"ملف TTS للمقطع {name} غير صالح.")
             results[name] = path
         return results
+
+
+def _gemini_tts_key() -> str:
+    """Gemini TTS may use its own key (GEMINI_API_KEY1) so its quota is separate from text generation."""
+    for name in ("GEMINI_API_KEY1", "GEMINI_API_KEY"):
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    raise ServiceError("مفتاح Gemini TTS غير مضبوط: اضبط GEMINI_API_KEY1 أو GEMINI_API_KEY.")
+
+
+def _parse_pcm_mime(mime_type: str) -> dict[str, int]:
+    """Bits per sample and sample rate from a mime type such as `audio/L16;codec=pcm;rate=24000`."""
+    bits_per_sample, rate = 16, 24000
+    for part in (mime_type or "").split(";"):
+        part = part.strip()
+        if part.lower().startswith("rate="):
+            try:
+                rate = int(part.split("=", 1)[1])
+            except (ValueError, IndexError):
+                pass
+        elif part.lower().startswith("audio/l"):
+            try:
+                bits_per_sample = int(part.lower().split("l", 1)[1])
+            except (ValueError, IndexError):
+                pass
+    return {"bits_per_sample": bits_per_sample, "rate": rate}
+
+
+def _pcm_to_wav(data: bytes, mime_type: str) -> bytes:
+    """Wrap raw little-endian PCM (what Gemini TTS returns) into a WAV container; WAV passes through."""
+    if data[:4] == b"RIFF":
+        return data
+    if not (mime_type or "").lower().startswith("audio/"):
+        raise ServiceError(f"نوع ملف صوت Gemini TTS غير متوقع: {mime_type or 'غير محدد'}.")
+    params = _parse_pcm_mime(mime_type)
+    if params["bits_per_sample"] != 16 or not 8000 <= params["rate"] <= 96000:
+        raise ServiceError(f"صيغة PCM غير مدعومة: {mime_type}.")
+    data = data[: len(data) // 2 * 2]
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as writer:
+        writer.setnchannels(1)
+        writer.setsampwidth(2)
+        writer.setframerate(params["rate"])
+        writer.writeframes(data)
+    return buffer.getvalue()
+
+
+def _wav_stats(wav: bytes) -> tuple[float, int]:
+    """(duration in seconds, peak absolute 16-bit sample) of a WAV file."""
+    try:
+        with wave.open(io.BytesIO(wav), "rb") as reader:
+            frames, rate = reader.getnframes(), reader.getframerate()
+            width = reader.getsampwidth()
+            raw = reader.readframes(frames)
+    except (wave.Error, EOFError):
+        raise _GeminiTransient("ملف WAV الناتج تالف.") from None
+    if frames <= 0 or rate <= 0:
+        raise _GeminiTransient("ملف WAV الناتج فارغ.")
+    peak = 32767
+    if width == 2:
+        samples = array("h")
+        samples.frombytes(raw[: len(raw) // 2 * 2])
+        if sys.byteorder == "big":
+            samples.byteswap()
+        peak = max(map(abs, samples), default=0)
+    return frames / rate, peak
+
+
+class GeminiTTSService:
+    """Commentary speech from the Gemini API (same interface as `TTSService`).
+
+    The API returns raw PCM without word timings, so `word_boundaries` stays empty and the video
+    engine falls back to its length-weighted estimate (reported as "estimated" in the checks).
+    Each segment is validated for plausible duration and non-silence, and retried on failure.
+    """
+    retry_delays = GEMINI_TTS_RETRY_DELAYS
+    _sleep = staticmethod(time.sleep)
+
+    def __init__(self, voice: str | None = None, model: str | None = None):
+        self.api_key = _gemini_tts_key()
+        self.model = (model or os.getenv("GEMINI_TTS_MODEL", "").strip() or DEFAULT_GEMINI_TTS_MODEL).strip()
+        self.voice = (voice or os.getenv("GEMINI_TTS_VOICE", "").strip() or DEFAULT_GEMINI_TTS_VOICE).strip()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{2,60}", self.model):
+            raise ServiceError("GEMINI_TTS_MODEL غير صالح.")
+        if not re.fullmatch(r"[A-Za-z]{3,30}", self.voice):
+            raise ServiceError("GEMINI_TTS_VOICE غير صالح؛ استخدم اسم صوت جاهز مثل Algieba.")
+        if not env_bool("TTS_TERMS_CONFIRMED"):
+            raise ServiceError("أكد حقوق الاستخدام التجاري لمزوّد TTS عبر TTS_TERMS_CONFIRMED=true.")
+        self.terms_url = os.getenv("GEMINI_TTS_TERMS_URL", "").strip() or GEMINI_TTS_TERMS
+        if urlparse(self.terms_url).scheme != "https":
+            raise ServiceError("GEMINI_TTS_TERMS_URL يجب أن يكون HTTPS.")
+        self.provider = f"gemini-tts ({self.model})"
+        self.word_boundaries: dict[str, list[dict[str, Any]]] = {}
+
+    def _prompt(self, text: str) -> str:
+        """Gemini 2.5 TTS follows a director's-note prompt; later models speak the text verbatim."""
+        if self.model.startswith("gemini-2.5"):
+            style = os.getenv("GEMINI_TTS_STYLE", "").strip() or (
+                "Calm, respectful and clear. Pace: natural and unhurried. Language: Modern Standard Arabic.")
+            return (
+                "Read the following transcript aloud exactly as written, word for word, without adding, "
+                "removing, translating or explaining anything.\n\n"
+                "# Audio Profile\nA calm, respectful Arabic narrator.\n\n"
+                f"# Director's note\n{style}\n\n## Transcript:\n{text}"
+            )
+        return text
+
+    @staticmethod
+    def _extract_audio(response: Any) -> tuple[bytes, str]:
+        try:
+            parts = response.candidates[0].content.parts or []
+        except Exception:
+            parts = []
+        data = bytearray()
+        mime = ""
+        for part in parts:
+            inline = getattr(part, "inline_data", None)
+            if inline is not None and getattr(inline, "data", None):
+                data.extend(inline.data)
+                mime = getattr(inline, "mime_type", "") or mime
+        return bytes(data), mime
+
+    def _request_audio(self, text: str) -> tuple[bytes, str]:
+        """One Gemini TTS call. Raises _GeminiTransient for retryable failures, ServiceError otherwise."""
+        try:
+            from google import genai
+            from google.genai import types
+        except Exception as exc:
+            raise ServiceError(f"تعذر استيراد مكتبة Gemini ({type(exc).__name__}).") from None
+        try:
+            client = genai.Client(
+                api_key=self.api_key,
+                http_options=types.HttpOptions(timeout=GEMINI_REQUEST_TIMEOUT_MS),
+            )
+            response = client.models.generate_content(
+                model=self.model,
+                contents=self._prompt(text),
+                config=types.GenerateContentConfig(
+                    temperature=1.0,
+                    response_modalities=["AUDIO"],
+                    speech_config=types.SpeechConfig(
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=self.voice)
+                        )
+                    ),
+                ),
+            )
+        except Exception as exc:
+            retryable, code, status = _gemini_exception_info(exc)
+            detail = _describe_gemini_exception(exc, self.api_key, code, status)
+            if retryable:
+                raise _GeminiTransient(detail) from None
+            raise ServiceError(f"فشل استدعاء Gemini TTS دون قابلية لإعادة المحاولة ({detail}).") from None
+        data, mime = self._extract_audio(response)
+        if not data:
+            raise _GeminiTransient(f"استجابة TTS بلا صوت (finish_reason={_gemini_finish_reason(response)})")
+        return data, mime
+
+    @staticmethod
+    def _check_plausible(name: str, text: str, seconds: float, peak: int) -> None:
+        words = max(1, len(text.split()))
+        pace = seconds / words
+        if seconds < TTS_MIN_SECONDS or pace < TTS_MIN_SECONDS_PER_WORD:
+            raise _GeminiTransient(f"المقطع {name} أقصر من المعقول ({seconds:.2f}s لـ{words} كلمات)")
+        if pace > TTS_MAX_SECONDS_PER_WORD:
+            raise _GeminiTransient(f"المقطع {name} أطول من المعقول ({seconds:.2f}s لـ{words} كلمات)")
+        if peak < TTS_MIN_PEAK:
+            raise _GeminiTransient(f"المقطع {name} صامت تقريبًا (peak={peak})")
+
+    def synthesize(self, texts: dict[str, str], output_dir: Path) -> dict[str, Path]:
+        _validate_tts_texts(texts)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        results: dict[str, Path] = {}
+        self.word_boundaries = {}
+        attempts = len(self.retry_delays) + 1
+        for name, text in texts.items():
+            path = output_dir / f"tts-{name}.wav"
+            for attempt in range(1, attempts + 1):
+                try:
+                    data, mime = self._request_audio(text)
+                    wav = _pcm_to_wav(data, mime)
+                    seconds, peak = _wav_stats(wav)
+                    self._check_plausible(name, text, seconds, peak)
+                    path.write_bytes(wav)
+                    self.word_boundaries[name] = []
+                    break
+                except _GeminiTransient as exc:
+                    print(f"Gemini TTS المقطع {name}: المحاولة {attempt}/{attempts} فشلت (مؤقت): {exc}",
+                          file=sys.stderr)
+                    if attempt == attempts:
+                        raise ServiceError(
+                            f"فشل توليد Gemini TTS للمقطع {name} بعد {attempts} محاولات: {exc}") from None
+                    self._sleep(self.retry_delays[attempt - 1])
+            if not path.is_file() or path.stat().st_size < 512:
+                path.unlink(missing_ok=True)
+                raise ServiceError(f"ملف TTS للمقطع {name} غير صالح.")
+            results[name] = path
+        return results
+
+
+class FallbackTTSService:
+    """Try the primary provider for every segment; on failure redo ALL segments with the secondary.
+
+    Switching per segment would mix two different voices inside one video, so the fallback is all-or-nothing.
+    `voice`, `terms_url`, `provider` and `word_boundaries` always describe the provider that produced the audio.
+    """
+    def __init__(self, primary: Any, secondary: Any):
+        self.primary, self.secondary = primary, secondary
+        self._active = primary
+        self.word_boundaries: dict[str, list[dict[str, Any]]] = {}
+
+    @property
+    def voice(self) -> str:
+        return self._active.voice
+
+    @property
+    def terms_url(self) -> str:
+        return self._active.terms_url
+
+    @property
+    def provider(self) -> str:
+        return getattr(self._active, "provider", "tts")
+
+    def synthesize(self, texts: dict[str, str], output_dir: Path) -> dict[str, Path]:
+        try:
+            files = self.primary.synthesize(texts, output_dir)
+            self._active = self.primary
+        except ServiceError as exc:
+            print(f"تنبيه: فشل مزوّد TTS الأساسي ({getattr(self.primary, 'provider', 'primary')}): "
+                  f"{str(exc)[:300]} — سيُستخدم المزوّد الاحتياطي.", file=sys.stderr)
+            files = self.secondary.synthesize(texts, output_dir)
+            self._active = self.secondary
+        self.word_boundaries = self._active.word_boundaries
+        return files
+
+
+def make_tts_service(edge_voice: str | None = None) -> Any:
+    """Pick the commentary voice provider from TTS_PROVIDER: edge (default), gemini, or auto.
+
+    `auto` uses Gemini first and falls back to edge-tts if Gemini is unconfigured or fails.
+    """
+    provider = os.getenv("TTS_PROVIDER", "").strip().lower() or "edge"
+    if provider not in TTS_PROVIDERS:
+        raise ServiceError("TTS_PROVIDER يجب أن يكون edge أو gemini أو auto.")
+    if provider == "edge":
+        return TTSService(edge_voice)
+    if provider == "gemini":
+        return GeminiTTSService()
+    try:
+        primary = GeminiTTSService()
+    except ServiceError as exc:
+        print(f"تنبيه: تعذر تهيئة Gemini TTS ({str(exc)[:200]}) — سيُستخدم edge-tts.", file=sys.stderr)
+        return TTSService(edge_voice)
+    return FallbackTTSService(primary, TTSService(edge_voice))
 
 
 def _youtube_client() -> Any:
@@ -1101,27 +1408,40 @@ class FacebookReelsPublisher:
         except ServiceError as exc:
             raise ServiceError(str(exc), platform_state={"status": "uploaded_unconfirmed", "video_id": str(video_id)}) from None
 
+
 class MakeWebhookPublisher:
     """Uploads the MP4 to a public GitHub Release and notifies a Make.com webhook.
 
     Make fans out to Facebook / YouTube / Instagram / TikTok. A 2xx answer proves delivery to Make,
     not publication on each platform (that is Make's job and is visible in its execution history).
+    The release tag derives from the file hash, so retries reuse the same release and the webhook
+    carries a stable `idempotency_key` that the Make scenario can use to ignore duplicates.
     """
+    _sleep = staticmethod(time.sleep)
+
     def __init__(self, session: requests.Session | None = None):
         self.session = session or requests.Session()
         self.webhook = _required_env("MAKE_WEBHOOK_URL")
         parsed = urlparse(self.webhook)
         host = parsed.hostname or ""
-        if parsed.scheme != "https" or not any(host.endswith(s) for s in MAKE_ALLOWED_SUFFIXES):
+        if parsed.scheme != "https" or not any(host.endswith(suffix) for suffix in MAKE_ALLOWED_SUFFIXES):
             raise ServiceError("MAKE_WEBHOOK_URL يجب أن يكون رابط HTTPS على نطاق make.com.")
         self.api_key = os.getenv("MAKE_WEBHOOK_API_KEY", "").strip()
         self.token = _required_env("GITHUB_TOKEN")
         self.repo = _required_env("GITHUB_REPOSITORY")
         if not re.fullmatch(r"[\w.-]+/[\w.-]+", self.repo):
             raise ServiceError("GITHUB_REPOSITORY غير صالح.")
-        self.platforms = [p.strip() for p in os.getenv(
-            "MAKE_PLATFORMS", "facebook,youtube,instagram,tiktok").split(",") if p.strip()]
+        self.platforms = [part.strip() for part in os.getenv(
+            "MAKE_PLATFORMS", "facebook,youtube,instagram,tiktok").split(",") if part.strip()]
         self.retry_delay = 5.0
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
 
     def _gh(self, method: str, url: str, **kwargs: Any) -> Any:
         headers = {"Authorization": f"Bearer {self.token}", "Accept": "application/vnd.github+json",
@@ -1131,30 +1451,49 @@ class MakeWebhookPublisher:
         except requests.RequestException as exc:
             raise ServiceError(f"تعذر الاتصال بـGitHub ({type(exc).__name__}).") from None
 
+    @staticmethod
+    def _uploaded_asset_url(release: dict[str, Any], asset_name: str) -> str | None:
+        for asset in release.get("assets", []) or []:
+            if isinstance(asset, dict) and asset.get("name") == asset_name and asset.get("state") == "uploaded":
+                url = asset.get("browser_download_url")
+                if isinstance(url, str) and url.startswith("https://"):
+                    return url
+        return None
+
     def _ensure_asset(self, video_path: Path, tag: str, title: str) -> str:
-        """Idempotent: the tag derives from the file hash, so a retry reuses the same release/asset."""
+        """Idempotent: the same tag/asset is reused when it already exists."""
         asset_name = f"{tag}.mp4"
         base = f"{GITHUB_API}/repos/{self.repo}/releases"
-        resp = self._gh("GET", f"{base}/tags/{tag}")
-        if resp.status_code == 404:
-            resp = self._gh("POST", base, json={"tag_name": tag, "name": title[:100],
-                                                "body": "Automated video release.", "draft": False,
-                                                "prerelease": False})
-        if resp.status_code not in (200, 201):
-            raise ServiceError(f"GitHub Release: HTTP {resp.status_code} (تحقق من permissions: contents: write).")
-        release = resp.json()
-        for asset in release.get("assets", []):
-            if asset.get("name") == asset_name and asset.get("state") == "uploaded":
-                return asset["browser_download_url"]
+        response = self._gh("GET", f"{base}/tags/{tag}")
+        if response.status_code == 404:
+            response = self._gh("POST", base, json={"tag_name": tag, "name": title[:100],
+                                                     "body": "Automated video release.",
+                                                     "draft": False, "prerelease": False})
+        if response.status_code not in (200, 201):
+            raise ServiceError(f"GitHub Release: HTTP {response.status_code} (تحقق من permissions: contents: write).")
+        release = response.json()
+        existing = self._uploaded_asset_url(release, asset_name)
+        if existing:
+            return existing
         upload_url = str(release.get("upload_url", "")).split("{", 1)[0]
         if urlparse(upload_url).hostname != "uploads.github.com":
             raise ServiceError("رابط رفع GitHub غير متوقع.")
         with video_path.open("rb") as stream:
-            up = self._gh("POST", upload_url, params={"name": asset_name}, data=stream,
-                          headers={"Content-Type": "video/mp4"})
-        if up.status_code not in (200, 201):
-            raise ServiceError(f"رفع الفيديو إلى GitHub Release أعاد HTTP {up.status_code}.")
-        return up.json()["browser_download_url"]
+            uploaded = self._gh("POST", upload_url, params={"name": asset_name}, data=stream,
+                                headers={"Content-Type": "video/mp4"})
+        if uploaded.status_code == 422:
+            # Another run may have uploaded the same asset in the meantime.
+            again = self._gh("GET", f"{base}/tags/{tag}")
+            if again.status_code == 200:
+                existing = self._uploaded_asset_url(again.json(), asset_name)
+                if existing:
+                    return existing
+        if uploaded.status_code not in (200, 201):
+            raise ServiceError(f"رفع الفيديو إلى GitHub Release أعاد HTTP {uploaded.status_code}.")
+        url = uploaded.json().get("browser_download_url")
+        if not isinstance(url, str) or not url.startswith("https://"):
+            raise ServiceError("لم يُرجع GitHub رابط تنزيل صالحًا للملف المرفوع.")
+        return url
 
     def _notify(self, payload: dict[str, Any]) -> None:
         headers = {"Content-Type": "application/json"}
@@ -1163,17 +1502,17 @@ class MakeWebhookPublisher:
         last = "unknown"
         for attempt in range(3):
             try:
-                resp = self.session.post(self.webhook, json=payload, headers=headers, timeout=(15, 60))
+                response = self.session.post(self.webhook, json=payload, headers=headers, timeout=(15, 60))
             except requests.RequestException as exc:
                 last = type(exc).__name__
             else:
-                if 200 <= resp.status_code < 300:
+                if 200 <= response.status_code < 300:
                     return
-                last = f"HTTP {resp.status_code}"
-                if resp.status_code not in (408, 429) and resp.status_code < 500:
+                last = f"HTTP {response.status_code}"
+                if response.status_code not in (408, 429) and response.status_code < 500:
                     break
             if attempt < 2:
-                time.sleep(self.retry_delay)
+                self._sleep(self.retry_delay)
         raise ServiceError(f"فشل إرسال Webhook إلى Make ({last}).")
 
     def publish_or_verify(self, video_path: Path, title: str, description: str,
@@ -1181,15 +1520,19 @@ class MakeWebhookPublisher:
         previous = previous or {}
         if previous.get("status") == "published" and previous.get("video_id"):
             return dict(previous)
-        if not video_path.is_file():
+        resume_url = previous.get("video_url") if isinstance(previous.get("video_url"), str) else None
+        if not resume_url and not video_path.is_file():
             raise ServiceError("ملف الفيديو غير موجود لرفعه.")
-        digest = hashlib.sha256(video_path.read_bytes()).hexdigest()
+        digest = previous.get("sha256") or self._sha256(video_path)
         tag = previous.get("video_id") or f"video-{digest[:16]}"
-        url = previous.get("video_url") or self._ensure_asset(video_path, tag, title)
-        state = {"status": "uploaded_unconfirmed", "video_id": tag, "video_url": url}
+        url = resume_url or self._ensure_asset(video_path, str(tag), title)
+        state = {"status": "uploaded_unconfirmed", "video_id": str(tag), "video_url": url, "sha256": digest}
         payload = {
-            "idempotency_key": tag, "video_url": url, "sha256": digest,
-            "title": title[:100], "description": description[:5000],
+            "idempotency_key": str(tag),
+            "video_url": url,
+            "sha256": digest,
+            "title": title[:100],
+            "description": description[:5000],
             "caption": f"{title}\n\n{description}"[:2000],     # Instagram/TikTok caption limit
             "platforms": self.platforms,
             "youtube_privacy": os.getenv("YOUTUBE_PRIVACY_STATUS", "private"),
@@ -1198,8 +1541,10 @@ class MakeWebhookPublisher:
             self._notify(payload)
         except ServiceError as exc:
             raise ServiceError(str(exc), platform_state=state) from None
-        return {"status": "published", "video_id": tag, "video_url": url, "delivered_to": "make.com"}
-                              
+        return {"status": "published", "video_id": str(tag), "video_url": url, "sha256": digest,
+                "delivered_to": "make.com"}
+
+
 # Self-contained unit tests; external APIs are mocked and never called.
 if __name__ == "__main__":
     import unittest
@@ -1570,5 +1915,403 @@ if __name__ == "__main__":
             self.assertEqual(service.word_boundaries["hook"], [{"text": "هوك", "start_ms": 0, "end_ms": 500}])
             self.assertEqual(service.word_boundaries["cta"], [])
             self.assertEqual(set(service.word_boundaries), {"hook", "seal", "cta"})
+
+        # ----- Gemini text-to-speech -----
+        @staticmethod
+        def pcm(seconds, amplitude=8000, rate=24000):
+            count = int(seconds * rate)
+            return array("h", [amplitude if (i // 40) % 2 == 0 else -amplitude for i in range(count)]).tobytes()
+
+        @staticmethod
+        def make_gemini_tts(model="gemini-3.8-flash-tts"):
+            service = object.__new__(GeminiTTSService)
+            service.api_key, service.model, service.voice = "k", model, "Algieba"
+            service.terms_url, service.provider = GEMINI_TTS_TERMS, f"gemini-tts ({model})"
+            service.word_boundaries = {}
+            service.sleeps = []
+            service._sleep = lambda seconds: service.sleeps.append(seconds)
+            return service
+
+        def test_gemini_tts_mime_parsing_and_wav_wrapping(self):
+            self.assertEqual(_parse_pcm_mime("audio/L16;codec=pcm;rate=24000"), {"bits_per_sample": 16, "rate": 24000})
+            self.assertEqual(_parse_pcm_mime("audio/L16;rate=16000")["rate"], 16000)
+            self.assertEqual(_parse_pcm_mime("audio/L16"), {"bits_per_sample": 16, "rate": 24000})
+            wav = _pcm_to_wav(self.pcm(1.0), "audio/L16;rate=24000")
+            with wave.open(io.BytesIO(wav), "rb") as reader:
+                self.assertEqual((reader.getnchannels(), reader.getsampwidth(), reader.getframerate()), (1, 2, 24000))
+                self.assertEqual(reader.getnframes(), 24000)
+            self.assertEqual(_pcm_to_wav(wav, "audio/wav"), wav)          # already a WAV file
+            with self.assertRaises(ServiceError):
+                _pcm_to_wav(b"\x00\x01" * 10, "text/plain")
+            with self.assertRaises(ServiceError):
+                _pcm_to_wav(b"\x00\x01" * 10, "audio/L24;rate=24000")
+
+        def test_gemini_tts_wav_stats_report_duration_and_peak(self):
+            seconds, peak = _wav_stats(_pcm_to_wav(self.pcm(2.0, amplitude=1234), "audio/L16;rate=24000"))
+            self.assertAlmostEqual(seconds, 2.0, places=3)
+            self.assertEqual(peak, 1234)
+            with self.assertRaises(_GeminiTransient):
+                _wav_stats(b"RIFFnot-a-wav")
+
+        def test_gemini_tts_synthesize_writes_wav_files_without_word_boundaries(self):
+            import tempfile
+            service = self.make_gemini_tts()
+            service._request_audio = lambda text: (self.pcm(2.0), "audio/L16;rate=24000")
+            with tempfile.TemporaryDirectory() as temp:
+                saved = service.synthesize({"hook": "ما هو الإيمان بالغيب", "seal": "صدق الله العظيم"}, Path(temp))
+                self.assertEqual(set(saved), {"hook", "seal"})
+                for path in saved.values():
+                    self.assertEqual(path.suffix, ".wav")
+                    self.assertEqual(path.read_bytes()[:4], b"RIFF")
+            self.assertEqual(service.word_boundaries, {"hook": [], "seal": []})
+
+        def test_gemini_tts_requires_the_seal_exactly_once(self):
+            import tempfile
+            service = self.make_gemini_tts()
+            service._request_audio = lambda text: (self.pcm(2.0), "audio/L16;rate=24000")
+            with tempfile.TemporaryDirectory() as temp:
+                with self.assertRaises(ServiceError):
+                    service.synthesize({"hook": "هوك"}, Path(temp))
+                with self.assertRaises(ServiceError):
+                    service.synthesize({"hook": "صدق الله العظيم", "seal": "صدق الله العظيم"}, Path(temp))
+
+        def test_gemini_tts_retries_implausible_audio_then_succeeds(self):
+            import tempfile
+            service = self.make_gemini_tts()
+            calls = []
+            def request(text):
+                calls.append(1)
+                return (self.pcm(0.1) if len(calls) == 1 else self.pcm(2.0)), "audio/L16;rate=24000"
+            service._request_audio = request
+            with tempfile.TemporaryDirectory() as temp:
+                service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(service.sleeps, [GEMINI_TTS_RETRY_DELAYS[0]])
+
+        def test_gemini_tts_rejects_silent_and_runaway_audio_after_all_attempts(self):
+            import tempfile
+            for label, audio in (("silent", self.pcm(2.0, amplitude=10)), ("runaway", self.pcm(20.0))):
+                service = self.make_gemini_tts()
+                calls = []
+                def request(text, audio=audio):
+                    calls.append(1)
+                    return audio, "audio/L16;rate=24000"
+                service._request_audio = request
+                with tempfile.TemporaryDirectory() as temp:
+                    with self.assertRaises(ServiceError, msg=label):
+                        service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+                self.assertEqual(len(calls), len(GEMINI_TTS_RETRY_DELAYS) + 1, label)
+                self.assertEqual(service.sleeps, list(GEMINI_TTS_RETRY_DELAYS), label)
+
+        def test_gemini_tts_does_not_retry_permanent_errors(self):
+            import tempfile
+            service = self.make_gemini_tts()
+            calls = []
+            def request(text):
+                calls.append(1)
+                raise ServiceError("code=403 permission denied")
+            service._request_audio = request
+            with tempfile.TemporaryDirectory() as temp:
+                with self.assertRaisesRegex(ServiceError, "403"):
+                    service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(service.sleeps, [])
+
+        def test_gemini_tts_prompt_depends_on_model_family(self):
+            self.assertEqual(self.make_gemini_tts("gemini-3.8-flash-tts")._prompt("نص"), "نص")
+            legacy = self.make_gemini_tts("gemini-2.5-pro-preview-tts")._prompt("نص")
+            self.assertIn("## Transcript:\nنص", legacy)
+            self.assertIn("exactly as written", legacy)
+
+        def test_gemini_tts_extracts_inline_audio_from_response_parts(self):
+            class Inline:
+                def __init__(self, data, mime_type):
+                    self.data, self.mime_type = data, mime_type
+            class Part:
+                def __init__(self, inline_data=None):
+                    self.inline_data = inline_data
+            class Content:
+                parts = [Part(), Part(Inline(b"ab", "audio/L16;rate=24000")), Part(Inline(b"cd", "audio/L16;rate=24000"))]
+            class Candidate:
+                content = Content()
+            class Response:
+                candidates = [Candidate()]
+            self.assertEqual(GeminiTTSService._extract_audio(Response()), (b"abcd", "audio/L16;rate=24000"))
+            self.assertEqual(GeminiTTSService._extract_audio(object()), (b"", ""))
+
+        def test_gemini_tts_constructor_validates_settings(self):
+            base = {"GEMINI_API_KEY1": "key", "GEMINI_API_KEY": "", "TTS_TERMS_CONFIRMED": "true",
+                    "GEMINI_TTS_MODEL": "", "GEMINI_TTS_VOICE": "", "GEMINI_TTS_TERMS_URL": ""}
+            with patch.dict(os.environ, base):
+                service = GeminiTTSService()
+                self.assertEqual((service.model, service.voice), (DEFAULT_GEMINI_TTS_MODEL, DEFAULT_GEMINI_TTS_VOICE))
+                self.assertEqual(service.terms_url, GEMINI_TTS_TERMS)
+                self.assertIn(service.model, service.provider)
+            with patch.dict(os.environ, {**base, "GEMINI_API_KEY1": "", "GEMINI_API_KEY": "fallback-key"}):
+                self.assertEqual(GeminiTTSService().api_key, "fallback-key")
+            with patch.dict(os.environ, {**base, "GEMINI_API_KEY1": "", "GEMINI_API_KEY": ""}):
+                with self.assertRaises(ServiceError):
+                    GeminiTTSService()
+            with patch.dict(os.environ, {**base, "GEMINI_TTS_VOICE": "bad voice!"}):
+                with self.assertRaises(ServiceError):
+                    GeminiTTSService()
+            with patch.dict(os.environ, {**base, "TTS_TERMS_CONFIRMED": "false"}):
+                with self.assertRaises(ServiceError):
+                    GeminiTTSService()
+            with patch.dict(os.environ, {**base, "GEMINI_TTS_TERMS_URL": "http://insecure.example"}):
+                with self.assertRaises(ServiceError):
+                    GeminiTTSService()
+
+        def test_tts_provider_factory_selects_edge_gemini_or_auto(self):
+            env = {"TTS_TERMS_CONFIRMED": "true", "TTS_LICENSE_URL": "https://example.org/terms",
+                   "GEMINI_API_KEY1": "key", "GEMINI_API_KEY": "", "GEMINI_TTS_MODEL": "", "GEMINI_TTS_VOICE": ""}
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": ""}):
+                self.assertIsInstance(make_tts_service("ar-EG-ShakirNeural"), TTSService)
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": "edge"}):
+                self.assertIsInstance(make_tts_service("ar-EG-ShakirNeural"), TTSService)
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": "gemini"}):
+                self.assertIsInstance(make_tts_service("ar-EG-ShakirNeural"), GeminiTTSService)
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": "auto"}):
+                auto = make_tts_service("ar-EG-ShakirNeural")
+                self.assertIsInstance(auto, FallbackTTSService)
+                self.assertIsInstance(auto.primary, GeminiTTSService)
+                self.assertIsInstance(auto.secondary, TTSService)
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": "auto", "GEMINI_API_KEY1": ""}):
+                self.assertIsInstance(make_tts_service("ar-EG-ShakirNeural"), TTSService)
+            with patch.dict(os.environ, {**env, "TTS_PROVIDER": "elevenlabs"}):
+                with self.assertRaises(ServiceError):
+                    make_tts_service()
+
+        def test_fallback_tts_uses_secondary_for_all_segments_and_reports_its_identity(self):
+            class Fake:
+                def __init__(self, name, voice, fail):
+                    self.provider, self.voice, self.terms_url = name, voice, f"https://{name}.example/terms"
+                    self.fail, self.word_boundaries, self.calls = fail, {}, 0
+                def synthesize(self, texts, output_dir):
+                    self.calls += 1
+                    if self.fail:
+                        raise ServiceError("quota exceeded")
+                    self.word_boundaries = {key: [] for key in texts}
+                    return {key: Path(f"{self.provider}-{key}.mp3") for key in texts}
+            primary, secondary = Fake("gemini", "Algieba", True), Fake("edge", "ar-EG-ShakirNeural", False)
+            service = FallbackTTSService(primary, secondary)
+            self.assertEqual(service.voice, "Algieba")
+            files = service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم"}, Path("."))
+            self.assertEqual((primary.calls, secondary.calls), (1, 1))
+            self.assertTrue(all(str(path).startswith("edge-") for path in files.values()))
+            self.assertEqual((service.voice, service.provider), ("ar-EG-ShakirNeural", "edge"))
+            self.assertEqual(service.terms_url, "https://edge.example/terms")
+            healthy = FallbackTTSService(Fake("gemini", "Algieba", False), secondary)
+            healthy.synthesize({"seal": "صدق الله العظيم"}, Path("."))
+            self.assertEqual((healthy.voice, healthy.provider), ("Algieba", "gemini"))
+
+        # ----- Pexels multi-clip backgrounds -----
+        @staticmethod
+        def pexels_video(video_id, duration=15, files=None):
+            return {"id": video_id, "url": f"https://www.pexels.com/video/{video_id}/", "duration": duration,
+                    "user": {"name": f"Creator {video_id}"},
+                    "video_files": files or [
+                        {"link": f"https://videos.pexels.com/{video_id}-sd.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
+                        {"link": f"https://videos.pexels.com/{video_id}-hd.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
+                        {"link": f"https://videos.pexels.com/{video_id}-uhd.mp4", "file_type": "video/mp4", "width": 2160, "height": 3840},
+                    ]}
+
+        class PexelsSession:
+            def __init__(self, videos):
+                self.videos, self.downloads = videos, []
+            def get(self, url, **kwargs):
+                if url == PEXELS_SEARCH:
+                    return ServiceValidationTests.FakeResponse(200, {"videos": self.videos})
+                self.downloads.append(url)
+                class Download:
+                    def __enter__(self_inner):
+                        return self_inner
+                    def __exit__(self_inner, *args):
+                        return False
+                    def raise_for_status(self_inner):
+                        return None
+                    def iter_content(self_inner, _size):
+                        return [b"v" * 5000]
+                return Download()
+
+        def test_pexels_picks_the_smallest_tall_enough_https_pexels_mp4(self):
+            video = self.pexels_video(1, files=[
+                {"link": "https://videos.pexels.com/a.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
+                {"link": "https://videos.pexels.com/b.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
+                {"link": "https://videos.pexels.com/c.mp4", "file_type": "video/mp4", "width": 2160, "height": 3840},
+                {"link": "https://evil.example/d.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
+                {"link": "http://videos.pexels.com/e.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
+                {"link": "https://videos.pexels.com/f.webm", "file_type": "video/webm", "width": 1080, "height": 1920},
+            ])
+            self.assertEqual(PexelsService._pick_file(video)["link"], "https://videos.pexels.com/b.mp4")
+            small_only = self.pexels_video(2, files=[
+                {"link": "https://videos.pexels.com/s1.mp4", "file_type": "video/mp4", "width": 360, "height": 640},
+                {"link": "https://videos.pexels.com/s2.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
+            ])
+            self.assertEqual(PexelsService._pick_file(small_only)["link"], "https://videos.pexels.com/s2.mp4")
+            self.assertIsNone(PexelsService._pick_file({"video_files": [{"link": "https://evil.example/x.mp4", "file_type": "video/mp4"}]}))
+
+        def test_pexels_fetches_distinct_clips_with_metadata_and_clamps_count(self):
+            import tempfile
+            videos = [self.pexels_video(i) for i in range(1, 8)] + [self.pexels_video(3)]  # duplicate id
+            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "true"}):
+                session = self.PexelsSession(videos)
+                service = PexelsService(session=session)
+                with tempfile.TemporaryDirectory() as temp:
+                    clips = service.fetch_backgrounds("شرح الصبر والأمل", Path(temp), count=4, speed=0.75)
+                    self.assertEqual(len(clips), 4)
+                    self.assertEqual(len({c["video_id"] for c in clips}), 4)
+                    self.assertTrue(all(Path(c["file"]).is_file() for c in clips))
+                    self.assertTrue(all(c["playback_speed"] == 0.75 and c["kind"] == "background_video" for c in clips))
+                    self.assertTrue(all(link.endswith("-hd.mp4") for link in session.downloads))
+                    self.assertEqual(clips[0]["query"], "quiet ocean sunrise nature")
+                    self.assertTrue(clips[0]["creator"].startswith("Creator"))
+                    too_many = service.fetch_backgrounds("نص", Path(temp) / "more", count=99)
+                    self.assertEqual(len(too_many), 5)
+                    too_few = service.fetch_backgrounds("نص", Path(temp) / "less", count=1)
+                    self.assertEqual(len(too_few), 2)
+
+        def test_pexels_prefers_long_clips_and_needs_at_least_two_usable_videos(self):
+            import tempfile
+            videos = [self.pexels_video(1, duration=3), self.pexels_video(2, duration=20),
+                      self.pexels_video(3, duration=4), self.pexels_video(4, duration=30)]
+            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "true"}):
+                with tempfile.TemporaryDirectory() as temp:
+                    clips = PexelsService(session=self.PexelsSession(videos)).fetch_backgrounds("نص", Path(temp), count=2)
+                    self.assertEqual({c["video_id"] for c in clips}, {2, 4})
+                    with self.assertRaises(ServiceError):
+                        PexelsService(session=self.PexelsSession([self.pexels_video(1)])).fetch_backgrounds("نص", Path(temp), count=3)
+
+        def test_pexels_requires_license_confirmation(self):
+            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "false"}):
+                with self.assertRaises(ServiceError):
+                    PexelsService()
+
+        # ----- Make.com publisher -----
+        class FakeHTTP:
+            """Shared response queue for both `request` (GitHub) and `post` (Make webhook)."""
+            def __init__(self, responses):
+                self.responses, self.calls = list(responses), []
+            def request(self, method, url, **kwargs):
+                self.calls.append(("request", method, url, kwargs))
+                return self.responses.pop(0)
+            def post(self, url, **kwargs):
+                self.calls.append(("post", url, kwargs))
+                return self.responses.pop(0)
+
+        MAKE_ENV = {"MAKE_WEBHOOK_URL": "https://hook.eu1.make.com/abc", "MAKE_WEBHOOK_API_KEY": "secret-key",
+                    "GITHUB_TOKEN": "gh-token", "GITHUB_REPOSITORY": "owner/repo",
+                    "MAKE_PLATFORMS": "facebook,youtube,instagram,tiktok"}
+
+        def make_publisher(self, responses):
+            with patch.dict(os.environ, self.MAKE_ENV):
+                publisher = MakeWebhookPublisher(session=self.FakeHTTP(responses))
+            publisher._sleep = lambda seconds: None
+            return publisher
+
+        def test_make_publisher_rejects_unsafe_webhook_and_repository(self):
+            for url in ("http://hook.eu1.make.com/abc", "https://evil.example/abc", "https://make.com.evil.example/abc"):
+                with patch.dict(os.environ, {**self.MAKE_ENV, "MAKE_WEBHOOK_URL": url}):
+                    with self.assertRaises(ServiceError, msg=url):
+                        MakeWebhookPublisher()
+            with patch.dict(os.environ, {**self.MAKE_ENV, "GITHUB_REPOSITORY": "not a repo"}):
+                with self.assertRaises(ServiceError):
+                    MakeWebhookPublisher()
+
+        def test_make_publisher_reuses_existing_release_asset_and_sends_payload(self):
+            import tempfile
+            content = b"fake-mp4-bytes" * 100
+            tag = "video-" + hashlib.sha256(content).hexdigest()[:16]
+            url = f"https://github.com/owner/repo/releases/download/{tag}/{tag}.mp4"
+            release = {"assets": [{"name": f"{tag}.mp4", "state": "uploaded", "browser_download_url": url}]}
+            publisher = self.make_publisher([self.FakeResponse(200, release), self.FakeResponse(200, {})])
+            with tempfile.TemporaryDirectory() as temp:
+                video = Path(temp) / "video.mp4"
+                video.write_bytes(content)
+                with patch.dict(os.environ, {"YOUTUBE_PRIVACY_STATUS": "unlisted"}):
+                    result = publisher.publish_or_verify(video, "العنوان", "الوصف")
+            self.assertEqual(result["status"], "published")
+            self.assertEqual((result["video_id"], result["video_url"]), (tag, url))
+            calls = publisher.session.calls
+            self.assertEqual([call[0] for call in calls], ["request", "post"])     # no upload happened
+            webhook = calls[1]
+            self.assertEqual(webhook[1], "https://hook.eu1.make.com/abc")
+            self.assertEqual(webhook[2]["headers"]["x-make-apikey"], "secret-key")
+            body = webhook[2]["json"]
+            self.assertEqual(body["idempotency_key"], tag)
+            self.assertEqual(body["video_url"], url)
+            self.assertEqual(body["platforms"], ["facebook", "youtube", "instagram", "tiktok"])
+            self.assertEqual(body["youtube_privacy"], "unlisted")
+            self.assertLessEqual(len(body["caption"]), 2000)
+
+        def test_make_publisher_creates_release_and_uploads_when_missing(self):
+            import tempfile
+            created = {"upload_url": "https://uploads.github.com/repos/owner/repo/releases/1/assets{?name,label}", "assets": []}
+            uploaded = {"browser_download_url": "https://github.com/owner/repo/releases/download/t/t.mp4"}
+            publisher = self.make_publisher([self.FakeResponse(404, {}), self.FakeResponse(201, created),
+                                             self.FakeResponse(201, uploaded), self.FakeResponse(200, {})])
+            with tempfile.TemporaryDirectory() as temp:
+                video = Path(temp) / "video.mp4"
+                video.write_bytes(b"x" * 2048)
+                result = publisher.publish_or_verify(video, "title", "desc")
+            self.assertEqual(result["video_url"], uploaded["browser_download_url"])
+            kinds = [(call[0], call[1] if call[0] == "request" else "POST") for call in publisher.session.calls]
+            self.assertEqual(kinds, [("request", "GET"), ("request", "POST"), ("request", "POST"), ("post", "POST")])
+            self.assertEqual(publisher.session.calls[2][3]["params"], {"name": result["video_id"] + ".mp4"})
+
+        def test_make_publisher_rejects_unexpected_upload_host(self):
+            import tempfile
+            created = {"upload_url": "https://evil.example/upload{?name}", "assets": []}
+            publisher = self.make_publisher([self.FakeResponse(404, {}), self.FakeResponse(201, created)])
+            with tempfile.TemporaryDirectory() as temp:
+                video = Path(temp) / "video.mp4"
+                video.write_bytes(b"x" * 2048)
+                with self.assertRaises(ServiceError):
+                    publisher.publish_or_verify(video, "title", "desc")
+
+        def test_make_publisher_keeps_id_and_url_when_webhook_keeps_failing(self):
+            import tempfile
+            url = "https://github.com/owner/repo/releases/download/t/t.mp4"
+            release = {"assets": [{"name": "placeholder", "state": "uploaded", "browser_download_url": url}]}
+            content = b"y" * 2048
+            tag = "video-" + hashlib.sha256(content).hexdigest()[:16]
+            release["assets"][0]["name"] = f"{tag}.mp4"
+            publisher = self.make_publisher([self.FakeResponse(200, release), self.FakeResponse(500, {}),
+                                             self.FakeResponse(502, {}), self.FakeResponse(503, {})])
+            with tempfile.TemporaryDirectory() as temp:
+                video = Path(temp) / "video.mp4"
+                video.write_bytes(content)
+                with self.assertRaises(ServiceError) as caught:
+                    publisher.publish_or_verify(video, "title", "desc")
+            state = caught.exception.platform_state
+            self.assertEqual((state["status"], state["video_id"], state["video_url"]), ("uploaded_unconfirmed", tag, url))
+            self.assertEqual(sum(1 for call in publisher.session.calls if call[0] == "post"), 3)
+
+        def test_make_publisher_does_not_retry_a_client_error(self):
+            import tempfile
+            content = b"z" * 2048
+            tag = "video-" + hashlib.sha256(content).hexdigest()[:16]
+            release = {"assets": [{"name": f"{tag}.mp4", "state": "uploaded",
+                                   "browser_download_url": "https://github.com/o/r/releases/download/t/t.mp4"}]}
+            publisher = self.make_publisher([self.FakeResponse(200, release), self.FakeResponse(400, {})])
+            with tempfile.TemporaryDirectory() as temp:
+                video = Path(temp) / "video.mp4"
+                video.write_bytes(content)
+                with self.assertRaisesRegex(ServiceError, "HTTP 400"):
+                    publisher.publish_or_verify(video, "title", "desc")
+            self.assertEqual(sum(1 for call in publisher.session.calls if call[0] == "post"), 1)
+
+        def test_make_publisher_resumes_from_saved_url_without_touching_github_or_the_file(self):
+            publisher = self.make_publisher([self.FakeResponse(200, {})])
+            previous = {"status": "uploaded_unconfirmed", "video_id": "video-abc123",
+                        "video_url": "https://github.com/o/r/releases/download/video-abc123/video-abc123.mp4",
+                        "sha256": "f" * 64}
+            result = publisher.publish_or_verify(Path("/nonexistent/video.mp4"), "title", "desc", previous=previous)
+            self.assertEqual(result["status"], "published")
+            self.assertEqual([call[0] for call in publisher.session.calls], ["post"])
+            self.assertEqual(publisher.session.calls[0][2]["json"]["idempotency_key"], "video-abc123")
+            again = publisher.publish_or_verify(Path("/nonexistent/video.mp4"), "title", "desc", previous=result)
+            self.assertEqual(again, result)
+            self.assertEqual(len(publisher.session.calls), 1)
 
     unittest.main()

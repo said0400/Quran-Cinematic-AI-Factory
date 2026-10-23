@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from services import (
     FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService,
-    QuranFoundationClient, ServiceError, TTSService, YouTubePublisher, env_bool,
+    QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     validate_word_segments,
 )
 from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
@@ -408,7 +408,7 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
 
 
 def _record_sources(verse: Any, recitation: Any, tafsir: Any, media_items: list[dict[str, Any]], tts_terms: str,
-                    tts_voice: str) -> list[dict[str, Any]]:
+                    tts_voice: str, tts_provider: str = "edge-tts") -> list[dict[str, Any]]:
     return [
         {"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
          "source_url": f"{QF_BASE}/verses/by_key/{verse.key}", "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
@@ -421,7 +421,7 @@ def _record_sources(verse: Any, recitation: Any, tafsir: Any, media_items: list[
          "source_url": tafsir.source_url, "license_url": tafsir.license_url,
          "license_status": "operator-confirmed commercial reproduction permission"},
         *media_items,
-        {"kind": "tts", "provider": "edge-tts", "voice": tts_voice,
+        {"kind": "tts", "provider": tts_provider, "voice": tts_voice,
          "license_url": tts_terms, "license_status": "operator-confirmed current usage terms"},
     ]
 
@@ -529,7 +529,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["verification"]["checks"]["background"] = background_info
         update_record(history, row, report_dir)
 
-        tts = TTSService(config.tts_voice)
+        tts = make_tts_service(config.tts_voice)
         speech_texts = {
             "hook": ai["hook"],
             "seal": "صدق الله العظيم",
@@ -554,7 +554,8 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["verification"]["checks"]["video"] = video_validation
         row["verification"]["status"] = "validated"
         row["status"] = "validated"
-        row["media_sources"] = _record_sources(verse, recitation, tafsir, media_items, tts.terms_url, tts.voice)
+        row["media_sources"] = _record_sources(verse, recitation, tafsir, media_items, tts.terms_url, tts.voice,
+                                             getattr(tts, "provider", "edge-tts"))
         font_source = video_validation.get("font_source", {})
         row["media_sources"].append({"kind": "font", **font_source})
         validated_video = True
@@ -765,6 +766,19 @@ if __name__ == "__main__":
                 tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
                 sources = _record_sources(verse, recitation, tafsir, [{"kind": "media"}], "https://terms", "ar-EG-ShakirNeural")
                 self.assertEqual([item for item in sources if item["kind"] == "tts"][0]["voice"], "ar-EG-ShakirNeural")
+
+            def test_record_sources_logs_the_tts_provider_actually_used(self):
+                class Obj:
+                    def __init__(self, **kwargs):
+                        self.__dict__.update(kwargs)
+                verse = Obj(key="2:3")
+                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
+                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
+                default = _record_sources(verse, recitation, tafsir, [], "https://terms", "ar-EG-ShakirNeural")
+                self.assertEqual([i for i in default if i["kind"] == "tts"][0]["provider"], "edge-tts")
+                gemini = _record_sources(verse, recitation, tafsir, [], "https://terms", "Algieba", "gemini-tts (m)")
+                entry = [i for i in gemini if i["kind"] == "tts"][0]
+                self.assertEqual((entry["provider"], entry["voice"]), ("gemini-tts (m)", "Algieba"))
 
             def test_record_sources_lists_every_background_clip(self):
                 class Obj:

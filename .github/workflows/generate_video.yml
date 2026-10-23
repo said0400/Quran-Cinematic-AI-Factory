@@ -35,7 +35,9 @@ concurrency:
   queue: max
 
 permissions:
-  contents: write # Required only to persist data/production_history.json between scheduled runs.
+  # Persist data/production_history.json between scheduled runs, and create the GitHub Release
+  # that hosts the public video link sent to Make.com.
+  contents: write
 
 jobs:
   produce:
@@ -53,7 +55,17 @@ jobs:
       TARGET_MAX_DURATION: ${{ vars.TARGET_MAX_DURATION || '60' }}
       MAX_CANDIDATES_PER_RUN: ${{ vars.MAX_CANDIDATES_PER_RUN || '5' }}
       MAX_RETRIES: ${{ vars.MAX_RETRIES || '3' }}
+      # Background: 2..5 Pexels clips, each slowed (0.75 = 25% slower) and merged into one video.
+      BACKGROUND_CLIP_COUNT: ${{ vars.BACKGROUND_CLIP_COUNT || '3' }}
+      BACKGROUND_SPEED: ${{ vars.BACKGROUND_SPEED || '0.75' }}
+      # Commentary voice: edge (default) | gemini | auto (Gemini first, edge-tts as fallback).
+      TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'edge' }}
       TTS_VOICE: ${{ vars.TTS_VOICE || 'ar-EG-ShakirNeural' }}
+      GEMINI_API_KEY1: ${{ secrets.GEMINI_API_KEY1 }}
+      GEMINI_TTS_MODEL: ${{ vars.GEMINI_TTS_MODEL }}
+      GEMINI_TTS_VOICE: ${{ vars.GEMINI_TTS_VOICE }}
+      GEMINI_TTS_STYLE: ${{ vars.GEMINI_TTS_STYLE }}
+      GEMINI_TTS_TERMS_URL: ${{ vars.GEMINI_TTS_TERMS_URL }}
       ARABIC_FONT: ${{ vars.ARABIC_FONT }}
       ARABIC_FONT_LICENSE_URL: ${{ vars.ARABIC_FONT_LICENSE_URL }}
       ARABIC_FONT_LICENSE_CONFIRMED: ${{ vars.ARABIC_FONT_LICENSE_CONFIRMED }}
@@ -90,8 +102,9 @@ jobs:
       META_PUBLISH_ENABLED: ${{ vars.META_PUBLISH_ENABLED || 'false' }}
       META_REELS_DISCLOSURE_CONFIRMED: ${{ vars.META_REELS_DISCLOSURE_CONFIRMED }}
       META_GRAPH_VERSION: ${{ vars.META_GRAPH_VERSION || 'v26.0' }}
-      BACKGROUND_CLIP_COUNT: ${{ vars.BACKGROUND_CLIP_COUNT || '3' }}
-      BACKGROUND_SPEED: ${{ vars.BACKGROUND_SPEED || '0.75' }}
+      # Make.com: the video is uploaded to a public GitHub Release, then its link is sent to the
+      # webhook, which fans out to Facebook, YouTube, Instagram and TikTok. When enabled it replaces
+      # the direct YouTube/Facebook publishers. The webhook URL is a secret because the repository is public.
       MAKE_PUBLISH_ENABLED: ${{ vars.MAKE_PUBLISH_ENABLED || 'false' }}
       MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
       MAKE_WEBHOOK_API_KEY: ${{ secrets.MAKE_WEBHOOK_API_KEY }}

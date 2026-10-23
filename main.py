@@ -5,7 +5,6 @@ import argparse
 import fcntl
 import hashlib
 import json
-import math
 import os
 import sys
 import tempfile
@@ -16,13 +15,13 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
 
 from services import (
-    FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService, QuranFoundationClient,
-    ServiceError, TTSService, YouTubePublisher, env_bool, validate_word_segments,
+    FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService,
+    QuranFoundationClient, ServiceError, TTSService, YouTubePublisher, env_bool,
+    validate_word_segments,
 )
-from video_engine import VideoError, build_video, media_duration, validate_video
+from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 AUTO_VERSE_POOL = [
@@ -30,6 +29,7 @@ AUTO_VERSE_POOL = [
     (17, 23), (25, 63), (39, 53), (49, 13), (64, 16), (94, 5),
 ]
 DEFAULT_TTS_VOICE = "ar-EG-ShakirNeural"
+PLATFORM_KEYS = ("youtube", "facebook", "make")
 
 
 class FactoryError(RuntimeError):
@@ -58,7 +58,7 @@ class Config:
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
         def integer(name: str, default: int, minimum: int, maximum: int) -> int:
-            raw = os.getenv(name, str(default)).strip()
+            raw = os.getenv(name, "").strip() or str(default)
             try:
                 value = int(raw)
             except ValueError:
@@ -144,7 +144,8 @@ def validate_generation_environment() -> None:
     if missing:
         raise FactoryError("إعدادات إنتاج مطلوبة غير موجودة: " + ", ".join(missing))
     if env_bool("MAKE_PUBLISH_ENABLED"):
-        absent = [k for k in ("MAKE_WEBHOOK_URL", "GITHUB_TOKEN", "GITHUB_REPOSITORY") if not os.getenv(k, "").strip()]
+        absent = [key for key in ("MAKE_WEBHOOK_URL", "GITHUB_TOKEN", "GITHUB_REPOSITORY")
+                  if not os.getenv(key, "").strip()]
         if absent:
             raise FactoryError("إعدادات Make مطلوبة غير موجودة: " + ", ".join(absent))
     if urlparse(os.getenv("QURAN_TEXT_LICENSE_URL", "").strip()).scheme != "https":
@@ -329,23 +330,24 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
                       report_dir: Path, title: str, description: str,
                       make_publisher: Callable[[str], Any] = publisher_factory,
                       retries: int = 3) -> dict[str, Any]:
-    """Publish destinations independently; never re-upload a destination already confirmed."""
+    """Publish destinations independently; never re-upload a destination already confirmed.
+
+    With MAKE_PUBLISH_ENABLED the only target is Make.com (it fans out to Facebook, YouTube,
+    Instagram and TikTok), so the direct YouTube/Facebook publishers are marked disabled. Without it,
+    YouTube is always a target and Facebook only when META_PUBLISH_ENABLED is set.
+    """
     if env_bool("MAKE_PUBLISH_ENABLED"):
         targets = ["make"]
-        for legacy in ("youtube", "facebook"):      # Make handles every destination
+        for legacy in ("youtube", "facebook"):
             state = row.setdefault("platforms", {}).get(legacy)
             if not isinstance(state, dict) or state.get("status") == "not_started":
                 row["platforms"][legacy] = {"status": "disabled", "video_id": None, "attempts": 0}
     else:
         targets = ["youtube"]
-        facebook_state = row.setdefault("platforms", {}).get("facebook")
-        
-        # السماح باستهداف Facebook إذا كان مفَعّلاً عبر البيئة أو لوجود حالة سابقة/معلقة (لاكتياز اختبارات الـ Retries)
-        has_facebook_activity = isinstance(facebook_state, dict) and facebook_state.get("status") not in {"not_started", "disabled", None}
-        
-        if env_bool("META_PUBLISH_ENABLED") or has_facebook_activity:
+        if env_bool("META_PUBLISH_ENABLED"):
             targets.append("facebook")
         else:
+            facebook_state = row.setdefault("platforms", {}).get("facebook")
             if not isinstance(facebook_state, dict) or facebook_state.get("status") == "not_started":
                 row["platforms"]["facebook"] = {"status": "disabled", "video_id": None, "attempts": 0}
     for name in targets:
@@ -405,7 +407,8 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
     return row
 
 
-def _record_sources(verse, recitation, tafsir, media_items, tts_terms, tts_voice):
+def _record_sources(verse: Any, recitation: Any, tafsir: Any, media_items: list[dict[str, Any]], tts_terms: str,
+                    tts_voice: str) -> list[dict[str, Any]]:
     return [
         {"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
          "source_url": f"{QF_BASE}/verses/by_key/{verse.key}", "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
@@ -431,12 +434,18 @@ QF_BASE = os.getenv(
 ).rstrip("/")
 
 
-def _title_description(key, content, source_names, media_items=None):
+def _title_description(key: str, content: dict[str, Any], source_names: list[str],
+                       media_items: list[dict[str, Any]] | None = None) -> tuple[str, str]:
     credit = "خلفية مرئية من Pexels: https://www.pexels.com/"
+    seen_pages: set[str] = set()
     for item in media_items or []:
-        if item.get("source_page"):
-            credit += f"\nالفيديو: {item['source_page']}" + (f" | المصور: {item['creator']}" if item.get("creator") else "")
-
+        source_page = item.get("source_page")
+        if not source_page or source_page in seen_pages:
+            continue
+        seen_pages.add(source_page)
+        credit += f"\nالفيديو: {source_page}"
+        if item.get("creator"):
+            credit += f" | المصور: {item['creator']}"
     required_attributions = [os.getenv(name, "").strip() for name in (
         "RECITATION_ATTRIBUTION", "TAFSIR_ATTRIBUTION", "QURAN_ATTRIBUTION", "TTS_ATTRIBUTION"
     ) if os.getenv(name, "").strip()]
@@ -462,7 +471,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         # remain confirmed and are never uploaded again for this verse.
         row["platforms"] = row["platforms"] | {
             key: dict(value) for key, value in previous_row.get("platforms", {}).items()
-            if key in {"youtube", "facebook", "make"} and isinstance(value, dict)
+            if key in PLATFORM_KEYS and isinstance(value, dict)
         }
     report_dir = config.output_dir / "reports"
     update_record(history, row, report_dir)
@@ -508,15 +517,18 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
+        # Several stock clips (2..5), each slowed (0.75 by default) and merged into one background.
         media_items = PexelsService().fetch_backgrounds(
             ai["explanation"] + " " + ai["practical_benefit"], work_dir / "clips",
             config.background_clips, config.background_speed)
-        per_clip = max(6.0, math.ceil(config.target_max * config.background_speed / len(media_items)) + 1)
+        clip_files = [Path(item.pop("file")) for item in media_items]
         background = work_dir / "background.mp4"
-        bg_info = compose_background([Path(m.pop("file")) for m in media_items], background,
-                                     config.width, config.height, config.fps,
-                                     speed=config.background_speed, source_seconds_each=per_clip)
-        row["verification"]["checks"]["background"] = bg_info
+        background_info = compose_background(
+            clip_files, background, config.width, config.height, config.fps,
+            speed=config.background_speed, target_duration=float(config.target_max))
+        row["verification"]["checks"]["background"] = background_info
+        update_record(history, row, report_dir)
+
         tts = TTSService(config.tts_voice)
         speech_texts = {
             "hook": ai["hook"],
@@ -562,13 +574,6 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         update_record(history, row, report_dir)
         print(f"فشل المرشح {chapter}:{verse_number}: {row['last_error']}", file=sys.stderr)
         return row, validated_video
-
-
-def media_path(media: dict[str, Any], work_dir: Path) -> Path:
-    path = work_dir / "background.mp4"
-    if not path.is_file():
-        raise FactoryError("خلفية Pexels لم تُنزّل إلى المسار المتوقع.")
-    return path
 
 
 def find_latest_row(history_rows: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
@@ -732,6 +737,25 @@ if __name__ == "__main__":
                         with self.assertRaises(FactoryError):
                             Config.from_env(Path("/tmp/project"))
 
+            def test_background_settings_default_parse_and_reject_out_of_range(self):
+                with patch.dict(os.environ, {}, clear=False):
+                    os.environ.pop("BACKGROUND_CLIP_COUNT", None)
+                    os.environ.pop("BACKGROUND_SPEED", None)
+                    config = Config.from_env(Path("/tmp/project"))
+                    self.assertEqual((config.background_clips, config.background_speed), (3, 0.75))
+                with patch.dict(os.environ, {"BACKGROUND_CLIP_COUNT": "", "BACKGROUND_SPEED": ""}):
+                    config = Config.from_env(Path("/tmp/project"))
+                    self.assertEqual((config.background_clips, config.background_speed), (3, 0.75))
+                with patch.dict(os.environ, {"BACKGROUND_CLIP_COUNT": "5", "BACKGROUND_SPEED": "0.5"}):
+                    config = Config.from_env(Path("/tmp/project"))
+                    self.assertEqual((config.background_clips, config.background_speed), (5, 0.5))
+                for name, bad in (("BACKGROUND_CLIP_COUNT", "1"), ("BACKGROUND_CLIP_COUNT", "6"),
+                                  ("BACKGROUND_CLIP_COUNT", "x"), ("BACKGROUND_SPEED", "0.1"),
+                                  ("BACKGROUND_SPEED", "1.2"), ("BACKGROUND_SPEED", "slow")):
+                    with patch.dict(os.environ, {name: bad}):
+                        with self.assertRaises(FactoryError):
+                            Config.from_env(Path("/tmp/project"))
+
             def test_record_sources_logs_the_voice_actually_used(self):
                 class Obj:
                     def __init__(self, **kwargs):
@@ -741,6 +765,29 @@ if __name__ == "__main__":
                 tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
                 sources = _record_sources(verse, recitation, tafsir, [{"kind": "media"}], "https://terms", "ar-EG-ShakirNeural")
                 self.assertEqual([item for item in sources if item["kind"] == "tts"][0]["voice"], "ar-EG-ShakirNeural")
+
+            def test_record_sources_lists_every_background_clip(self):
+                class Obj:
+                    def __init__(self, **kwargs):
+                        self.__dict__.update(kwargs)
+                verse = Obj(key="2:3")
+                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
+                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
+                clips = [{"kind": "background_video", "video_id": 1}, {"kind": "background_video", "video_id": 2},
+                         {"kind": "background_video", "video_id": 3}]
+                sources = _record_sources(verse, recitation, tafsir, clips, "https://terms", "ar-EG-ShakirNeural")
+                self.assertEqual([item["video_id"] for item in sources if item["kind"] == "background_video"], [1, 2, 3])
+                self.assertEqual(sources[-1]["kind"], "tts")
+
+            def test_title_description_credits_every_distinct_background_clip(self):
+                clips = [{"source_page": "https://www.pexels.com/video/a/", "creator": "Ali"},
+                         {"source_page": "https://www.pexels.com/video/b/", "creator": None},
+                         {"source_page": "https://www.pexels.com/video/a/", "creator": "Ali"}]
+                content = {"hook": "هوك"}
+                _, description = _title_description("2:152", content, ["مصدر"], clips)
+                self.assertEqual(description.count("https://www.pexels.com/video/a/"), 1)
+                self.assertIn("https://www.pexels.com/video/b/", description)
+                self.assertIn("المصور: Ali", description)
 
             def test_daily_guard_only_counts_auto_and_allows_retry_after_known_failure(self):
                 published = new_run_record("auto-ok", 2, 152, "auto", "2026-10-21", 1)
@@ -784,7 +831,7 @@ if __name__ == "__main__":
                             raise ServiceError("simulated Meta failure")
                     def factory(name):
                         return FakeFB()
-                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "true"}):
+                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "true", "MAKE_PUBLISH_ENABLED": "false"}):
                         publish_platforms(Path("video.mp4"), row, h, Path(temp) / "reports", "title", "desc", factory, retries=2)
                     self.assertNotIn("youtube", calls)
                     self.assertEqual(calls.count("facebook"), 1)
@@ -803,7 +850,7 @@ if __name__ == "__main__":
                         def publish_or_verify(self, *args, **kwargs):
                             calls.append(kwargs["previous"]["video_id"])
                             return {"status": "published", "video_id": "fb-1"} if len(calls) == 2 else {"status": "pending", "video_id": "fb-1"}
-                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "true"}):
+                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "true", "MAKE_PUBLISH_ENABLED": "false"}):
                         result = publish_platforms(Path("video.mp4"), row, h, Path(temp) / "reports", "title", "desc",
                                                    lambda name: FakeFB(), retries=2)
                     self.assertEqual(calls, ["fb-1", "fb-1"])
@@ -820,12 +867,86 @@ if __name__ == "__main__":
                         def publish_or_verify(self, *args, **kwargs):
                             calls.append("youtube")
                             return {"status": "published", "video_id": "yt-test"}
-                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "false"}):
+                    with patch.dict(os.environ, {"META_PUBLISH_ENABLED": "false", "MAKE_PUBLISH_ENABLED": "false"}):
                         result = publish_platforms(Path("video.mp4"), row, history, Path(temp) / "reports",
                                                    "title", "desc", lambda name: FakePublisher())
                     self.assertEqual(calls, ["youtube"])
                     self.assertEqual(result["status"], "published")
                     self.assertEqual(result["platforms"]["facebook"]["status"], "disabled")
+
+            def test_make_mode_publishes_only_through_make_and_disables_direct_platforms(self):
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp:
+                    history = ProductionHistory(Path(temp) / "history.json")
+                    history.load()
+                    row = new_run_record("make-1", 2, 152, "manual", "2026-10-21", 1)
+                    created = []
+                    class FakeMake:
+                        def publish_or_verify(self, video, title, description, previous=None):
+                            return {"status": "published", "video_id": "video-abc", "video_url": "https://github.com/x/y/releases/download/video-abc/video-abc.mp4",
+                                    "delivered_to": "make.com"}
+                    def factory(name):
+                        created.append(name)
+                        return FakeMake()
+                    with patch.dict(os.environ, {"MAKE_PUBLISH_ENABLED": "true", "META_PUBLISH_ENABLED": "true"}):
+                        result = publish_platforms(Path("video.mp4"), row, history, Path(temp) / "reports",
+                                                   "title", "desc", factory)
+                    self.assertEqual(created, ["make"])
+                    self.assertEqual(result["status"], "published")
+                    self.assertEqual(result["platforms"]["make"]["video_id"], "video-abc")
+                    self.assertEqual(result["platforms"]["youtube"]["status"], "disabled")
+                    self.assertEqual(result["platforms"]["facebook"]["status"], "disabled")
+
+            def test_make_unconfirmed_delivery_keeps_the_id_and_resumes_by_id(self):
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp:
+                    history = ProductionHistory(Path(temp) / "history.json")
+                    history.load()
+                    row = new_run_record("make-2", 2, 153, "manual", "2026-10-21", 1)
+                    previous_seen = []
+                    class FakeMake:
+                        def __init__(self, fail):
+                            self.fail = fail
+                        def publish_or_verify(self, video, title, description, previous=None):
+                            previous_seen.append((previous or {}).get("video_id"))
+                            if self.fail:
+                                raise ServiceError("webhook down", platform_state={
+                                    "status": "uploaded_unconfirmed", "video_id": "video-abc", "video_url": "https://example.org/v.mp4"})
+                            return {"status": "published", "video_id": "video-abc", "video_url": "https://example.org/v.mp4"}
+                    with patch.dict(os.environ, {"MAKE_PUBLISH_ENABLED": "true"}):
+                        first = publish_platforms(Path("video.mp4"), row, history, Path(temp) / "reports",
+                                                  "title", "desc", lambda name: FakeMake(True), retries=2)
+                        self.assertEqual(first["status"], "failed")
+                        self.assertEqual(first["platforms"]["make"]["status"], "uploaded_unconfirmed")
+                        self.assertEqual(first["platforms"]["make"]["video_id"], "video-abc")
+                        self.assertTrue(row_has_unresolved_submission(first))
+                        second = publish_platforms(Path("video.mp4"), first, history, Path(temp) / "reports",
+                                                   "title", "desc", lambda name: FakeMake(False), retries=2)
+                    self.assertEqual(previous_seen, [None, "video-abc"])
+                    self.assertEqual(second["status"], "published")
+
+            def test_make_settings_are_required_only_when_make_publishing_is_enabled(self):
+                base = {
+                    "GEMINI_API_KEY": "k", "QF_CLIENT_ID": "i", "QF_CLIENT_SECRET": "s",
+                    "QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
+                    "RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
+                    "TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
+                    "TAFSIR_ALLOWLIST": "16|https://example.org/t", "PEXELS_API_KEY": "p",
+                    "TTS_LICENSE_URL": "https://example.org/tts",
+                    "QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
+                    "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true", "PEXELS_LICENSE_CONFIRMED": "true",
+                    "TTS_TERMS_CONFIRMED": "true",
+                }
+                with patch.dict(os.environ, {**base, "MAKE_PUBLISH_ENABLED": "false"}):
+                    validate_generation_environment()
+                with patch.dict(os.environ, {**base, "MAKE_PUBLISH_ENABLED": "true", "MAKE_WEBHOOK_URL": "",
+                                              "GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r"}):
+                    with self.assertRaisesRegex(FactoryError, "MAKE_WEBHOOK_URL"):
+                        validate_generation_environment()
+                with patch.dict(os.environ, {**base, "MAKE_PUBLISH_ENABLED": "true",
+                                              "MAKE_WEBHOOK_URL": "https://hook.eu1.make.com/abc",
+                                              "GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r"}):
+                    validate_generation_environment()
 
             def test_unresolved_platform_id_excludes_verse_from_auto_selection(self):
                 row = new_run_record("run-3", 2, 286, "auto", "2026-01-01", 1)

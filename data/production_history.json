@@ -8299,6 +8299,217 @@
       "verse_key": "94:5",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "370a31a64c8dda64c7783b57a5b04df0a81865216117c14a8148f0f92627522c"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-23T09:30:26.116401+00:00",
+      "last_error": null,
+      "local_date": "2026-10-23",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/2:3",
+          "verse_key": "2:3"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/2?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+        },
+        {
+          "creator": "setengah lima sore",
+          "download_url": "https://videos.pexels.com/video-files/33756165/14330638_720_1280_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/serene-sunrise-over-lush-green-tea-leaves-33756165/",
+          "video_id": 33756165
+        },
+        {
+          "creator": "Rahmad Himawan",
+          "download_url": "https://videos.pexels.com/video-files/39375670/16763263_720_1280_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/scenic-aerial-view-of-lush-rice-terraces-in-indonesia-39375670/",
+          "video_id": 39375670
+        },
+        {
+          "creator": "Mike Dantzer",
+          "download_url": "https://videos.pexels.com/video-files/19061721/19061721-hd_720_1280_60fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/a-view-of-a-field-with-a-sun-shining-over-it-19061721/",
+          "video_id": 19061721
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+          "provider": "edge-tts",
+          "voice": "ar-EG-ShakirNeural"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "status": "published",
+          "video_id": "video-d599eae83f06873e",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-d599eae83f06873e/video-d599eae83f06873e.mp4"
+        },
+        "youtube": {
+          "attempts": 2,
+          "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+          "status": "failed",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل الإيمان مجرد تصديق قلبي؟ اكتشف المعنى الشامل.\n\nشرح موجز مستند إلى تفسير المیسر. الآية: 2:3.\nالمحتوى للتعريف والتدبر، ولا يغني عن الرجوع إلى المصادر الشرعية المعتمدة.\n\nخلفية مرئية من Pexels: https://www.pexels.com/\nالفيديو: https://www.pexels.com/video/serene-sunrise-over-lush-green-tea-leaves-33756165/ | المصور: setengah lima sore\nالفيديو: https://www.pexels.com/video/scenic-aerial-view-of-lush-rice-terraces-in-indonesia-39375670/ | المصور: Rahmad Himawan\nالفيديو: https://www.pexels.com/video/a-view-of-a-field-with-a-sun-shining-over-it-19061721/ | المصور: Mike Dantzer\nالمصدر: التفسير الميسر - Quran Foundation",
+        "title": "تدبر آية قرآنية | 2:3"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-23-2-3-267027138e-report.json",
+      "run_id": "2026-10-23-2-3-267027138e",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+      },
+      "status": "published",
+      "updated_at": "2026-10-23T09:31:49.392745+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 50.833,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": true
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "The provided text accurately reflects the interpretation of the verse as stated in the source, specifically regarding the definition of faith as encompassing belief, speech, and action, and the practical application of prayer and spending."
+          },
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.938,
+          "verse_source_and_key": true,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 49.297,
+            "audio_segments": {
+              "benefit": {
+                "end": 43.834,
+                "start": 34.018
+              },
+              "cta": {
+                "end": 49.33,
+                "start": 43.834
+              },
+              "explanation": {
+                "end": 34.018,
+                "start": 19.954
+              },
+              "hook": {
+                "end": 5.616,
+                "start": 0.0
+              },
+              "recitation": {
+                "end": 17.554,
+                "start": 5.616
+              },
+              "seal": {
+                "end": 19.954,
+                "start": 17.554
+              }
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 49.3,
+            "file_size_bytes": 24982447,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 11.938,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "benefit": "tts_word_boundary",
+              "cta": "tts_word_boundary",
+              "explanation": "tts_word_boundary",
+              "hook": "tts_word_boundary"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 8
+        },
+        "status": "validated"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "6cd08193accabfee78e6183a408334c36d6a98e67d1b66f71852e8ac0104782c"
     }
   ],
   "version": 1

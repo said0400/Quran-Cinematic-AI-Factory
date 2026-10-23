@@ -8418,7 +8418,7 @@
         "source_name": "المیسر",
         "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
       },
-      "status": "published",
+      "status": "failed",
       "updated_at": "2026-10-23T09:31:49.392745+00:00",
       "verification": {
         "checks": {
@@ -8504,7 +8504,7 @@
           },
           "word_segments_valid": 8
         },
-        "status": "validated"
+        "status": "failed"
       },
       "verse": 3,
       "verse_key": "2:3",

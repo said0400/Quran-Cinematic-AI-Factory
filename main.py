@@ -19,21 +19,63 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from services import (
     FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService,
     QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
-    validate_word_segments,
+    quran_words, validate_word_segments,
 )
-from video_engine import VideoError, build_video, compose_background, media_duration, validate_video
+from video_engine import (
+    VideoError, build_verse_layout, build_video, compose_background, media_duration, validate_video,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-AUTO_VERSE_POOL = [
-    (2, 152), (2, 153), (3, 139), (5, 8), (13, 28), (16, 90),
-    (17, 23), (25, 63), (39, 53), (49, 13), (64, 16), (94, 5),
-]
+# Verses grouped by the everyday problem they speak to. Long enough (about 10-35 words) for a
+# 12-30 second recitation; the topic is only an angle hint for the writer, the meaning always
+# comes from the fetched tafsir. A verse that fails a runtime check (too short, layout, timings)
+# is skipped, never retried.
+VERSE_TOPICS: dict[str, tuple[tuple[int, int], ...]] = {
+    "الصبر والابتلاء": ((2, 45), (2, 153), (2, 155), (2, 156), (3, 200), (29, 2), (39, 10), (57, 22), (64, 11), (21, 83)),
+    "الفرج وكشف الكرب": ((21, 87), (10, 107), (35, 2)),
+    "الرزق والتوكل": ((65, 3), (11, 6), (29, 60), (9, 51)),
+    "القلق والطمأنينة": ((13, 28), (2, 186), (3, 139), (16, 97)),
+    "اليأس والأمل ورحمة الله": ((39, 53), (12, 87), (4, 110)),
+    "بر الوالدين": ((17, 23), (17, 24), (31, 14)),
+    "الأخلاق والعلاقات": ((49, 13), (41, 34), (3, 134), (25, 63), (16, 90)),
+    "الأسرة والمودة": ((30, 21),),
+    "وسائل التواصل والشائعات": ((49, 6), (17, 36)),
+    "المال والإنفاق": ((4, 29), (17, 29), (28, 77)),
+    "الدنيا والغفلة ومحاسبة النفس": ((63, 9), (3, 185), (18, 46), (59, 18)),
+    "الشكر وتغيير النفس": ((14, 7), (8, 53)),
+    "الدعاء والثبات": ((2, 201), (3, 8)),
+}
+
+
+def _interleave_topics(topics: dict[str, tuple[tuple[int, int], ...]]) -> list[tuple[int, int]]:
+    """Round-robin over the topics so consecutive days rarely repeat a topic."""
+    queues = [list(verses) for verses in topics.values()]
+    pool: list[tuple[int, int]] = []
+    while any(queues):
+        for queue in queues:
+            if queue:
+                pool.append(queue.pop(0))
+    return pool
+
+
+AUTO_VERSE_POOL = _interleave_topics(VERSE_TOPICS)
+VERSE_TOPIC_BY_KEY = {f"{chapter}:{verse}": topic
+                      for topic, verses in VERSE_TOPICS.items() for chapter, verse in verses}
+# Spoken-length planning: the hook, closing phrase and call to action take roughly this long.
+FIXED_SPEECH_SECONDS = 15.5
+SPEECH_WORDS_PER_SECOND = 2.3
+MESSAGE_WORDS_FLOOR, MESSAGE_WORDS_CAP = 30, 80
+DESCRIPTION_LIMIT = 1900     # title (<=95) + blank line + description stays under the 2000-char caption limit
 DEFAULT_TTS_VOICE = "ar-EG-ShakirNeural"
 PLATFORM_KEYS = ("youtube", "facebook", "make")
 
 
 class FactoryError(RuntimeError):
     pass
+
+
+class CandidateRejected(FactoryError):
+    """A deterministic reason to skip this verse (retrying the same verse cannot help)."""
 
 
 @dataclass(frozen=True)
@@ -54,6 +96,8 @@ class Config:
     dim_strength: float = 0.30
     background_clips: int = 3
     background_speed: float = 0.75
+    min_verse_words: int = 10
+    max_recitation_seconds: int = 40
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -115,6 +159,8 @@ class Config:
             dim_strength=decimal("VIDEO_DIM_STRENGTH", 0.30, 0.0, 0.8),
             background_clips=integer("BACKGROUND_CLIP_COUNT", 3, 2, 5),
             background_speed=decimal("BACKGROUND_SPEED", 0.75, 0.25, 1.0),
+            min_verse_words=integer("MIN_VERSE_WORDS", 10, 1, 100),
+            max_recitation_seconds=integer("MAX_RECITATION_SECONDS", 40, 10, 300),
         )
 
 
@@ -434,31 +480,36 @@ QF_BASE = os.getenv(
 ).rstrip("/")
 
 
-def _title_description(key: str, content: dict[str, Any], source_names: list[str],
-                       media_items: list[dict[str, Any]] | None = None) -> tuple[str, str]:
-    credit = "خلفية مرئية من Pexels: https://www.pexels.com/"
-    seen_pages: set[str] = set()
-    for item in media_items or []:
-        source_page = item.get("source_page")
-        if not source_page or source_page in seen_pages:
-            continue
-        seen_pages.add(source_page)
-        credit += f"\nالفيديو: {source_page}"
-        if item.get("creator"):
-            credit += f" | المصور: {item['creator']}"
-    required_attributions = [os.getenv(name, "").strip() for name in (
-        "RECITATION_ATTRIBUTION", "TAFSIR_ATTRIBUTION", "QURAN_ATTRIBUTION", "TTS_ATTRIBUTION"
-    ) if os.getenv(name, "").strip()]
-    if required_attributions:
-        credit += "\n" + "\n".join(required_attributions)
-    title = f"تدبر آية قرآنية | {key}"
-    description = (
-        f"{content['hook']}\n\n"
-        f"شرح موجز مستند إلى تفسير {source_names[0]}. الآية: {key}.\n"
-        "المحتوى للتعريف والتدبر، ولا يغني عن الرجوع إلى المصادر الشرعية المعتمدة.\n\n"
-        f"{credit}"
-    )
-    return title[:100], description[:5000]
+def message_word_budget(target_max: float, recitation_seconds: float) -> tuple[int, int]:
+    """(minimum, maximum) spoken words for the merged message, from the time left after the recitation."""
+    spare = float(target_max) - float(recitation_seconds) - FIXED_SPEECH_SECONDS
+    upper = max(MESSAGE_WORDS_FLOOR, min(MESSAGE_WORDS_CAP, int(spare * SPEECH_WORDS_PER_SECOND)))
+    lower = min(upper, max(25, int(upper * 0.7)))
+    return lower, upper
+
+
+def compose_description(ai: dict[str, Any], limit: int = DESCRIPTION_LIMIT) -> str:
+    """Long description + search keywords + hashtags. Never names a source; keywords are trimmed first."""
+    body = ai["description"].strip()
+    hashtags = " ".join(ai["hashtags"])
+    keywords = list(ai["keywords"])
+    while True:
+        parts = [body]
+        if keywords:
+            parts.append("الكلمات المفتاحية: " + "، ".join(keywords))
+        parts.append(hashtags)
+        text = "\n\n".join(parts)
+        if len(text) <= limit or not keywords:
+            break
+        keywords.pop()
+    if len(text) > limit:
+        allowed = max(0, limit - len(hashtags) - 2)
+        text = body[:allowed].rstrip() + "\n\n" + hashtags
+    return text
+
+
+def _title_description(ai: dict[str, Any]) -> tuple[str, str]:
+    return ai["title"].strip()[:100], compose_description(ai)[:5000]
 
 
 def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str, config: Config,
@@ -482,6 +533,15 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         verse = quran.get_verse(chapter, verse_number)
         row["verse_key"] = verse.key
         row["verification"]["checks"]["verse_source_and_key"] = True
+        # Cheap, deterministic checks first: a verse that cannot work is skipped before any paid call.
+        verse_word_count = len(quran_words(verse.text_uthmani))
+        row["verification"]["checks"]["verse_word_count"] = verse_word_count
+        if mode == "auto" and verse_word_count < config.min_verse_words:
+            raise CandidateRejected(f"الآية قصيرة ({verse_word_count} كلمة؛ الحد الأدنى {config.min_verse_words}).")
+        try:
+            build_verse_layout(verse.text_uthmani, verse.chapter_name, verse.verse, config.width, config.height)
+        except VideoError as exc:
+            raise CandidateRejected(f"تعذر عرض الآية على البطاقة: {exc}") from None
         row["status"] = "started"
         update_record(history, row, report_dir)
 
@@ -489,8 +549,14 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         work_dir.mkdir(parents=True, exist_ok=True)
         recitation, recitation_file = quran.get_recitation(chapter, verse_number, work_dir)
         recitation_duration = media_duration(recitation_file)
-        timed_words = validate_word_segments(recitation.segments, verse.text_uthmani,
-                                             int(round(recitation_duration * 1000)))
+        if mode == "auto" and recitation_duration > config.max_recitation_seconds:
+            raise CandidateRejected(
+                f"التلاوة أطول من الحد ({recitation_duration:.1f}s > {config.max_recitation_seconds}s).")
+        try:
+            timed_words = validate_word_segments(recitation.segments, verse.text_uthmani,
+                                                 int(round(recitation_duration * 1000)))
+        except ServiceError as exc:
+            raise CandidateRejected(str(exc)) from None
         row["verification"]["checks"]["recitation_api_verse_key"] = verse.key
         row["verification"]["checks"]["word_segments_valid"] = len(timed_words)
         row["verification"]["checks"]["recitation_duration_seconds"] = round(recitation_duration, 3)
@@ -507,19 +573,31 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "source_url": tafsir.source_url, "license_url": tafsir.license_url,
             "commercial_license_verified_by_operator": tafsir.license_verified_by_operator,
         }
+        topic = VERSE_TOPIC_BY_KEY.get(verse.key)
+        message_budget = message_word_budget(config.target_max, recitation_duration)
         gemini = GeminiContentService()
-        ai = gemini.create_and_review(verse, tafsir)
+        ai = gemini.create_and_review(verse, tafsir, topic=topic, message_words=message_budget)
         row["verification"]["checks"]["model_content_schema"] = True
         row["verification"]["checks"]["model_source_review"] = ai["review"]
+        row["verification"]["checks"]["content"] = {
+            "topic": topic,
+            "message_words": len(ai["message"].split()),
+            "message_word_budget": list(message_budget),
+            "hook_words": len(ai["hook"].split()),
+            "keywords": len(ai["keywords"]),
+            "hashtags": len(ai["hashtags"]),
+        }
+        generated_texts = (ai["hook"], ai["message"], ai["call_to_action"], ai["title"], ai["description"],
+                           " ".join(ai["keywords"]), " ".join(ai["hashtags"]))
         row["verification"]["checks"]["honorific_occurrences_in_generated_text"] = sum(
-            text.count("صدق الله العظيم") for text in (ai["hook"], ai["explanation"], ai["practical_benefit"], ai["call_to_action"])
+            text.count("صدق الله العظيم") for text in generated_texts
         )
         if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
         # Several stock clips (2..5), each slowed (0.75 by default) and merged into one background.
         media_items = PexelsService().fetch_backgrounds(
-            ai["explanation"] + " " + ai["practical_benefit"], work_dir / "clips",
+            f"{topic or ''} {ai['message']}", work_dir / "clips",
             config.background_clips, config.background_speed)
         clip_files = [Path(item.pop("file")) for item in media_items]
         background = work_dir / "background.mp4"
@@ -533,8 +611,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         speech_texts = {
             "hook": ai["hook"],
             "seal": "صدق الله العظيم",
-            "explanation": ai["explanation"],
-            "benefit": ai["practical_benefit"],
+            "message": ai["message"],
             "cta": ai["call_to_action"],
         }
         speech_files = tts.synthesize(speech_texts, work_dir / "speech")
@@ -560,7 +637,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["media_sources"].append({"kind": "font", **font_source})
         validated_video = True
         update_record(history, row, report_dir)
-        title, description = _title_description(verse.key, ai, [tafsir.source_name], media_items)
+        title, description = _title_description(ai)
         row["publication_metadata"] = {"title": title, "description": description}
         update_record(history, row, report_dir)
         publish_platforms(output_path, row, history, report_dir, title, description,
@@ -569,6 +646,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
     except Exception as exc:
         row["last_error"] = (str(exc) or type(exc).__name__)[:500]
         row["attempt_count"] = attempt
+        row["permanent_failure"] = isinstance(exc, CandidateRejected)
         row["status"] = "partially_published" if row_has_any_publication(row) else "failed"
         if not row.get("verification", {}).get("status") == "validated":
             row.setdefault("verification", {})["status"] = "failed"
@@ -670,6 +748,8 @@ def run(args: argparse.Namespace) -> int:
                 candidate_errors.append(row.get("last_error", "فشل غير محدد"))
                 if args.mode == "manual":
                     return 1
+                if row.get("permanent_failure"):
+                    break          # retrying the same verse cannot help; move to the next candidate
             # Automatic mode moves to another candidate only after a pre-publication failure.
         if completed_today + successful_this_run >= daily_target:
             return 0
@@ -701,6 +781,8 @@ if __name__ == "__main__":
     if "--test" in sys.argv:
         import unittest
         from unittest.mock import patch
+
+        THIS = sys.modules[__name__]      # the module under test is __main__, not "main"
 
         class MainTests(unittest.TestCase):
             def test_environment_parsing_strips_timezone_whitespace(self):
@@ -793,15 +875,157 @@ if __name__ == "__main__":
                 self.assertEqual([item["video_id"] for item in sources if item["kind"] == "background_video"], [1, 2, 3])
                 self.assertEqual(sources[-1]["kind"], "tts")
 
-            def test_title_description_credits_every_distinct_background_clip(self):
-                clips = [{"source_page": "https://www.pexels.com/video/a/", "creator": "Ali"},
-                         {"source_page": "https://www.pexels.com/video/b/", "creator": None},
-                         {"source_page": "https://www.pexels.com/video/a/", "creator": "Ali"}]
-                content = {"hook": "هوك"}
-                _, description = _title_description("2:152", content, ["مصدر"], clips)
-                self.assertEqual(description.count("https://www.pexels.com/video/a/"), 1)
-                self.assertIn("https://www.pexels.com/video/b/", description)
-                self.assertIn("المصور: Ali", description)
+            @staticmethod
+            def sample_copy(**overrides):
+                data = {
+                    "hook": "تعبك الذي لا يراه أحد يراه الله",
+                    "message": " ".join(["كلمة"] * 45),
+                    "call_to_action": "شارك هذا المقطع واجعله صدقة جارية عن والديك",
+                    "title": "تعبك الذي لا يراه أحد يراه الله وحده",
+                    "description": "هذه الآية تخاطب قلب كل من أنهكه الصبر.\n\nتأمل معناها اليوم.",
+                    "keywords": ["آيات عن الصبر", "تدبر القرآن", "دعاء الفرج"],
+                    "hashtags": ["#الصبر", "#تدبر_القرآن", "#طمأنينة"],
+                }
+                data.update(overrides)
+                return data
+
+            def test_title_is_the_generated_sentence_and_description_has_keywords_and_hashtags_only(self):
+                title, description = _title_description(self.sample_copy())
+                self.assertEqual(title, "تعبك الذي لا يراه أحد يراه الله وحده")
+                self.assertIn("الكلمات المفتاحية: آيات عن الصبر، تدبر القرآن، دعاء الفرج", description)
+                self.assertTrue(description.rstrip().endswith("#الصبر #تدبر_القرآن #طمأنينة"))
+                self.assertTrue(description.startswith("هذه الآية تخاطب"))
+                lowered = description.lower()
+                for forbidden in ("pexels", "quran.foundation", "http", "المصدر", "المصور", "تفسير الميسر", "مشاري"):
+                    self.assertNotIn(forbidden, lowered)
+
+            def test_description_never_reads_the_attribution_environment_variables(self):
+                env = {name: "نص نسبة يجب ألا يظهر" for name in (
+                    "RECITATION_ATTRIBUTION", "TAFSIR_ATTRIBUTION", "QURAN_ATTRIBUTION", "TTS_ATTRIBUTION")}
+                with patch.dict(os.environ, env):
+                    _, description = _title_description(self.sample_copy())
+                self.assertNotIn("نص نسبة", description)
+
+            def test_description_keeps_hashtags_and_trims_keywords_to_fit_the_caption_limit(self):
+                copy = self.sample_copy(description="جملة مفيدة. " * 100,
+                                        keywords=[f"كلمة مفتاحية رقم {i}" for i in range(15)])
+                text = compose_description(copy, limit=1300)
+                self.assertLessEqual(len(text), 1300)
+                self.assertTrue(text.rstrip().endswith("#الصبر #تدبر_القرآن #طمأنينة"))
+                self.assertIn("الكلمات المفتاحية:", text)
+                tight = compose_description(copy, limit=len(copy["description"].strip()) + 40)
+                self.assertNotIn("الكلمات المفتاحية:", tight)
+                self.assertTrue(tight.rstrip().endswith("#طمأنينة"))
+                self.assertLessEqual(len(tight), len(copy["description"].strip()) + 40)
+                title, full = _title_description(self.sample_copy(description="ن" * 1400,
+                                                                  hashtags=[f"#وسم{i}" for i in range(12)]))
+                self.assertLessEqual(len(title) + 2 + len(full), 2000)       # fits the Instagram/TikTok caption
+
+            def test_message_budget_shrinks_as_the_recitation_grows_and_stays_in_bounds(self):
+                short = message_word_budget(60, 12)
+                long_verse = message_word_budget(60, 30)
+                huge = message_word_budget(60, 55)
+                self.assertGreater(short[1], long_verse[1])
+                self.assertEqual(huge[1], MESSAGE_WORDS_FLOOR)
+                for low, high in (short, long_verse, huge):
+                    self.assertTrue(25 <= low <= high <= MESSAGE_WORDS_CAP)
+
+            def test_verse_pool_covers_many_topics_without_duplicates_and_interleaves_them(self):
+                self.assertGreaterEqual(len(AUTO_VERSE_POOL), 40)
+                self.assertEqual(len(AUTO_VERSE_POOL), len(set(AUTO_VERSE_POOL)))
+                self.assertEqual(len(VERSE_TOPIC_BY_KEY), len(AUTO_VERSE_POOL))
+                self.assertGreaterEqual(len(VERSE_TOPICS), 10)
+                for chapter, verse in AUTO_VERSE_POOL:
+                    self.assertTrue(1 <= chapter <= 114 and verse >= 1)
+                first_topics = [VERSE_TOPIC_BY_KEY[f"{c}:{v}"] for c, v in AUTO_VERSE_POOL[:len(VERSE_TOPICS)]]
+                self.assertEqual(len(set(first_topics)), len(VERSE_TOPICS))   # one verse per topic before any repeats
+
+            def test_quran_words_helpers_in_services_and_video_engine_agree(self):
+                import video_engine
+                samples = ["بسم الله الرحمن", "فَٱتَّقُوا۟ ٱللَّهَ ۗ وَمَن يُوقَ ۚ فَأُو۟لَٰٓئِكَ", "۞ بسم الله", "", "  \n "]
+                for sample in samples:
+                    self.assertEqual(quran_words(sample), video_engine.quran_words(sample), sample)
+
+            def test_min_verse_and_recitation_limits_default_parse_and_validate(self):
+                with patch.dict(os.environ, {"MIN_VERSE_WORDS": "", "MAX_RECITATION_SECONDS": ""}):
+                    config = Config.from_env(Path("/tmp/project"))
+                    self.assertEqual((config.min_verse_words, config.max_recitation_seconds), (10, 40))
+                with patch.dict(os.environ, {"MIN_VERSE_WORDS": "14", "MAX_RECITATION_SECONDS": "30"}):
+                    config = Config.from_env(Path("/tmp/project"))
+                    self.assertEqual((config.min_verse_words, config.max_recitation_seconds), (14, 30))
+                for name, bad in (("MIN_VERSE_WORDS", "0"), ("MIN_VERSE_WORDS", "x"),
+                                  ("MAX_RECITATION_SECONDS", "5"), ("MAX_RECITATION_SECONDS", "999")):
+                    with patch.dict(os.environ, {name: bad}):
+                        with self.assertRaises(FactoryError):
+                            Config.from_env(Path("/tmp/project"))
+
+            @staticmethod
+            def _candidate_env(temp, **fake):
+                class Verse:
+                    key, chapter_name, verse = "94:5", "الشرح", 5
+                    text_uthmani = fake.get("text", "فإن مع العسر يسرا")
+                class Recitation:
+                    segments = fake.get("segments", [[1, 0, 500]])
+                class FakeQuran:
+                    def get_verse(self, chapter, verse):
+                        return Verse()
+                    def get_recitation(self, chapter, verse, directory):
+                        if fake.get("recitation_error"):
+                            raise ServiceError(fake["recitation_error"])
+                        return Recitation(), Path(directory) / "recitation.mp3"
+                return FakeQuran
+
+            def _run_candidate(self, mode, **fake):
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp:
+                    fake_quran = self._candidate_env(temp, **fake)
+                    with patch.dict(os.environ, {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json"}), \
+                            patch.object(THIS, "validate_generation_environment"), \
+                            patch.object(THIS, "QuranFoundationClient", fake_quran), \
+                            patch.object(THIS, "media_duration", return_value=fake.get("duration", 10.0)), \
+                            patch.object(THIS, "GeminiContentService", side_effect=AssertionError("paid call must not happen")):
+                        config = Config.from_env(Path(temp))
+                        history = ProductionHistory(config.history_file)
+                        return generate_candidate(94, 5, 1, mode, config, history, "2026-10-24")
+
+            def test_short_verse_is_rejected_before_any_paid_call_in_auto_mode_only(self):
+                row, validated = self._run_candidate("auto", recitation_error="reached recitation")
+                self.assertEqual((row["status"], row["permanent_failure"], validated), ("failed", True, False))
+                self.assertIn("قصيرة", row["last_error"])
+                row, _ = self._run_candidate("manual", recitation_error="reached recitation")
+                self.assertIn("reached recitation", row["last_error"])       # the manual run went past the length check
+                self.assertFalse(row["permanent_failure"])
+
+            def test_recitation_longer_than_the_limit_and_timing_mismatch_are_permanent_rejections(self):
+                long_text = " ".join(["كلمة"] * 12)
+                row, _ = self._run_candidate("auto", text=long_text, duration=55.0)
+                self.assertTrue(row["permanent_failure"])
+                self.assertIn("أطول", row["last_error"])
+                row, _ = self._run_candidate("auto", text=long_text, duration=15.0, segments=[[1, 0, 500]])
+                self.assertTrue(row["permanent_failure"])
+                self.assertIn("التوقيتات", row["last_error"])
+
+            def test_deterministic_rejection_moves_to_the_next_verse_without_retrying(self):
+                import tempfile
+                from argparse import Namespace
+                calls = []
+                def fake_generate(chapter, verse, attempt, mode, config, history, local_date, previous_row=None):
+                    calls.append((chapter, verse, attempt))
+                    if len(calls) == 1:
+                        return {"status": "failed", "permanent_failure": True, "last_error": "short"}, False
+                    row = new_run_record("ok", chapter, verse, mode, local_date, attempt)
+                    row["status"] = "published"
+                    return row, True
+                with tempfile.TemporaryDirectory() as temp, \
+                        patch.dict(os.environ, {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json",
+                                                "MAX_RETRIES": "5"}), \
+                        patch.object(THIS, "generate_candidate", fake_generate):
+                    code = run(Namespace(mode="auto", chapter=None, verse=None, reprocess=False,
+                                         publish_only=False, input_video=None, test=False))
+                self.assertEqual(code, 0)
+                self.assertEqual(len(calls), 2)                    # the rejected verse was tried once, not five times
+                self.assertNotEqual(calls[0][:2], calls[1][:2])
+                self.assertEqual((calls[0][2], calls[1][2]), (1, 1))
 
             def test_daily_guard_only_counts_auto_and_allows_retry_after_known_failure(self):
                 published = new_run_record("auto-ok", 2, 152, "auto", "2026-10-21", 1)
@@ -822,13 +1046,15 @@ if __name__ == "__main__":
                 with tempfile.TemporaryDirectory() as temp:
                     history = ProductionHistory(Path(temp) / "data/history.json")
                     history.load()
-                    row = new_run_record("test-1", 2, 152, "manual", "2026-01-01", 1)
+                    chapter, verse = AUTO_VERSE_POOL[0]
+                    self.assertIn((chapter, verse), choose_auto_candidates([], "2026-01-02", 100))
+                    row = new_run_record("test-1", chapter, verse, "manual", "2026-01-01", 1)
                     row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
                     history.upsert(row)
                     reread = history.get_runs()
                     self.assertEqual(len(reread), 1)
                     self.assertTrue(row_has_any_publication(reread[0]))
-                    self.assertNotIn((2, 152), choose_auto_candidates(reread, "2026-01-02", 20))
+                    self.assertNotIn((chapter, verse), choose_auto_candidates(reread, "2026-01-02", 100))
 
             def test_partial_failure_never_repeats_successful_platform(self):
                 import tempfile
@@ -963,9 +1189,11 @@ if __name__ == "__main__":
                     validate_generation_environment()
 
             def test_unresolved_platform_id_excludes_verse_from_auto_selection(self):
-                row = new_run_record("run-3", 2, 286, "auto", "2026-01-01", 1)
+                chapter, verse = AUTO_VERSE_POOL[1]
+                row = new_run_record("run-3", chapter, verse, "auto", "2026-01-01", 1)
                 row["platforms"]["facebook"] = {"status": "uploading_unknown", "video_id": "fb-session"}
-                self.assertNotIn((2, 286), choose_auto_candidates([row], "2026-01-02", 20))
+                self.assertIn((chapter, verse), choose_auto_candidates([], "2026-01-02", 100))
+                self.assertNotIn((chapter, verse), choose_auto_candidates([row], "2026-01-02", 100))
 
             def test_publish_only_fingerprint_requires_exact_artifact(self):
                 import tempfile

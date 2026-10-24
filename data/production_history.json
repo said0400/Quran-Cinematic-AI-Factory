@@ -9206,6 +9206,232 @@
       "verse_key": "2:2",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "9f43fbc4ec837148047ed798f7f3374ffe8455c68b30abe8458c9649e0fb1ffc"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 3,
+      "created_at": "2026-10-24T19:17:31.980392+00:00",
+      "last_error": null,
+      "local_date": "2026-10-24",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/3:2",
+          "verse_key": "3:2"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/3.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/3?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:2"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/scenic-winter-sunrise-over-snowy-forest-35965015/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/35965015/15247875_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "calm nature landscape sunrise",
+          "source_page": "https://www.pexels.com/video/scenic-winter-sunrise-over-snowy-forest-35965015/",
+          "video_id": 35965015
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/a-photo-of-a-lake-with-trees-in-the-background-26860330/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/26860330/12022827_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "calm nature landscape sunrise",
+          "source_page": "https://www.pexels.com/video/a-photo-of-a-lake-with-trees-in-the-background-26860330/",
+          "video_id": 26860330
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/scenic-aerial-view-of-foggy-landscape-at-sunrise-34078226/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/34078226/14453752_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "calm nature landscape sunrise",
+          "source_page": "https://www.pexels.com/video/scenic-aerial-view-of-foggy-landscape-at-sunrise-34078226/",
+          "video_id": 34078226
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "88c117173506c78d05dd78fa268ca2db3d18226e0436a9e56d9bf230ee0dceb7",
+          "status": "published",
+          "video_id": "video-88c117173506c78d",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-88c117173506c78d/video-88c117173506c78d.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في خضم الحياة المتسارعة، قد ننسى من بيده مقاليد الأمور. هذا المقطع يقدم وقفة تأملية حول المعنى العميق لصفات الله التي تمنح النفس سكينة وثباتاً. استكشف كيف يمكن لاستحضار هذه الحقيقة أن يغير نظرتك لضغوط الحياة اليومية ومخاوف المستقبل. ستجد هنا دعوة للهدوء النفسي واليقين في تدبير الله لكل تفاصيل وجودنا. شارك هذه الرسالة مع أصدقائك وأحبتك لتنشر الطمأنينة في قلوبهم، فربما تكون سبباً في راحة بال من يحتاجها بشدة في هذه اللحظة.\n\nالكلمات المفتاحية: طمأنينة القلب، تدبير الله، راحة البال، معنى الحياة، التوكل على الله، تفريج الهموم، سكينة النفس، عظمة الخالق، تجاوز الصعاب، التفكير الإيجابي، معاني إيمانية، تأملات روحية\n\n#طمأنينة #راحة_بال #تدبير_الله #تأملات #سكينة #يقين #حياة_أفضل #تفاؤل #PeaceOfMind #Reflection",
+        "title": "حين تضيق بك الدنيا تذكر من بيده تدبير كل شيء"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-24-3-2-ef18c28910-report.json",
+      "run_id": "2026-10-24-3-2-ef18c28910",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:2"
+      },
+      "status": "published",
+      "updated_at": "2026-10-24T19:20:31.014110+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 64.1,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": false
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 13,
+            "keywords": 12,
+            "message_word_budget": [
+              55,
+              79
+            ],
+            "message_words": 68,
+            "topic": null
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص التزم بتفسير الآية المذكور (وحدانية الله، الحياة الكاملة، القيام على كل شيء) ولم يضف أحكاماً شرعية أو وعوداً بأجر محدد أو ادعاءات غيبية خارج سياق التفسير."
+          },
+          "recitation_api_verse_key": "3:2",
+          "recitation_duration_seconds": 10.136,
+          "verse_source_and_key": true,
+          "verse_word_count": 7,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 74.289,
+            "audio_segments": {
+              "cta": {
+                "end": 74.339,
+                "start": 61.328
+              },
+              "hook": {
+                "end": 7.211,
+                "start": 0.0
+              },
+              "message": {
+                "end": 61.328,
+                "start": 20.077
+              },
+              "recitation": {
+                "end": 17.346,
+                "start": 7.211
+              },
+              "seal": {
+                "end": 20.077,
+                "start": 17.346
+              }
+            },
+            "commentary_pages": {
+              "cta": 1,
+              "hook": 1,
+              "message": 3
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 74.3,
+            "file_size_bytes": 60615601,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 10.136,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 7
+        },
+        "status": "validated"
+      },
+      "verse": 2,
+      "verse_key": "3:2",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "88c117173506c78d05dd78fa268ca2db3d18226e0436a9e56d9bf230ee0dceb7"
     }
   ],
   "version": 1

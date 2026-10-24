@@ -8,8 +8,8 @@ Rendering model
 * All text is drawn here with Pillow/RAQM as RGBA frames and piped to FFmpeg as raw video, so the
   number of FFmpeg inputs does not grow with the number of words.
 * The Quran verse sits on an ornamental card and is highlighted word by word using the source
-  timestamps. Commentary texts (hook, explanation, benefit, call to action) stay fully visible on a
-  plain card with the current spoken word highlighted.
+  timestamps. Commentary texts (hook, message, call to action) stay fully visible on a plain card
+  with the current spoken word highlighted; a long text is split into consecutive cards.
 """
 from __future__ import annotations
 
@@ -200,6 +200,64 @@ def _star_points(cx: float, cy: float, outer: float, inner: float, points: int =
     return result
 
 
+def quran_words(text: str) -> list[str]:
+    """Split Quran text into display/timing words.
+
+    Whitespace-separated tokens without any letter (waqf signs, the rosette, the verse-end sign)
+    are not words and have no timing: they are attached to the preceding word (or to the next one
+    at the very start), so word counts match the source timestamps. Kept identical to
+    `services.quran_words` (a unit test in main.py compares them).
+    """
+    words: list[str] = []
+    pending: list[str] = []
+    for token in (text or "").split():
+        if not any(unicodedata.category(char).startswith("L") for char in token):
+            if words:
+                words[-1] += " " + token
+            else:
+                pending.append(token)
+            continue
+        if pending:
+            token = " ".join([*pending, token])
+            pending = []
+        words.append(token)
+    return words
+
+
+SENTENCE_END_CHARS = "،,.؟?!؛:"
+PAGE_MAX_WORDS = 24      # a card holds at most 7 lines; 24 words fit even at the smallest font size
+PAGE_MIN_WORDS = 10
+
+
+def _best_cut(words: list[str], low: int, high: int) -> int:
+    """Exclusive end index in [low, high] that follows sentence punctuation, else `high`."""
+    for index in range(high, low - 1, -1):
+        if words[index - 1][-1:] in SENTENCE_END_CHARS:
+            return index
+    return high
+
+
+def paginate_text(text: str, max_words: int = PAGE_MAX_WORDS, min_words: int = PAGE_MIN_WORDS) -> list[list[str]]:
+    """Split commentary into card-sized pages, preferring to break after sentence punctuation."""
+    words = text.split()
+    if not words:
+        raise VideoError("نص المشهد فارغ.")
+    pages: list[list[str]] = []
+    start = 0
+    while len(words) - start > max_words:
+        end = _best_cut(words, start + min_words, start + max_words)
+        pages.append(words[start:end])
+        start = end
+    pages.append(words[start:])
+    if len(pages) > 1 and len(pages[-1]) < min_words // 2:
+        # Never leave a tiny last card: share the last two pages evenly.
+        combined = pages[-2] + pages[-1]
+        middle = len(combined) // 2
+        cut = _best_cut(combined, max(1, middle - 3), min(len(combined) - 1, middle + 3))
+        pages[-2:] = [combined[:cut], combined[cut:]]
+    return pages
+
+
 # --------------------------------------------------------------------------------------------
 # Layouts: static card + word positions. A frame is the card plus the words with one highlighted.
 # --------------------------------------------------------------------------------------------
@@ -288,14 +346,14 @@ def build_verse_layout(text: str, chapter_name: str = "", verse_number: int | No
     font_path = font_path or discover_font()
     s = width / 1080.0
     probe_draw = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
-    words = text.split()
+    words = quran_words(text)
     chosen = None
     for size in range(66, 39, -2):
         pixel_size = max(8, int(round(size * s)))
         font = _font(font_path, pixel_size)
         gap = max(4, pixel_size // 3)
         lines = _wrap_words(words, font, int(width * 0.70), probe_draw, gap)
-        if len(lines) <= 6:
+        if len(lines) <= 8:
             chosen = (font, lines, pixel_size, gap)
             break
     if chosen is None:
@@ -543,8 +601,8 @@ def _encode_with_overlay_pipe(command: list[str], frames: Iterator[bytes], timeo
 
 
 def _audio_concat(audio_files: list[Path], destination: Path) -> float:
-    if len(audio_files) != 6:
-        raise VideoError("يجب تمرير ستة مقاطع صوتية منفصلة: هوك، تلاوة، العبارة، تفسير، فائدة، خاتمة.")
+    if len(audio_files) != 5:
+        raise VideoError("يجب تمرير خمسة مقاطع صوتية منفصلة: هوك، تلاوة، العبارة، رسالة، دعوة المشاركة.")
     for file in audio_files:
         if not file.is_file() or file.stat().st_size < 512:
             raise VideoError(f"مقطع صوت غير صالح: {file.name}")
@@ -630,6 +688,33 @@ def compose_background(clips: list[Path], destination: Path, width: int = 1080, 
     }
 
 
+def commentary_scenes(name: str, label: str, text: str, start: float, end: float,
+                      timings: list[tuple[float, float, int]], width: int, height: int, font_path: str,
+                      first_fade_in: float = FADE_SECONDS, last_fade_out: float = FADE_SECONDS) -> list[Scene]:
+    """Scenes for one spoken text: one card, or consecutive cards when the text is long.
+
+    `timings` are absolute (start_s, end_s, word_index) rows over `text.split()`. Each card starts
+    when its first word is spoken and lasts until the next card begins, so the screen is never blank
+    between cards.
+    """
+    pages = paginate_text(text)
+    scenes: list[Scene] = []
+    first = 0
+    for number, page in enumerate(pages):
+        last_page = number == len(pages) - 1
+        following = first + len(page)
+        page_start = start if number == 0 else timings[first][0]
+        page_end = end if last_page else timings[following][0]
+        page_end = max(page_end, page_start + 0.05)
+        page_timings = [(a, b, index - first) for a, b, index in timings if first <= index < following]
+        scenes.append(Scene(name if len(pages) == 1 else f"{name}-{number + 1}", page_start, page_end,
+                            build_text_layout(" ".join(page), label, width, height, font_path), page_timings,
+                            fade_in=first_fade_in if number == 0 else 0.12,
+                            fade_out=last_fade_out if last_page else 0.0))
+        first = following
+    return scenes
+
+
 def build_video(background: Path, audio_files: dict[str, Path], recitation_segments: list[dict[str, int]],
                 verse_text: str, content: dict[str, Any], output_path: Path,
                 width: int = 1080, height: int = 1920, fps: int = 30,
@@ -638,14 +723,14 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                 chapter_name: str = "", verse_number: int | None = None,
                 dim_strength: float = 0.30) -> dict[str, Any]:
     """Build exactly ordered scenes without cropping or speeding up the recitation."""
-    required = ["hook", "explanation", "practical_benefit", "call_to_action"]
+    required = ["hook", "message", "call_to_action"]
     if not all(isinstance(content.get(key), str) and content[key].strip() for key in required):
         raise VideoError("نصوص الفيديو المطلوبة ناقصة.")
     if "صدق الله العظيم" in " ".join(content[key] for key in required):
         raise VideoError("عبارة «صدق الله العظيم» يجب أن تكون مقطعًا مستقلًا بعد التلاوة فقط.")
-    keys = ["hook", "recitation", "seal", "explanation", "benefit", "cta"]
+    keys = ["hook", "recitation", "seal", "message", "cta"]
     if any(key not in audio_files for key in keys):
-        raise VideoError("مقاطع الصوت الستة المطلوبة غير مكتملة.")
+        raise VideoError("مقاطع الصوت الخمسة المطلوبة غير مكتملة.")
     if not recitation_segments:
         raise VideoError("توقيتات الكلمات الحقيقية غير متاحة.")
     dim_layer = build_dim_layer(width, height, float(dim_strength))  # validates the strength early
@@ -683,16 +768,20 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
     timing_sources: dict[str, str] = {}
     scenes: list[Scene] = []
 
+    commentary_pages: dict[str, int] = {}
+
     # Hook: the first scene appears immediately (no fade-in) so the opening frame is never empty.
     hook_start, hook_end = stage_intervals["hook"]
     hook_timings, timing_sources["hook"] = align_speech_words(content["hook"], boundaries.get("hook"), durations["hook"])
-    scenes.append(Scene("hook", hook_start, hook_end,
-                        build_text_layout(content["hook"], "فكرة الآية", width, height, font_path),
-                        [(hook_start + a, hook_start + b, i) for a, b, i in hook_timings], fade_in=0.0))
+    hook_scenes = commentary_scenes("hook", "", content["hook"], hook_start, hook_end,
+                                    [(hook_start + a, hook_start + b, i) for a, b, i in hook_timings],
+                                    width, height, font_path, first_fade_in=0.0)
+    commentary_pages["hook"] = len(hook_scenes)
+    scenes.extend(hook_scenes)
 
     # Quran verse: ornamental card, words highlighted with the real source timestamps only.
     rec_start, rec_end = stage_intervals["recitation"]
-    verse_words = verse_text.split()
+    verse_words = quran_words(verse_text)
     recitation_timings: list[tuple[float, float, int]] = []
     for segment in recitation_segments:
         word_index = int(segment["word_index"])
@@ -713,19 +802,21 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
     scenes.append(Scene("seal", seal_start, seal_end,
                         build_text_layout("صدق الله العظيم", "", width, height, font_path), []))
 
-    for key, label, text_key in (("explanation", "المعنى", "explanation"),
-                                 ("benefit", "فائدة عملية", "practical_benefit"),
-                                 ("cta", "شارك الفائدة", "call_to_action")):
+    for key, label, text_key in (("message", "رسالة لك", "message"),
+                                 ("cta", "صدقة جارية", "call_to_action")):
         start, end = stage_intervals[key]
         timings, timing_sources[key] = align_speech_words(content[text_key], boundaries.get(key), durations[key])
-        fade_out = FADE_SECONDS
+        last_fade_out = FADE_SECONDS
         if key == "cta":
             if video_duration > total_audio:
                 # Keep the final call-to-action on screen over any deliberate minimum-length padding.
                 end = video_duration
-            fade_out = 0.0
-        scenes.append(Scene(key, start, end, build_text_layout(content[text_key], label, width, height, font_path),
-                            [(start + a, start + b, i) for a, b, i in timings], fade_out=fade_out))
+            last_fade_out = 0.0
+        key_scenes = commentary_scenes(key, label, content[text_key], start, end,
+                                       [(start + a, start + b, i) for a, b, i in timings],
+                                       width, height, font_path, last_fade_out=last_fade_out)
+        commentary_pages[key] = len(key_scenes)
+        scenes.extend(key_scenes)
 
     total_frames = int(math.ceil(video_duration * fps))
     zoom = f"(1+0.08*min(t/{max(video_duration, 1.0):.3f},1))"
@@ -763,6 +854,7 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                        "padding_seconds": round(max(0, video_duration - total_audio), 3),
                        "dim_strength": float(dim_strength),
                        "tts_word_timing": dict(timing_sources),
+                       "commentary_pages": commentary_pages,
                        "font_source": {"path": font_path, **_font_license_metadata(font_path)}})
     return validation
 
@@ -861,10 +953,10 @@ if __name__ == "__main__":
             with tempfile.TemporaryDirectory() as temp:
                 dummy = Path(temp) / "dummy"
                 dummy.write_bytes(b"x" * 1000)
-                audio = {key: dummy for key in ["hook", "recitation", "seal", "explanation", "benefit", "cta"]}
+                audio = {key: dummy for key in ["hook", "recitation", "seal", "message", "cta"]}
                 with self.assertRaises(VideoError):
                     build_video(dummy, audio, [{"word_index": 0, "start_ms": 0, "end_ms": 500}],
-                                "بسم الله", {"hook": "سؤال", "explanation": "صدق الله العظيم", "practical_benefit": "فائدة", "call_to_action": "شارك"},
+                                "بسم الله", {"hook": "سؤال", "message": "صدق الله العظيم", "call_to_action": "شارك"},
                                 Path(temp) / "final_output.mp4")
 
         def test_final_mp4_probe_checks_video_and_audio_streams(self):
@@ -1041,6 +1133,60 @@ if __name__ == "__main__":
                 with self.assertRaises(VideoError):
                     compose_background([clip], destination, 270, 480, 10, target_duration=-1)
 
+        # ----- Quran words, pagination, multi-card commentary -----
+        def test_quran_words_attach_waqf_signs_and_match_the_word_count_of_the_timestamps(self):
+            self.assertEqual(quran_words("بسم الله الرحمن"), ["بسم", "الله", "الرحمن"])
+            text = "فَٱتَّقُوا۟ ٱللَّهَ ۗ وَمَن يُوقَ ۚ فَأُو۟لَٰٓئِكَ"
+            self.assertEqual(len(text.split()), 7)
+            self.assertEqual(len(quran_words(text)), 5)
+            self.assertEqual(quran_words("۞ بسم الله"), ["۞ بسم", "الله"])
+
+        def test_verse_layout_counts_real_words_and_fits_a_long_verse(self):
+            text = "بسم الله \u06d7 الرحمن الرحيم \u06da " + " ".join(["الحمد", "لله", "رب", "العالمين"] * 7)
+            layout = build_verse_layout(text, "الفاتحة", 1, width=540, height=960)
+            self.assertEqual(layout.word_count, len(quran_words(text)))
+            self.assertLess(layout.word_count, len(text.split()))
+            self.assertEqual(draw_layout(layout, layout.word_count - 1).size, (540, 960))
+            with self.assertRaises(VideoError):
+                draw_layout(layout, layout.word_count)
+
+        def test_paginate_text_keeps_every_word_in_order_and_prefers_sentence_breaks(self):
+            sentences = ["كلمة " * 11 + "تامة.", "عبارة " * 11 + "ثانية،", "جملة " * 11 + "ثالثة.", "ختام " * 5 + "قوي."]
+            text = " ".join(sentences)
+            pages = paginate_text(text)
+            self.assertEqual([word for page in pages for word in page], text.split())
+            self.assertTrue(all(len(page) <= PAGE_MAX_WORDS for page in pages))
+            self.assertTrue(all(len(page) >= PAGE_MIN_WORDS // 2 for page in pages))
+            self.assertTrue(pages[0][-1].endswith((".", "،")))
+            self.assertEqual(paginate_text("كلمتان فقط"), [["كلمتان", "فقط"]])
+            with self.assertRaises(VideoError):
+                paginate_text("   ")
+            tail = " ".join(["كلمة"] * 25 + ["أ", "ب"])           # would leave a 2-word last page
+            tail_pages = paginate_text(tail)
+            self.assertEqual([w for page in tail_pages for w in page], tail.split())
+            self.assertGreaterEqual(len(tail_pages[-1]), PAGE_MIN_WORDS // 2)
+
+        def test_commentary_scenes_split_long_text_into_gapless_cards_with_page_relative_timings(self):
+            words = [("كلمة%d." % i if i % 12 == 11 else "كلمة%d" % i) for i in range(50)]
+            text = " ".join(words)
+            timings = [(10.0 + i * 0.4, 10.0 + i * 0.4 + 0.35, i) for i in range(50)]
+            scenes = commentary_scenes("message", "رسالة لك", text, 10.0, 30.5, timings, 270, 480, discover_font())
+            self.assertGreaterEqual(len(scenes), 3)
+            self.assertEqual(scenes[0].start, 10.0)
+            self.assertEqual(scenes[-1].end, 30.5)
+            for left, right in zip(scenes, scenes[1:]):
+                self.assertAlmostEqual(left.end, right.start, places=6)     # no blank gap between cards
+                self.assertEqual(left.fade_out, 0.0)
+            self.assertEqual(scenes[0].fade_in, FADE_SECONDS)
+            self.assertEqual(scenes[-1].fade_out, FADE_SECONDS)
+            self.assertEqual(sum(scene.layout.word_count for scene in scenes), 50)
+            for scene in scenes:
+                indexes = [index for _, _, index in scene.words]
+                self.assertEqual(indexes, list(range(scene.layout.word_count)))
+            single = commentary_scenes("hook", "", "جملة قصيرة قوية", 0.0, 3.0, [(0.1, 0.8, 0), (0.9, 1.5, 1), (1.6, 2.4, 2)],
+                                       270, 480, discover_font(), first_fade_in=0.0)
+            self.assertEqual((len(single), single[0].name, single[0].fade_in), (1, "hook", 0.0))
+
         # ----- Whole pipeline at a small size -----
         def test_full_build_uses_card_dim_and_reports_timing_sources(self):
             with tempfile.TemporaryDirectory() as temp:
@@ -1048,16 +1194,18 @@ if __name__ == "__main__":
                 run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
                              "-i", "color=c=0x303030:s=360x640:r=10:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                              str(temp_path / "bg.mp4")])
-                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "explanation": 2.0, "benefit": 1.5, "cta": 1.0}
+                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "message": 3.0, "cta": 1.0}
                 audio = {}
                 for name, seconds in lengths.items():
                     audio[name] = temp_path / f"{name}.wav"
                     run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
                                  "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
                 segments = [{"word_index": i, "start_ms": 100 + i * 450, "end_ms": 500 + i * 450} for i in range(4)]
-                content = {"hook": "هل تعلم معنى هذه الآية؟", "explanation": "شرح موجز للآية الكريمة",
-                           "practical_benefit": "فائدة عملية قصيرة", "call_to_action": "شارك الفائدة"}
-                hook_boundaries = [{"start_ms": 50 + i * 150, "end_ms": 180 + i * 150} for i in range(5)]
+                content = {"hook": "تعبك الذي لا يراه أحد يسمعه الله",
+                           "message": "هذه الآية تقول لك إن الصبر ليس ضعفًا. ابدأ اليوم بخطوة صغيرة واحدة.",
+                           "call_to_action": "شارك هذا المقطع واجعله صدقة جارية"}
+                hook_boundaries = [{"start_ms": 50 + i * 110, "end_ms": 140 + i * 110}
+                                   for i in range(len("تعبك الذي لا يراه أحد يسمعه الله".split()))]
                 output = temp_path / "final_output.mp4"
                 result = build_video(temp_path / "bg.mp4", audio, segments, "بسم الله الرحمن الرحيم", content, output,
                                      width=270, height=480, fps=10, target_min_duration=8, target_max_duration=60,
@@ -1065,7 +1213,8 @@ if __name__ == "__main__":
                                      verse_number=1, dim_strength=0.30)
                 self.assertTrue(result["valid"])
                 self.assertEqual(result["tts_word_timing"]["hook"], "tts_word_boundary")
-                self.assertEqual(result["tts_word_timing"]["explanation"], "estimated")
+                self.assertEqual(result["tts_word_timing"]["message"], "estimated")
+                self.assertEqual(result["commentary_pages"], {"hook": 1, "message": 1, "cta": 1})
                 self.assertEqual(result["dim_strength"], 0.30)
 
                 def frame_at(second: float) -> Image.Image:
@@ -1096,15 +1245,16 @@ if __name__ == "__main__":
                     clips.append(clip)
                 background = temp_path / "background.mp4"
                 compose_background(clips, background, 270, 480, 10, speed=0.75, target_duration=8.0)
-                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "explanation": 2.0, "benefit": 1.5, "cta": 1.0}
+                lengths = {"hook": 1.0, "recitation": 2.0, "seal": 1.0, "message": 3.0, "cta": 1.0}
                 audio = {}
                 for name, seconds in lengths.items():
                     audio[name] = temp_path / f"{name}.wav"
                     run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
                                  "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
                 segments = [{"word_index": i, "start_ms": 100 + i * 450, "end_ms": 500 + i * 450} for i in range(4)]
-                content = {"hook": "هل تعلم معنى هذه الآية؟", "explanation": "شرح موجز للآية الكريمة",
-                           "practical_benefit": "فائدة عملية قصيرة", "call_to_action": "شارك الفائدة"}
+                content = {"hook": "تعبك الذي لا يراه أحد يسمعه الله",
+                           "message": "هذه الآية تقول لك إن الصبر ليس ضعفًا. ابدأ اليوم بخطوة صغيرة واحدة.",
+                           "call_to_action": "شارك هذا المقطع واجعله صدقة جارية"}
                 result = build_video(background, audio, segments, "بسم الله الرحمن الرحيم", content,
                                      temp_path / "final_output.mp4", width=270, height=480, fps=10,
                                      target_min_duration=8, target_max_duration=60)

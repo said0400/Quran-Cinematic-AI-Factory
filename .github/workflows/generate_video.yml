@@ -58,6 +58,9 @@ jobs:
       # Background: 2..5 Pexels clips, each slowed (0.75 = 25% slower) and merged into one video.
       BACKGROUND_CLIP_COUNT: ${{ vars.BACKGROUND_CLIP_COUNT || '3' }}
       BACKGROUND_SPEED: ${{ vars.BACKGROUND_SPEED || '0.75' }}
+      # Automatic runs skip verses shorter than MIN_VERSE_WORDS words or whose recitation exceeds MAX_RECITATION_SECONDS.
+      MIN_VERSE_WORDS: ${{ vars.MIN_VERSE_WORDS || '10' }}
+      MAX_RECITATION_SECONDS: ${{ vars.MAX_RECITATION_SECONDS || '40' }}
       # Commentary voice: edge (default) | gemini | auto (Gemini first, edge-tts as fallback).
       TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'edge' }}
       TTS_VOICE: ${{ vars.TTS_VOICE || 'ar-EG-ShakirNeural' }}

@@ -155,6 +155,31 @@ def normalize_arabic(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+def quran_words(text: str) -> list[str]:
+    """Split Quran text into display/timing words.
+
+    Whitespace-separated tokens that contain no letter (waqf signs such as the small high
+    ligatures, the rosette, the verse-end sign) are not words: Quran Foundation gives no timing
+    for them. They are attached to the preceding word (or the next one at the very start) so the
+    word count matches the word-level timestamps and the sign is highlighted with its word.
+    Kept identical to `video_engine.quran_words` (a unit test in main.py compares them).
+    """
+    words: list[str] = []
+    pending: list[str] = []
+    for token in (text or "").split():
+        if not any(unicodedata.category(char).startswith("L") for char in token):
+            if words:
+                words[-1] += " " + token
+            else:
+                pending.append(token)
+            continue
+        if pending:
+            token = " ".join([*pending, token])
+            pending = []
+        words.append(token)
+    return words
+
+
 def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: int,
                            end_tolerance_ms: int = 300) -> list[dict[str, int]]:
     """Validate Quran Foundation [word_index,start_ms,end_ms] timing rows.
@@ -162,7 +187,7 @@ def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: 
     Only contiguous 0-based or 1-based word indexes are accepted. No timing is
     generated or interpolated by this function.
     """
-    words = [w for w in (text_uthmani or "").split() if w]
+    words = quran_words(text_uthmani)
     if not isinstance(segments, list) or not words:
         raise ServiceError("توقيتات الكلمات غير متاحة أو نص الآية فارغ؛ رُفض المرشح.")
     if len(segments) != len(words):
@@ -491,9 +516,25 @@ class QuranFoundationClient:
 
 
 HOOK_SCORE_KEYS = (
-    "start_strength", "curiosity", "relevance", "clarity", "brevity",
-    "uniqueness", "non_misleading", "general_audience",
+    "start_strength", "curiosity", "emotional_impact", "relevance", "clarity",
+    "brevity", "uniqueness", "non_misleading", "general_audience",
 )
+HOOK_MIN_WORDS, HOOK_MAX_WORDS = 3, 18
+MESSAGE_MIN_WORDS_FLOOR = 20            # hard floor; the prompt asks for a longer text
+CTA_MIN_WORDS, CTA_MAX_WORDS = 6, 34
+TITLE_MAX_WORDS, TITLE_MAX_CHARS = 16, 95
+DESCRIPTION_MIN_CHARS, DESCRIPTION_MAX_CHARS = 300, 1400
+KEYWORDS_MIN, KEYWORDS_MAX = 6, 15
+HASHTAGS_MIN, HASHTAGS_MAX = 6, 12
+CONTENT_ATTEMPTS = 3                    # regenerations when the content fails validation or review
+SHARE_VERB_PATTERN = re.compile(r"شارك|انشر|أرسل|ارسل|مرّر|مرر")
+# The published text must not name sources (reciter, tafsir, stock site, AI vendors).
+FORBIDDEN_SOURCE_PATTERN = re.compile(
+    r"pexels|quran\.foundation|gemini|جيميناي|الميسر|مشاري|العفاسي|ابن كثير|الطبري|السعدي|القرطبي|البغوي",
+    re.I)
+URL_PATTERN = re.compile(r"(?:https?://|www\.)", re.I)
+SEAL_PHRASE = "صدق الله العظيم"
+
 GENERATION_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -501,11 +542,14 @@ GENERATION_SCHEMA = {
             "text": {"type": "STRING"},
             **{key: {"type": "INTEGER"} for key in HOOK_SCORE_KEYS},
         }, "required": ["text", *HOOK_SCORE_KEYS]}},
-        "explanation": {"type": "STRING"},
-        "practical_benefit": {"type": "STRING"},
+        "message": {"type": "STRING"},
         "call_to_action": {"type": "STRING"},
+        "title": {"type": "STRING"},
+        "description": {"type": "STRING"},
+        "keywords": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "hashtags": {"type": "ARRAY", "items": {"type": "STRING"}},
     },
-    "required": ["hook_candidates", "explanation", "practical_benefit", "call_to_action"],
+    "required": ["hook_candidates", "message", "call_to_action", "title", "description", "keywords", "hashtags"],
 }
 REVIEW_SCHEMA = {
     "type": "OBJECT",
@@ -518,47 +562,122 @@ REVIEW_SCHEMA = {
     },
     "required": ["grounded_in_source", "no_unsupported_claims", "no_contradiction", "needs_review", "reason"],
 }
-def validate_generated_content(data: Any) -> dict[str, Any]:
+
+
+class ContentValidationError(ServiceError):
+    """The generated copy broke a content rule; regenerating it is worthwhile."""
+
+
+def _normalize_hashtags(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        raise ContentValidationError("حقل الهاشتاجات ليس قائمة.")
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            raise ContentValidationError("أحد الهاشتاجات ليس نصًا.")
+        tag = re.sub(r"\s+", "_", item.strip().lstrip("#").strip())
+        tag = re.sub(r"[^\w\u0600-\u06FF]", "", tag).strip("_")
+        if not 2 <= len(tag) <= 40:
+            continue
+        signature = normalize_arabic(tag).lower()
+        if signature in seen:
+            continue
+        seen.add(signature)
+        result.append("#" + tag)
+    if len(result) < HASHTAGS_MIN:
+        raise ContentValidationError(f"عدد الهاشتاجات الصالحة أقل من {HASHTAGS_MIN}.")
+    return result[:HASHTAGS_MAX]
+
+
+def _normalize_keywords(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        raise ContentValidationError("حقل الكلمات المفتاحية ليس قائمة.")
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            raise ContentValidationError("إحدى الكلمات المفتاحية ليست نصًا.")
+        keyword = re.sub(r"\s+", " ", item.strip().lstrip("#").strip())
+        if not 2 <= len(keyword) <= 40 or URL_PATTERN.search(keyword):
+            continue
+        signature = normalize_arabic(keyword).lower()
+        if signature in seen:
+            continue
+        seen.add(signature)
+        result.append(keyword)
+    if len(result) < KEYWORDS_MIN:
+        raise ContentValidationError(f"عدد الكلمات المفتاحية الصالحة أقل من {KEYWORDS_MIN}.")
+    return result[:KEYWORDS_MAX]
+
+
+def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[str, Any]:
+    """Validate the model output and return the normalized copy.
+
+    Every rule failure raises `ContentValidationError`, which `GeminiContentService` answers by
+    regenerating (a few times) instead of failing the whole candidate.
+    """
     if not isinstance(data, dict):
-        raise ServiceError("مخرجات النموذج ليست كائن JSON.")
+        raise ContentValidationError("مخرجات النموذج ليست كائن JSON.")
     candidates = data.get("hook_candidates")
     if not isinstance(candidates, list) or len(candidates) != 5:
-        raise ServiceError("يجب إنشاء خمس صيغ مستقلة للهوك بالضبط.")
+        raise ContentValidationError("يجب إنشاء خمس صيغ مستقلة للهوك بالضبط.")
     normalized: list[dict[str, Any]] = []
     seen: set[str] = set()
     for candidate in candidates:
         if not isinstance(candidate, dict) or not isinstance(candidate.get("text"), str):
-            raise ServiceError("بنية أحد مرشحي الهوك غير صالحة.")
+            raise ContentValidationError("بنية أحد مرشحي الهوك غير صالحة.")
         text = candidate["text"].strip()
-        if not text or len(text.split()) > 12 or "صدق الله العظيم" in text or re.search(r"(?:https?://|www\.)", text, re.I):
-            raise ServiceError("مرشح الهوك فارغ أو طويل أو يكرر عبارة ما بعد التلاوة.")
+        word_count = len(text.split())
+        if not HOOK_MIN_WORDS <= word_count <= HOOK_MAX_WORDS or SEAL_PHRASE in text or URL_PATTERN.search(text):
+            raise ContentValidationError("مرشح الهوك قصير جدًا أو طويل أو يكرر عبارة ما بعد التلاوة.")
         signature = normalize_arabic(text)
         if signature in seen:
-            raise ServiceError("مرشحو الهوك مكرّرون.")
+            raise ContentValidationError("مرشحو الهوك مكرّرون.")
         seen.add(signature)
         scores = {}
         for key in HOOK_SCORE_KEYS:
             score = candidate.get(key)
             if isinstance(score, bool) or not isinstance(score, int) or not 1 <= score <= 5:
-                raise ServiceError(f"تقييم الهوك {key} خارج المجال 1..5.")
+                raise ContentValidationError(f"تقييم الهوك {key} خارج المجال 1..5.")
             scores[key] = score
-        total = sum(scores.values())
         if scores["non_misleading"] < 4 or scores["relevance"] < 4:
-            raise ServiceError("أحد مرشحي الهوك لا يحقق الحد الأدنى للارتباط وعدم التضليل.")
-        normalized.append({"text": text, "scores": scores, "total_score": total})
-    for key in ("explanation", "practical_benefit", "call_to_action"):
-        value = data.get(key)
-        if not isinstance(value, str) or not value.strip() or len(value) > 1200:
-            raise ServiceError(f"حقل {key} فارغ أو غير صالح.")
-        if "صدق الله العظيم" in value:
-            raise ServiceError("يُمنع تكرار عبارة صدق الله العظيم داخل النص المولّد.")
-        if re.search(r"(?:https?://|www\.)", value, re.I):
-            raise ServiceError("روابط أو نصوص خارجية غير موثوقة مرفوضة في مخرجات Gemini.")
+            raise ContentValidationError("أحد مرشحي الهوك لا يحقق الحد الأدنى للارتباط وعدم التضليل.")
+        normalized.append({"text": text, "scores": scores, "total_score": sum(scores.values())})
+
+    def text_field(name: str, min_words: int, max_words: int, max_chars: int) -> str:
+        value = data.get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise ContentValidationError(f"حقل {name} فارغ أو غير صالح.")
+        value = value.strip()
+        words = len(value.split())
+        if not min_words <= words <= max_words or len(value) > max_chars:
+            raise ContentValidationError(f"طول حقل {name} خارج الحدود ({words} كلمة).")
+        if SEAL_PHRASE in value:
+            raise ContentValidationError("يُمنع تكرار عبارة صدق الله العظيم داخل النص المولّد.")
+        if URL_PATTERN.search(value):
+            raise ContentValidationError("روابط أو نصوص خارجية غير موثوقة مرفوضة في مخرجات Gemini.")
+        return value
+
+    message = text_field("message", MESSAGE_MIN_WORDS_FLOOR, int(max_message_words), 1600)
+    cta = text_field("call_to_action", CTA_MIN_WORDS, CTA_MAX_WORDS, 400)
+    if not SHARE_VERB_PATTERN.search(cta):
+        raise ContentValidationError("دعوة المشاركة لا تحتوي فعل مشاركة واضحًا.")
+    title = text_field("title", 3, TITLE_MAX_WORDS, TITLE_MAX_CHARS)
+    if "#" in title:
+        raise ContentValidationError("العنوان يجب ألا يحتوي هاشتاجات.")
+    description = text_field("description", 30, 400, DESCRIPTION_MAX_CHARS)
+    if len(description) < DESCRIPTION_MIN_CHARS:
+        raise ContentValidationError("الوصف أقصر من الحد الأدنى.")
+    keywords = _normalize_keywords(data.get("keywords"))
+    hashtags = _normalize_hashtags(data.get("hashtags"))
+    published_text = " ".join([title, description, *keywords, *hashtags])
+    if FORBIDDEN_SOURCE_PATTERN.search(published_text):
+        raise ContentValidationError("النص المنشور يذكر مصدرًا أو اسمًا ممنوعًا.")
     best = max(normalized, key=lambda item: (item["total_score"], item["scores"]["non_misleading"], item["scores"]["relevance"]))
-    return {"hook": best["text"], "hook_candidates": normalized,
-            "explanation": data["explanation"].strip(),
-            "practical_benefit": data["practical_benefit"].strip(),
-            "call_to_action": data["call_to_action"].strip()}
+    return {"hook": best["text"], "hook_candidates": normalized, "message": message,
+            "call_to_action": cta, "title": title, "description": description,
+            "keywords": keywords, "hashtags": hashtags}
 
 
 def _gemini_exception_info(exc: BaseException) -> tuple[bool, int | None, str]:
@@ -675,27 +794,79 @@ class GeminiContentService:
                 self._sleep(self.retry_delays[attempt - 1])
         raise ServiceError("فشل استدعاء Gemini.")  # pragma: no cover - loop always returns or raises
 
-    def create_and_review(self, verse: QuranVerse, tafsir: TafsirSource) -> dict[str, Any]:
-        prompt = (
-            "أنت محرر عربي مساعد، ولست مصدرًا شرعيًا. استخدم النص التفسيري الموثق المرفق وحده. "
-            "لخّص التفسير الموثوق بلغة عربية فصحى بسيطة، وحافظ على المعنى الأساسي، ولا تضف أحكامًا أو أسباب نزول أو معلومات غير موجودة بالمصدر. "
-            "أنشئ خمس صيغ مختلفة قصيرة للهوك، وامنح كل واحدة تقييمًا صحيحًا من 1 إلى 5 للمعايير التالية: "
-            + ", ".join(HOOK_SCORE_KEYS)
-            + ". يجب أن ترتبط بالآية ولا توهم بأنها رسالة غيبية شخصية أو وعد بحل مشكلة، وتجنب التضليل. "
-            "قدّم شرحًا موجزًا وفائدة عملية مرتبطة بالآية ودعوة عامة للتفاعل. لا تكتب عبارة «صدق الله العظيم» في أي حقل. "
+    @staticmethod
+    def _generation_prompt(verse: QuranVerse, tafsir: TafsirSource, topic: str | None,
+                           message_words: tuple[int, int]) -> str:
+        low, high = message_words
+        topic_line = f"الموضوع المقترح لزاوية الطرح: {topic}\n" if topic else ""
+        return (
+            "أنت كاتب محتوى عربي محترف متخصص في الفيديوهات القصيرة المؤثرة، ولست مصدرًا شرعيًا. "
+            "المعنى الديني يؤخذ حصرًا من نص التفسير الموثق المرفق: لا تضف أحكامًا ولا أسباب نزول ولا أحاديث "
+            "ولا قصصًا ولا أرقامًا ولا معلومات غير موجودة فيه، ولا تنسب للآية وعدًا شخصيًا غيبيًا ولا تضمن للمشاهد "
+            "حل مشكلته أو أجرًا معينًا. اكتب بعربية فصحى بسيطة نابضة، بجمل قصيرة وإيقاع مؤثر، وخاطب المشاهد بضمير المخاطب.\n\n"
+            "المطلوب (وفق المخطط حصرًا):\n"
+            "1) hook_candidates: خمس صيغ مختلفة تمامًا لهوك افتتاحي يُقال قبل الآية، كل واحدة من "
+            f"{HOOK_MIN_WORDS + 3} إلى 16 كلمة. يضرب الهوك إحساسًا حقيقيًا يعيشه الناس اليوم (التعب الصامت، ضيق الرزق، "
+            "الخوف من المستقبل، ظلم الناس، انتظار الفرج، ضغط الدراسة والامتحان، الوحدة، فقد الأحبة، الإرهاق من الدنيا) "
+            "ويرتبط بمعنى الآية، ويخلق فضولًا لا يُحل إلا بسماع الآية. تجنب المقدمات المستهلكة مثل «هل تعلم»، "
+            "وتجنب الأسئلة العامة الباردة، ولا تقتبس نص الآية، ولا توهم بأن الآية رسالة شخصية له. "
+            "قيّم كل صيغة بأعداد صحيحة من 1 إلى 5 للمعايير: " + ", ".join(HOOK_SCORE_KEYS) + ".\n"
+            f"2) message: نص واحد متماسك يُقال بعد الآية ({low} إلى {high} كلمة) يدمج معنى الآية من التفسير والفائدة العملية "
+            "في رسالة قوية تلمس قلب كل مشاهد مهما كانت ظروفه: ابدأ بكشف المعنى ببساطة، ثم خاطب موقفًا يوميًا واقعيًا "
+            "يعيشه الناس، ثم أعطه خطوة عملية يفعلها اليوم، واختم بجملة قوية تبقى في ذهنه. بلا قوائم، ولا تكرر الهوك، "
+            "ولا تقتبس الآية، ولا تكتب «صدق الله العظيم».\n"
+            f"3) call_to_action: دعوة مشاركة عاطفية قوية ومحترمة من {CTA_MIN_WORDS + 2} إلى 28 كلمة تدفع المشاهد لمشاركة المقطع الآن، "
+            "وتربط المشاركة بالصدقة الجارية والخير الذي يصل لمن يحب، كوالديه أو أحبّته أو من فقدهم أو من يحتاج هذه الكلمات "
+            "(مثال على الروح فقط، لا تنسخه: «شاركه الآن، فلعله يكون صدقة جارية لك ولوالديك»). استخدم فعل «شارك» أو «انشر» أو «أرسل». "
+            "نوّع الصياغة، ولا تجزم بأجر معين ولا تذكر حديثًا ولا حكمًا شرعيًا.\n"
+            f"4) title: عنوان واحد قوي جدًا في جملة واحدة (3 إلى {TITLE_MAX_WORDS} كلمة، وأقل من {TITLE_MAX_CHARS} حرفًا) "
+            "يجمع الفضول والإحساس، بلا رقم آية ولا هاشتاجات ولا علامات اقتباس.\n"
+            f"5) description: وصف طويل بلا حشو ولا تحيات ({DESCRIPTION_MIN_CHARS + 200} إلى 1100 حرف) في فقرات قصيرة، "
+            "يبدأ بجملة قوية، ويوضح ما سيجده المشاهد من معنى وفائدة، ويضمّن الكلمات المفتاحية طبيعيًا، وينتهي بدعوة للمشاركة. "
+            "لا روابط، ولا تذكر أي مصدر أو قارئ أو موقع أو تفسير أو أداة أو ذكاءً اصطناعيًا.\n"
+            f"6) keywords: من {KEYWORDS_MIN + 4} إلى {KEYWORDS_MAX} كلمة أو عبارة بحث عربية (كلمتان إلى أربع) يبحث بها الناس فعلًا عن هذا الموضوع.\n"
+            f"7) hashtags: من {HASHTAGS_MIN + 2} إلى {HASHTAGS_MAX} هاشتاجًا عربيًا (ويجوز اثنان بالإنجليزية) يبدأ كل منها بعلامة # دون مسافات (استخدم _ بين الكلمات).\n\n"
             "أعد JSON وفق المخطط فقط.\n\n"
+            f"{topic_line}"
             f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
-            f"المصدر: {tafsir.source_name}\nنص التفسير المسترجع: {tafsir.text}"
+            f"نص التفسير الموثق (المصدر الوحيد للمعنى الديني): {tafsir.text}"
         )
+
+    def create_and_review(self, verse: QuranVerse, tafsir: TafsirSource, topic: str | None = None,
+                          message_words: tuple[int, int] = (40, 70)) -> dict[str, Any]:
+        """Generate the video copy, validate it and have it reviewed against the tafsir.
+
+        A copy that breaks a rule or is rejected by the review is regenerated up to CONTENT_ATTEMPTS
+        times; API failures are not retried here (`_generate_json` handles transient ones).
+        """
+        prompt = self._generation_prompt(verse, tafsir, topic, message_words)
         # Output budgets are generous because "thinking" models may spend part of the budget
         # on reasoning tokens, which would otherwise truncate the JSON.
-        generated = validate_generated_content(self._generate_json(prompt, GENERATION_SCHEMA, 4096))
+        for attempt in range(1, CONTENT_ATTEMPTS + 1):
+            try:
+                generated = validate_generated_content(
+                    self._generate_json(prompt, GENERATION_SCHEMA, 8192),
+                    max_message_words=message_words[1] + 20)
+                review = self._review(verse, tafsir, generated)
+                generated["review"] = review
+                generated["model"] = self.model
+                return generated
+            except ContentValidationError as exc:
+                print(f"محتوى Gemini المحاولة {attempt}/{CONTENT_ATTEMPTS} مرفوض: {str(exc)[:300]}", file=sys.stderr)
+                if attempt == CONTENT_ATTEMPTS:
+                    raise
+        raise ServiceError("فشل إنشاء المحتوى.")  # pragma: no cover - loop always returns or raises
+
+    def _review(self, verse: QuranVerse, tafsir: TafsirSource, generated: dict[str, Any]) -> dict[str, Any]:
+        reviewed = {key: generated[key] for key in ("hook", "message", "call_to_action", "title", "description")}
         review_prompt = (
-            "راجع النص المقترح بمقارنته حصريًا بالنص التفسيري المرفق وبالآية الأصلية. أنت لست مفتيًا. "
-            "اعتبر كل ادعاء ديني أو تفسيري غير موجود بوضوح في المصدر سببًا لرفضه أو طلب المراجعة. "
-            "لا تقيّم الأسلوب فقط. إذا لم تكفِ الأدلة، اجعل needs_review=true. أعد JSON فقط حسب المخطط.\n"
-            f"الآية العثمانية: {verse.text_uthmani}\nالتفسير الأصلي من {tafsir.source_name}: {tafsir.text}\n"
-            f"النص المراد مراجعته: {json.dumps(generated, ensure_ascii=False)}"
+            "راجع النص المقترح بمقارنة ادعاءاته الدينية حصريًا بالنص التفسيري المرفق وبالآية الأصلية. أنت لست مفتيًا. "
+            "اللغة العاطفية والتشويقية في الهوك والعنوان ودعوة المشاركة أسلوبٌ مقبول، فلا ترفض النص بسببه. "
+            "ارفض النص أو اجعل needs_review=true فقط إذا: ورد ادعاء ديني أو تفسيري غير موجود بوضوح في المصدر، "
+            "أو يناقضه، أو ضُمن أجر أو نتيجة معينة، أو نُسبت للآية رسالة شخصية غيبية، أو ذُكر حديث أو حكم شرعي. "
+            "أعد JSON فقط حسب المخطط.\n"
+            f"الآية العثمانية: {verse.text_uthmani}\nالتفسير الأصلي: {tafsir.text}\n"
+            f"النص المراد مراجعته: {json.dumps(reviewed, ensure_ascii=False)}"
         )
         review = self._generate_json(review_prompt, REVIEW_SCHEMA, 2048)
         for key in ("grounded_in_source", "no_unsupported_claims", "no_contradiction", "needs_review"):
@@ -704,10 +875,8 @@ class GeminiContentService:
         if not isinstance(review.get("reason"), str):
             raise ServiceError("استجابة المراجعة تفتقر إلى سبب نصي.")
         if review["needs_review"] or not all(review[k] for k in ("grounded_in_source", "no_unsupported_claims", "no_contradiction")):
-            raise ServiceError("رفضت مراجعة المحتوى أو طلبت مراجعة بشرية: " + review["reason"][:240])
-        generated["review"] = review
-        generated["model"] = self.model
-        return generated
+            raise ContentValidationError("رفضت مراجعة المحتوى أو طلبت مراجعة بشرية: " + review["reason"][:240])
+        return review
 
 
 class PexelsService:
@@ -722,7 +891,7 @@ class PexelsService:
     }
     DEFAULT_QUERY = "calm nature landscape sunrise"
     MIN_CLIPS, MAX_CLIPS = 2, 5
-    PREFERRED_MIN_DURATION = 8          # seconds of source footage; shorter clips are used last
+    PREFERRED_MIN_DURATION = 16         # seconds of source footage; shorter clips are used last (they make the background loop)
     PREFERRED_FILE_HEIGHT = 1920        # matches the 1080x1920 output without downloading 4K
 
     def __init__(self, session: requests.Session | None = None):
@@ -1666,21 +1835,135 @@ if __name__ == "__main__":
             with self.assertRaises(ServiceError):
                 validate_word_segments([[0, 0, 300], [1, 200, 100]], "بسم الله", 800)
 
-        def test_generated_json_requires_five_distinct_scored_hooks(self):
-            base = {"hook_candidates": [], "explanation": "شرح", "practical_benefit": "فائدة", "call_to_action": "شارك"}
-            with self.assertRaises(ServiceError):
-                validate_generated_content(base)
+        # ----- Generated video copy -----
+        @staticmethod
+        def valid_content(**overrides):
+            hooks = [{"text": f"تعبك الذي لا يراه أحد يراه الله رقم {i}", **{key: 4 for key in HOOK_SCORE_KEYS}}
+                     for i in range(5)]
+            data = {
+                "hook_candidates": hooks,
+                "message": " ".join(["كلمة"] * 45),
+                "call_to_action": "شارك هذا المقطع الآن واجعله صدقة جارية عن والديك ومن تحب",
+                "title": "تعبك الذي لا يراه أحد يراه الله وحده",
+                "description": "هذه الآية تخاطب قلب كل من أنهكه الصبر. " * 12,
+                "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
+                "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
+            }
+            data.update(overrides)
+            return data
 
-        def test_generated_json_accepts_five_hooks_and_rejects_seal_duplication(self):
-            candidates = []
-            for index in range(5):
-                candidates.append({"text": f"تأمل معنى الآية رقم {index}", **{key: 4 for key in HOOK_SCORE_KEYS}})
-            content = {"hook_candidates": candidates, "explanation": "شرح موثق", "practical_benefit": "فائدة عملية",
-                       "call_to_action": "شارك الفائدة"}
-            self.assertTrue(validate_generated_content(content)["hook"])
-            content["explanation"] = "صدق الله العظيم"
+        def test_generated_content_accepts_a_complete_valid_copy(self):
+            result = validate_generated_content(self.valid_content())
+            self.assertTrue(result["hook"])
+            self.assertEqual(len(result["hook_candidates"]), 5)
+            self.assertEqual(len(result["hashtags"]), 8)
+            self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
+            self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
+                                           "description", "keywords", "hashtags"})
+
+        def test_generated_content_rejects_rule_violations(self):
+            good = self.valid_content()
+            def broken(**overrides):
+                with self.assertRaises(ContentValidationError, msg=str(list(overrides))):
+                    validate_generated_content(self.valid_content(**overrides))
+            broken(hook_candidates=good["hook_candidates"][:4])
+            broken(message="كلمات قليلة جدا")
+            broken(message=" ".join(["كلمة"] * 200))
+            broken(call_to_action="هذه عبارة جميلة جدا عن الصبر والأمل في الحياة")      # no share verb
+            broken(title="عنوان #وسم هنا قوي جدا")
+            broken(title="كلمة " * 30)
+            broken(description="وصف قصير")
+            broken(description="نص " + "رابط https://example.org " * 40)
+            broken(message=good["message"] + " صدق الله العظيم")
+            broken(description=good["description"] + " المصدر Pexels")
+            broken(keywords=["واحدة", "اثنتان"])
+            broken(hashtags=["#واحد"])
+            same = [dict(good["hook_candidates"][0]) for _ in range(5)]
+            broken(hook_candidates=same)
+            low = [dict(hook, relevance=2) for hook in good["hook_candidates"]]
+            broken(hook_candidates=low)
+
+        def test_generated_content_normalizes_hashtags_and_keywords(self):
+            result = validate_generated_content(self.valid_content(
+                hashtags=["الصبر", "# تدبر القرآن", "#آيات!", "#آيات", "#راحة_نفسية", "#ذكر", "#دعاء", "#أمل", "#"],
+                keywords=["# آيات عن الصبر", "آيات عن الصبر", "تفسير الآية", "تدبر القرآن", "دعاء الفرج", "راحة القلب", "كلمات مؤثرة", "x"]))
+            self.assertIn("#الصبر", result["hashtags"])
+            self.assertIn("#تدبر_القرآن", result["hashtags"])
+            self.assertEqual(result["hashtags"].count("#آيات"), 1)
+            self.assertEqual(result["keywords"].count("آيات عن الصبر"), 1)
+
+        def test_content_generation_regenerates_after_a_rule_violation_but_not_after_api_errors(self):
+            verse = QuranVerse(2, 3, "2:3", "كلمة " * 12, 1, "البقرة")
+            tafsir = TafsirSource("تفسير " * 20, "مصدر", 16, "https://x", "https://l", True)
+            review_ok = {"grounded_in_source": True, "no_unsupported_claims": True, "no_contradiction": True,
+                         "needs_review": False, "reason": "ok"}
+            service = object.__new__(GeminiContentService)
+            service.model = "test-model"
+            calls = []
+            def flaky(prompt, schema, max_tokens):
+                calls.append(schema is GENERATION_SCHEMA)
+                if schema is REVIEW_SCHEMA:
+                    return review_ok
+                if calls.count(True) == 1:
+                    return self.valid_content(message="قصير")
+                return self.valid_content()
+            service._generate_json = flaky
+            result = service.create_and_review(verse, tafsir, topic="الصبر والابتلاء", message_words=(30, 60))
+            self.assertEqual(calls.count(True), 2)
+            self.assertEqual(result["review"], review_ok)
+            self.assertEqual(result["model"], "test-model")
+            def api_down(prompt, schema, max_tokens):
+                raise ServiceError("code=404 model not found")
+            service._generate_json = api_down
+            with self.assertRaisesRegex(ServiceError, "404"):
+                service.create_and_review(verse, tafsir)
+
+        def test_content_generation_regenerates_when_the_review_rejects_and_gives_up_after_three(self):
+            verse = QuranVerse(2, 3, "2:3", "كلمة " * 12, 1, "البقرة")
+            tafsir = TafsirSource("تفسير " * 20, "مصدر", 16, "https://x", "https://l", True)
+            service = object.__new__(GeminiContentService)
+            service.model = "test-model"
+            generations = []
+            def rejecting(prompt, schema, max_tokens):
+                if schema is REVIEW_SCHEMA:
+                    return {"grounded_in_source": False, "no_unsupported_claims": True, "no_contradiction": True,
+                            "needs_review": True, "reason": "unsupported claim"}
+                generations.append(1)
+                return self.valid_content()
+            service._generate_json = rejecting
+            with self.assertRaisesRegex(ContentValidationError, "unsupported claim"):
+                service.create_and_review(verse, tafsir)
+            self.assertEqual(len(generations), CONTENT_ATTEMPTS)
+
+        def test_generation_prompt_carries_topic_budget_and_rules(self):
+            verse = QuranVerse(2, 3, "2:3", "آية", 1, "البقرة")
+            tafsir = TafsirSource("نص التفسير الموثق", "مصدر", 16, "https://x", "https://l", True)
+            prompt = GeminiContentService._generation_prompt(verse, tafsir, "بر الوالدين", (42, 61))
+            self.assertIn("بر الوالدين", prompt)
+            self.assertIn("42 إلى 61 كلمة", prompt)
+            self.assertIn("نص التفسير الموثق", prompt)
+            self.assertIn("صدقة جارية", prompt)
+            self.assertIn("لا تذكر أي مصدر", prompt)
+            self.assertNotIn("الموضوع المقترح", GeminiContentService._generation_prompt(verse, tafsir, None, (42, 61)))
+
+        # ----- Quran words (waqf signs are not words) -----
+        def test_quran_words_attach_waqf_signs_to_the_previous_word(self):
+            self.assertEqual(quran_words("بسم الله الرحمن"), ["بسم", "الله", "الرحمن"])
+            text = "فَٱتَّقُوا۟ ٱللَّهَ ۗ وَمَن يُوقَ ۚ فَأُو۟لَٰٓئِكَ"
+            words = quran_words(text)
+            self.assertEqual(len(text.split()), 7)
+            self.assertEqual(len(words), 5)
+            self.assertEqual(words[1], "ٱللَّهَ ۗ")
+            self.assertEqual(quran_words("۞ بسم الله"), ["۞ بسم", "الله"])
+            self.assertEqual(quran_words(""), [])
+
+        def test_word_segments_accept_verses_that_contain_waqf_signs(self):
+            text = "بسم الله \u06d7 الرحمن \u06da الرحيم"
+            segments = [[i + 1, i * 400, i * 400 + 380] for i in range(4)]
+            got = validate_word_segments(segments, text, 1700)
+            self.assertEqual([row["word_index"] for row in got], [0, 1, 2, 3])
             with self.assertRaises(ServiceError):
-                validate_generated_content(content)
+                validate_word_segments(segments[:3], text, 1700)
 
         def test_tafsir_license_fails_closed(self):
             with patch.dict(os.environ, {"TAFSIR_ID": "1", "TAFSIR_LICENSE_URL": "https://example.org/terms",

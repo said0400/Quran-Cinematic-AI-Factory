@@ -9432,6 +9432,232 @@
       "verse_key": "3:2",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "88c117173506c78d05dd78fa268ca2db3d18226e0436a9e56d9bf230ee0dceb7"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 28,
+      "created_at": "2026-10-25T14:57:50.834411+00:00",
+      "last_error": null,
+      "local_date": "2026-10-25",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/28:77",
+          "verse_key": "28:77"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/28.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/28?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/28:77"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/33122071/14117700_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/",
+          "video_id": 33122071
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/a-view-of-a-field-with-a-sun-shining-over-it-19061721/",
+          "creator": "Mike Dantzer",
+          "download_url": "https://videos.pexels.com/video-files/19061721/19061721-hd_1080_1920_60fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/a-view-of-a-field-with-a-sun-shining-over-it-19061721/",
+          "video_id": 19061721
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/the-sun-is-shining-over-a-field-with-a-house-in-the-distance-24801672/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/24801672/11896958_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/the-sun-is-shining-over-a-field-with-a-house-in-the-distance-24801672/",
+          "video_id": 24801672
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "b9536fe7910dcc858a0b5d64a3fa4c848706713cfc84aa08465716c55f5645b6",
+          "status": "published",
+          "video_id": "video-b9536fe7910dcc85",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-b9536fe7910dcc85/video-b9536fe7910dcc85.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "كثير منا يغرق في تفاصيل الحياة اليومية ويسعى خلف المال، لكننا نغفل عن التوازن الحقيقي الذي يمنحنا الراحة. في هذا المقطع، نستعرض مفهوماً عميقاً حول كيفية استثمار ما آتاك الله من نعم، وكيفية التمتع بالحلال دون إفراط أو تفريط. ستجد هنا دعوة للتأمل في أثر الإحسان إلى الناس وكيف أن العطاء هو انعكاس لما قدمه الله لك من فضل. تعلم كيف تجعل من مالك وسيلة لبناء أثر طيب في الدنيا والآخرة، بعيداً عن الإسراف أو الفساد. هذا الطرح يلامس احتياجك اليومي للسكينة والرضا، ويقدم لك رؤية واضحة لكيفية إدارة حياتك المالية والروحية بذكاء. لا تجعل الدنيا تسرق منك جوهرك، بل اجعلها جسراً تعبر به نحو غاياتك النبيلة. شارك هذا المحتوى مع أصدقائك وأهلك لتعم الفائدة، فربما يحتاج أحدهم لهذه الكلمات اليوم.\n\nالكلمات المفتاحية: التوازن في الحياة، الإنفاق في سبيل الخير، الرزق والبركة، كيفية التعامل مع المال، الإحسان للناس، الاستثمار في الآخرة، مفهوم الرزق الحلال، الاعتدال في الدنيا، أثر الصدقة، راحة البال، تطوير الذات، القيم الإنسانية\n\n#توازن_الحياة #الرزق_الحلال #الإحسان #الاستثمار_في_الآخرة #السكينة #القيم_الإنسانية #تطوير_الذات #العطاء #حكمة_اليوم #LifeBalance #GivingBack",
+        "title": "كيف توازن بين طموحك في الدنيا ونجاحك في الآخرة"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-25-28-77-53d9eacaaa-report.json",
+      "run_id": "2026-10-25-28-77-53d9eacaaa",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/28:77"
+      },
+      "status": "published",
+      "updated_at": "2026-10-25T15:00:35.791284+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 64.1,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": false
+          },
+          "content": {
+            "hashtags": 11,
+            "hook_words": 13,
+            "keywords": 12,
+            "message_word_budget": [
+              25,
+              31
+            ],
+            "message_words": 29,
+            "topic": "المال والإنفاق"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس معاني الآية والتفسير المرفق بشكل دقيق، حيث دعا إلى التوازن بين الدنيا والآخرة، والتمتع بالحلال دون إسراف، والإحسان للناس، ولم يضف أحكاماً شرعية أو وعوداً غيبية غير موجودة في المصدر."
+          },
+          "recitation_api_verse_key": "28:77",
+          "recitation_duration_seconds": 31.015,
+          "verse_source_and_key": true,
+          "verse_word_count": 26,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 72.459,
+            "audio_segments": {
+              "cta": {
+                "end": 72.459,
+                "start": 59.048
+              },
+              "hook": {
+                "end": 7.811,
+                "start": 0.0
+              },
+              "message": {
+                "end": 59.048,
+                "start": 41.197
+              },
+              "recitation": {
+                "end": 38.826,
+                "start": 7.811
+              },
+              "seal": {
+                "end": 41.197,
+                "start": 38.826
+              }
+            },
+            "commentary_pages": {
+              "cta": 2,
+              "hook": 1,
+              "message": 2
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 72.466,
+            "file_size_bytes": 46184427,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 31.015,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 26
+        },
+        "status": "validated"
+      },
+      "verse": 77,
+      "verse_key": "28:77",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "b9536fe7910dcc858a0b5d64a3fa4c848706713cfc84aa08465716c55f5645b6"
     }
   ],
   "version": 1

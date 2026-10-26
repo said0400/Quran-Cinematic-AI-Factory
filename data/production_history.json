@@ -9658,6 +9658,232 @@
       "verse_key": "28:77",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "b9536fe7910dcc858a0b5d64a3fa4c848706713cfc84aa08465716c55f5645b6"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 18,
+      "created_at": "2026-10-26T17:24:20.433898+00:00",
+      "last_error": null,
+      "local_date": "2026-10-26",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/18:46",
+          "verse_key": "18:46"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/18.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/18?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:46"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/an-empty-street-with-trees-15238832/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/15238832/15238832-hd_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "sunrise landscape nature",
+          "source_page": "https://www.pexels.com/video/an-empty-street-with-trees-15238832/",
+          "video_id": 15238832
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/the-sun-is-setting-over-a-field-with-trees-17870391/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/17870391/17870391-hd_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "sunrise landscape nature",
+          "source_page": "https://www.pexels.com/video/the-sun-is-setting-over-a-field-with-trees-17870391/",
+          "video_id": 17870391
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/a-sunrise-over-a-field-with-trees-and-fog-15499822/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/15499822/15499822-hd_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "sunrise landscape nature",
+          "source_page": "https://www.pexels.com/video/a-sunrise-over-a-field-with-trees-and-fog-15499822/",
+          "video_id": 15499822
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "ab3c3040e1e35945b1fe1e524d038b5c97ad53434660745d67a32345db59f1fa",
+          "status": "published",
+          "video_id": "video-ab3c3040e1e35945",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-ab3c3040e1e35945/video-ab3c3040e1e35945.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في خضم انشغالنا بمتطلبات الحياة اليومية، قد نغفل عن جوهر وجودنا وما ينفعنا حقاً في مستقبلنا الأبدي. هذا المقطع يضع بين يديك تأملاً عميقاً حول زينة الحياة الدنيا وكيفية تحويل لحظاتك العادية إلى أعمال صالحة تبقى أثرها. ستجد هنا تذكيراً بفضل التسبيح والتحميد والتكبير، وكيف أن هذه الكلمات البسيطة هي أثمن ما يمكن أن يجمعه الإنسان في رحلته. اكتشف كيف تجعل من يومك المزدحم فرصة لزيادة رصيدك من الباقيات الصالحات التي تمنحك الطمأنينة والسكينة. لا تدع الغفلة تسرق منك فرصة الاستثمار في ما يبقى، وشارك هذا المحتوى مع أصدقائك وأحبتك لتعم الفائدة وتصل هذه الرسالة لكل قلب يحتاج إلى التذكير.\n\nالكلمات المفتاحية: الباقيات الصالحات، زينة الحياة الدنيا، محاسبة النفس، فضل التسبيح، الذكر اليومي، حقيقة الدنيا، العمل الصالح، تذكير بالله، الاستعداد للآخرة، التفكر في الحياة، أثر الكلمة الطيبة، الطمأنينة النفسية\n\n#الباقيات_الصالحات #تذكير #محاسبة_النفس #الذكر #حقيقة_الدنيا #طمأنينة #تطوير_الذات #رسالة_اليوم #Reflection #Mindfulness",
+        "title": "حقيقة ما يبقى معك حين ترحل عن هذه الدنيا"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-26-18-46-accd9890e7-report.json",
+      "run_id": "2026-10-26-18-46-accd9890e7",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:46"
+      },
+      "status": "published",
+      "updated_at": "2026-10-26T17:27:28.211384+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 64.1,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": false
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 14,
+            "keywords": 12,
+            "message_word_budget": [
+              44,
+              63
+            ],
+            "message_words": 59,
+            "topic": "الدنيا والغفلة ومحاسبة النفس"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص التزم بالمعاني الواردة في التفسير المرفق، حيث ربط بين زينة الدنيا (المال والبنين) وبين الباقيات الصالحات (التسبيح والتحميد والتكبير) كأفضل أجر وأمل، ولم يضف أحكاماً شرعية أو ادعاءات غيبية خارج نطاق التفسير."
+          },
+          "recitation_api_verse_key": "18:46",
+          "recitation_duration_seconds": 16.885,
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 76.929,
+            "audio_segments": {
+              "cta": {
+                "end": 76.929,
+                "start": 61.318
+              },
+              "hook": {
+                "end": 8.571,
+                "start": 0.0
+              },
+              "message": {
+                "end": 61.318,
+                "start": 27.427
+              },
+              "recitation": {
+                "end": 25.456,
+                "start": 8.571
+              },
+              "seal": {
+                "end": 27.427,
+                "start": 25.456
+              }
+            },
+            "commentary_pages": {
+              "cta": 2,
+              "hook": 1,
+              "message": 3
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 76.933,
+            "file_size_bytes": 49404119,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 16.885,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 13
+        },
+        "status": "validated"
+      },
+      "verse": 46,
+      "verse_key": "18:46",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "ab3c3040e1e35945b1fe1e524d038b5c97ad53434660745d67a32345db59f1fa"
     }
   ],
   "version": 1

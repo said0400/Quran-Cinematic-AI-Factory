@@ -9884,6 +9884,320 @@
       "verse_key": "18:46",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "ab3c3040e1e35945b1fe1e524d038b5c97ad53434660745d67a32345db59f1fa"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-27T16:41:01.892300+00:00",
+      "last_error": "عدد التوقيتات (11) لا يطابق عدد كلمات الآية (10).",
+      "local_date": "2026-10-27",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": true,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-27-2-156-a53e81ccaf-report.json",
+      "run_id": "2026-10-27-2-156-a53e81ccaf",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-27T16:41:08.755470+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true,
+          "verse_word_count": 10
+        },
+        "status": "failed"
+      },
+      "verse": 156,
+      "verse_key": "2:156",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 9,
+      "created_at": "2026-10-27T16:41:08.783179+00:00",
+      "last_error": "عدد التوقيتات (16) لا يطابق عدد كلمات الآية (14).",
+      "local_date": "2026-10-27",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": true,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-27-9-51-ea76b3e0ee-report.json",
+      "run_id": "2026-10-27-9-51-ea76b3e0ee",
+      "source_tafsir": null,
+      "status": "failed",
+      "updated_at": "2026-10-27T16:41:14.532888+00:00",
+      "verification": {
+        "checks": {
+          "verse_source_and_key": true,
+          "verse_word_count": 14
+        },
+        "status": "failed"
+      },
+      "verse": 51,
+      "verse_key": "9:51",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 16,
+      "created_at": "2026-10-27T16:41:14.561506+00:00",
+      "last_error": null,
+      "local_date": "2026-10-27",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/16:97",
+          "verse_key": "16:97"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/16.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/16?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/16:97"
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/33122071/14117700_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/tranquil-summer-fields-with-power-lines-33122071/",
+          "video_id": 33122071
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/sunset-over-tranquil-field-landscape-28647803/",
+          "creator": "Matthias Groeneveld",
+          "download_url": "https://videos.pexels.com/video-files/28647803/12442263_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/sunset-over-tranquil-field-landscape-28647803/",
+          "video_id": 28647803
+        },
+        {
+          "attribution": "Pexels video https://www.pexels.com/video/scenic-aerial-view-of-lush-rice-terraces-in-indonesia-39375670/",
+          "creator": "Rahmad Himawan",
+          "download_url": "https://videos.pexels.com/video-files/39375670/16763264_1080_1920_30fps.mp4",
+          "kind": "background_video",
+          "license": "Pexels License (operator confirmed); commercial use subject to current terms",
+          "license_url": "https://www.pexels.com/license/",
+          "playback_speed": 0.75,
+          "provider": "Pexels",
+          "query": "green field sunrise nature",
+          "source_page": "https://www.pexels.com/video/scenic-aerial-view-of-lush-rice-terraces-in-indonesia-39375670/",
+          "video_id": 39375670
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "20457d4d7a0fbf159ae848f2fc9438e7e2c5f696928a7fbfa296c27bd049a430",
+          "status": "published",
+          "video_id": "video-20457d4d7a0fbf15",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-20457d4d7a0fbf15/video-20457d4d7a0fbf15.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تشعر أن القلق يسيطر على تفاصيل يومك؟ في هذا المقطع نكشف عن مفهوم الحياة الطيبة التي يبحث عنها الجميع. السعادة ليست مجرد أرقام في حسابك البنكي، بل هي حالة من الرضا والسكينة تنبع من الإيمان والعمل الصالح الذي تقدمه في حياتك اليومية. \n\nنناقش كيف يمكن للإنسان أن يعيش حياة سعيدة ومطمئنة رغم بساطة الإمكانيات المادية، وكيف يغير العمل الصالح نظرتك للواقع المحيط بك. استعد لاستعادة توازنك النفسي من خلال فهم أعمق لمعنى الطمأنينة الحقيقية التي لا تتأثر بتقلبات الدنيا.\n\nإذا وجدت في هذه الكلمات ما يلامس قلبك، فلا تتردد في نشرها لمن تحب، فربما تكون سببا في إدخال السكينة على روح شخص يمر بضيق.\n\nالكلمات المفتاحية: الحياة الطيبة، كيف أكون مطمئنا، التخلص من القلق، العمل الصالح، السعادة الحقيقية، راحة البال، الرضا النفسي، معنى الحياة، تجاوز ضغوط الحياة، الطمأنينة في الإيمان، كيف أعيش بسعادة، تخفيف الهموم\n\n#طمأنينة #حياة_طيبة #راحة_البال #تطوير_الذات #سكينة #إيمان #تفاؤل #سلام_داخلي #PeaceOfMind #Happiness",
+        "title": "سر الحياة المطمئنة بعيدا عن ضغوط المال والهموم"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-27-16-97-ac279f5379-report.json",
+      "run_id": "2026-10-27-16-97-ac279f5379",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/16:97"
+      },
+      "status": "published",
+      "updated_at": "2026-10-27T16:45:57.791265+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "clips": 3,
+            "duration_seconds": 64.066,
+            "source_seconds_per_clip": 16.0,
+            "speed": 0.75,
+            "target_duration_seconds": 60.0,
+            "will_loop": false
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 15,
+            "keywords": 12,
+            "message_word_budget": [
+              30,
+              44
+            ],
+            "message_words": 42,
+            "topic": "القلق والطمأنينة"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس المعنى العام للآية والتفسير المرفق حول ارتباط الحياة الطيبة بالإيمان والعمل الصالح بعيداً عن وفرة المال، ولم يضف أحكاماً شرعية أو وعوداً غيبية خارج سياق النص."
+          },
+          "recitation_api_verse_key": "16:97",
+          "recitation_duration_seconds": 25.325,
+          "verse_source_and_key": true,
+          "verse_word_count": 18,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 76.169,
+            "audio_segments": {
+              "cta": {
+                "end": 76.169,
+                "start": 64.678
+              },
+              "hook": {
+                "end": 11.371,
+                "start": 0.0
+              },
+              "message": {
+                "end": 64.678,
+                "start": 38.947
+              },
+              "recitation": {
+                "end": 36.696,
+                "start": 11.371
+              },
+              "seal": {
+                "end": 38.947,
+                "start": 36.696
+              }
+            },
+            "commentary_pages": {
+              "cta": 1,
+              "hook": 1,
+              "message": 2
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 76.2,
+            "file_size_bytes": 54131926,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 25.325,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 18
+        },
+        "status": "validated"
+      },
+      "verse": 97,
+      "verse_key": "16:97",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "20457d4d7a0fbf159ae848f2fc9438e7e2c5f696928a7fbfa296c27bd049a430"
     }
   ],
   "version": 1

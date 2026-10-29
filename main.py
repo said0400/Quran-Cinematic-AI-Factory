@@ -21,9 +21,9 @@ from services import (
     QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     quran_words, validate_word_segments,
 )
-from procedural_background import render_background
+from procedural_background import build_timeline, render_background
 from video_engine import (
-    VideoError, build_verse_layout, build_video, media_duration, validate_video,
+    VideoError, align_speech_words, build_verse_layout, build_video, media_duration, validate_video,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -588,8 +588,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "hook_words": len(ai["hook"].split()),
             "keywords": len(ai["keywords"]),
             "hashtags": len(ai["hashtags"]),
-            "visual_type": ai["visual_plan"]["visual_type"],
-            "visual_scene_count": len(ai["visual_plan"]["scenes"]),
+		    "visual_scene_count": len(ai["visual_plan"]["scenes"]),
         }
         generated_texts = (ai["hook"], ai["message"], ai["call_to_action"], ai["title"], ai["description"],
                            " ".join(ai["keywords"]), " ".join(ai["hashtags"]))
@@ -599,16 +598,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
-        # The visual layer is generated locally: no stock footage, image downloads, or external assets.
-        media_items: list[dict[str, Any]] = []
-        background = work_dir / "background.mp4"
-        background_info = render_background(
-            background, config.width, config.height, config.fps, float(config.target_max),
-            theme=f"{verse.key}|{topic or ''}|{ai['title']}|{ai['message'][:180]}",
-            plan=ai["visual_plan"])
-        row["verification"]["checks"]["background"] = background_info
-        update_record(history, row, report_dir)
-
+        # The voice comes first: scene changes are derived from the real voice-over timings.
         tts = make_tts_service(config.tts_voice)
         speech_texts = {
             "hook": ai["hook"],
@@ -618,6 +608,27 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         }
         speech_files = tts.synthesize(speech_texts, work_dir / "speech")
         speech_files["recitation"] = recitation_file
+
+        media_items: list[dict[str, Any]] = []
+        keys = ("hook", "recitation", "seal", "message", "cta")
+        durations = {key: media_duration(speech_files[key]) for key in keys}
+        intervals: dict[str, tuple[float, float]] = {}
+        cursor = 0.0
+        for key in keys:
+            intervals[key] = (cursor, cursor + durations[key])
+            cursor += durations[key]
+        video_duration = max(cursor, float(config.target_min))
+        message_timings, message_timing_source = align_speech_words(
+            ai["message"], tts.word_boundaries.get("message"), durations["message"])
+        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration)
+        background = work_dir / "background.mp4"
+        background_info = render_background(
+            background, config.width, config.height, config.fps, video_duration, timeline,
+            theme=f"{verse.key}|{topic or ''}|{ai['title']}")
+        background_info["message_timing_source"] = message_timing_source
+        row["verification"]["checks"]["background"] = background_info
+        update_record(history, row, report_dir)
+        
         output_path = config.output_dir / config.final_video_name
         # Quran word highlighting always uses the source timestamps; the commentary highlighting uses
         # the TTS word boundaries when valid and an estimate otherwise (reported in the video checks).

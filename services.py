@@ -11,7 +11,6 @@ import html
 import io
 import json
 import os
-import random
 import re
 import subprocess
 import sys
@@ -32,8 +31,6 @@ QF_PRODUCTION_AUTH = "https://oauth2.quran.foundation"
 QF_PRELIVE_AUTH = "https://prelive-oauth2.quran.foundation"
 QF_DOCS = "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/"
 QF_TERMS = "https://api-docs.quran.foundation/legal/developer-terms/"
-PEXELS_SEARCH = "https://api.pexels.com/v1/videos/search"
-PEXELS_LICENSE = "https://www.pexels.com/license/"
 YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 YOUTUBE_READ_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
 YOUTUBE_UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
@@ -528,6 +525,15 @@ KEYWORDS_MIN, KEYWORDS_MAX = 6, 15
 HASHTAGS_MIN, HASHTAGS_MAX = 6, 12
 CONTENT_ATTEMPTS = 3                    # regenerations when the content fails validation or review
 SHARE_VERB_PATTERN = re.compile(r"شارك|انشر|أرسل|ارسل|مرّر|مرر")
+VISUAL_TYPES = {
+    "solar_lunar_year_comparison", "timeline_counter", "obstacle_path", "growth_and_provision",
+    "message_verification", "storm_to_calm", "home_relationship", "room_diagram", "generic_explainer",
+}
+VISUAL_ELEMENT_TYPES = {
+    "sun", "moon", "earth", "orbit", "counter", "timeline", "path", "obstacle", "person",
+    "seed", "tree", "coin", "phone", "message", "check", "cloud", "rain", "house", "arrow",
+    "circle", "label", "number", "scale",
+}
 # The published text must not name sources (reciter, tafsir, stock site, AI vendors).
 FORBIDDEN_SOURCE_PATTERN = re.compile(
     r"pexels|quran\.foundation|gemini|جيميناي|الميسر|مشاري|العفاسي|ابن كثير|الطبري|السعدي|القرطبي|البغوي",
@@ -548,8 +554,19 @@ GENERATION_SCHEMA = {
         "description": {"type": "STRING"},
         "keywords": {"type": "ARRAY", "items": {"type": "STRING"}},
         "hashtags": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "visual_plan": {"type": "OBJECT", "properties": {
+            "visual_type": {"type": "STRING"},
+            "scenes": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+                "type": {"type": "STRING"}, "title": {"type": "STRING"},
+                "duration_seconds": {"type": "NUMBER"}, "narration_anchor": {"type": "STRING"},
+                "elements": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+                    "type": {"type": "STRING"}, "label": {"type": "STRING"},
+                    "value": {"type": "STRING"}, "animation": {"type": "STRING"},
+                }, "required": ["type", "animation"]}},
+            }, "required": ["type", "duration_seconds", "elements"]}},
+        }, "required": ["visual_type", "scenes"]},
     },
-    "required": ["hook_candidates", "message", "call_to_action", "title", "description", "keywords", "hashtags"],
+    "required": ["hook_candidates", "message", "call_to_action", "title", "description", "keywords", "hashtags", "visual_plan"],
 }
 REVIEW_SCHEMA = {
     "type": "OBJECT",
@@ -609,6 +626,45 @@ def _normalize_keywords(raw: Any) -> list[str]:
     if len(result) < KEYWORDS_MIN:
         raise ContentValidationError(f"عدد الكلمات المفتاحية الصالحة أقل من {KEYWORDS_MIN}.")
     return result[:KEYWORDS_MAX]
+
+
+def validate_visual_plan(raw: Any) -> dict[str, Any]:
+    """Validate Gemini's text-only scene plan before it reaches the local renderer."""
+    if not isinstance(raw, dict) or raw.get("visual_type") not in VISUAL_TYPES:
+        raise ContentValidationError("نوع الخطة البصرية غير مسموح أو مفقود.")
+    scenes = raw.get("scenes")
+    if not isinstance(scenes, list) or not 2 <= len(scenes) <= 6:
+        raise ContentValidationError("الخطة البصرية يجب أن تحتوي من مشهدين إلى ستة مشاهد.")
+    normalized_scenes: list[dict[str, Any]] = []
+    total = 0.0
+    for scene in scenes:
+        if not isinstance(scene, dict) or scene.get("type") not in VISUAL_TYPES:
+            raise ContentValidationError("نوع أحد المشاهد البصرية غير مسموح.")
+        try:
+            duration = float(scene.get("duration_seconds"))
+        except (TypeError, ValueError):
+            raise ContentValidationError("مدة المشهد البصري غير صالحة.") from None
+        if not 1 <= duration <= 30:
+            raise ContentValidationError("مدة المشهد البصري يجب أن تكون بين ثانية واحدة و30 ثانية.")
+        elements = scene.get("elements")
+        if not isinstance(elements, list) or not 1 <= len(elements) <= 10:
+            raise ContentValidationError("كل مشهد بصري يجب أن يحتوي من عنصر إلى عشرة عناصر.")
+        clean_elements = []
+        for element in elements:
+            if not isinstance(element, dict) or element.get("type") not in VISUAL_ELEMENT_TYPES:
+                raise ContentValidationError("نوع عنصر بصري غير مسموح.")
+            clean_elements.append({key: str(element[key])[:120] for key in ("type", "label", "value", "animation")
+                                   if key in element})
+        clean = {"type": scene["type"], "duration_seconds": duration, "elements": clean_elements}
+        if isinstance(scene.get("title"), str):
+            clean["title"] = scene["title"][:160]
+        if isinstance(scene.get("narration_anchor"), str):
+            clean["narration_anchor"] = scene["narration_anchor"][:160]
+        normalized_scenes.append(clean)
+        total += duration
+    if not 8 <= total <= 120:
+        raise ContentValidationError("إجمالي مدد الخطة البصرية خارج المجال المعقول.")
+    return {"visual_type": raw["visual_type"], "scenes": normalized_scenes}
 
 
 def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[str, Any]:
@@ -671,13 +727,14 @@ def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[
         raise ContentValidationError("الوصف أقصر من الحد الأدنى.")
     keywords = _normalize_keywords(data.get("keywords"))
     hashtags = _normalize_hashtags(data.get("hashtags"))
+    visual_plan = validate_visual_plan(data.get("visual_plan"))
     published_text = " ".join([title, description, *keywords, *hashtags])
     if FORBIDDEN_SOURCE_PATTERN.search(published_text):
         raise ContentValidationError("النص المنشور يذكر مصدرًا أو اسمًا ممنوعًا.")
     best = max(normalized, key=lambda item: (item["total_score"], item["scores"]["non_misleading"], item["scores"]["relevance"]))
     return {"hook": best["text"], "hook_candidates": normalized, "message": message,
             "call_to_action": cta, "title": title, "description": description,
-            "keywords": keywords, "hashtags": hashtags}
+            "keywords": keywords, "hashtags": hashtags, "visual_plan": visual_plan}
 
 
 def _gemini_exception_info(exc: BaseException) -> tuple[bool, int | None, str]:
@@ -826,6 +883,14 @@ class GeminiContentService:
             "لا روابط، ولا تذكر أي مصدر أو قارئ أو موقع أو تفسير أو أداة أو ذكاءً اصطناعيًا.\n"
             f"6) keywords: من {KEYWORDS_MIN + 4} إلى {KEYWORDS_MAX} كلمة أو عبارة بحث عربية (كلمتان إلى أربع) يبحث بها الناس فعلًا عن هذا الموضوع.\n"
             f"7) hashtags: من {HASHTAGS_MIN + 2} إلى {HASHTAGS_MAX} هاشتاجًا عربيًا (ويجوز اثنان بالإنجليزية) يبدأ كل منها بعلامة # دون مسافات (استخدم _ بين الكلمات).\n\n"
+            "8) visual_plan: خطة نصية فقط لمحرك رسوم محلي. لا تنشئ صورة ولا تطلب صورة ولا تذكر API. "
+            "اختر visual_type واحدًا من: solar_lunar_year_comparison, timeline_counter, obstacle_path, "
+            "growth_and_provision, message_verification, storm_to_calm, home_relationship, room_diagram, "
+            "generic_explainer. أنشئ من 2 إلى 6 مشاهد، ولكل مشهد type وduration_seconds وelements. "
+            "كل عنصر يجب أن يكون من عناصر الرسم البسيطة مثل sun, moon, earth, orbit, counter, timeline, "
+            "path, obstacle, person, seed, tree, coin, phone, message, check, cloud, rain, house, arrow, "
+            "circle, label, number, scale. اربط الرسم بالموضوع المنقول من التفسير، ولا تضف رقمًا أو حقيقة "
+            "غير موجودة في الآية أو التفسير. narration_anchor جملة قصيرة تحدد العبارة التي يظهر عندها المشهد.\n\n"
             "أعد JSON وفق المخطط فقط.\n\n"
             f"{topic_line}"
             f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
@@ -878,139 +943,6 @@ class GeminiContentService:
             raise ContentValidationError("رفضت مراجعة المحتوى أو طلبت مراجعة بشرية: " + review["reason"][:240])
         return review
 
-
-class PexelsService:
-    """Stock nature footage. `fetch_backgrounds` downloads 2..5 distinct portrait clips."""
-    QUERIES = {
-        "صبر": "quiet ocean sunrise nature",
-        "رحمة": "soft forest sunlight nature",
-        "أمل": "sunrise landscape nature",
-        "تفكر": "mountain lake nature",
-        "عدل": "calm nature landscape",
-        "عمل": "green field sunrise nature",
-    }
-    DEFAULT_QUERY = "calm nature landscape sunrise"
-    MIN_CLIPS, MAX_CLIPS = 2, 5
-    PREFERRED_MIN_DURATION = 16         # seconds of source footage; shorter clips are used last (they make the background loop)
-    PREFERRED_FILE_HEIGHT = 1920        # matches the 1080x1920 output without downloading 4K
-
-    def __init__(self, session: requests.Session | None = None):
-        self.key = _required_env("PEXELS_API_KEY")
-        self.session = session or requests.Session()
-        if not env_bool("PEXELS_LICENSE_CONFIRMED"):
-            raise ServiceError("أكد مراجعة شروط Pexels قبل الاستخدام عبر PEXELS_LICENSE_CONFIRMED=true.")
-
-    def _query_for(self, topic: str) -> str:
-        return next((q for label, q in self.QUERIES.items() if label in topic), self.DEFAULT_QUERY)
-
-    @classmethod
-    def _pick_file(cls, video: dict[str, Any]) -> dict[str, Any] | None:
-        """Best downloadable MP4 of a video: HTTPS on *.pexels.com; smallest file that is tall enough."""
-        files = []
-        for item in video.get("video_files") or []:
-            if not isinstance(item, dict) or not isinstance(item.get("link"), str):
-                continue
-            parsed = urlparse(item["link"])
-            if parsed.scheme != "https" or not (parsed.hostname or "").endswith(".pexels.com"):
-                continue
-            if item.get("file_type") != "video/mp4":
-                continue
-            files.append(item)
-        if not files:
-            return None
-        def area(entry: dict[str, Any]) -> int:
-            return int(entry.get("width") or 0) * int(entry.get("height") or 0)
-        tall_enough = [f for f in files if int(f.get("height") or 0) >= cls.PREFERRED_FILE_HEIGHT]
-        return min(tall_enough, key=area) if tall_enough else max(files, key=area)
-
-    def _download(self, link: str, destination: Path, limit: int = 150 * 1024 * 1024) -> None:
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with self.session.get(link, stream=True, timeout=(20, 120),
-                                  headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}) as file_response:
-                file_response.raise_for_status()
-                total = 0
-                with destination.open("wb") as out:
-                    for chunk in file_response.iter_content(1024 * 1024):
-                        if chunk:
-                            total += len(chunk)
-                            if total > limit:
-                                raise ServiceError("فيديو الخلفية تجاوز الحد الآمن للتنزيل.")
-                            out.write(chunk)
-        except ServiceError:
-            destination.unlink(missing_ok=True)
-            raise
-        except requests.RequestException as exc:
-            destination.unlink(missing_ok=True)
-            raise ServiceError(f"تعذر تنزيل فيديو Pexels ({type(exc).__name__}).") from None
-        if not destination.exists() or destination.stat().st_size < 4096:
-            destination.unlink(missing_ok=True)
-            raise ServiceError("فيديو الخلفية فارغ أو غير مكتمل.")
-
-    def fetch_backgrounds(self, topic: str, work_dir: Path, count: int = 3,
-                          speed: float = 0.75) -> list[dict[str, Any]]:
-        """Download `count` (clamped to 2..5) distinct portrait clips.
-
-        Returns one metadata dict per clip, including the local path under "file" (the caller
-        removes it before the metadata is stored in the production report).
-        """
-        count = max(self.MIN_CLIPS, min(self.MAX_CLIPS, int(count)))
-        query = self._query_for(topic)
-        try:
-            response = self.session.get(PEXELS_SEARCH, headers={"Authorization": self.key},
-                                        params={"query": query, "orientation": "portrait", "size": "medium",
-                                                "per_page": 30}, timeout=(15, 45))
-        except requests.RequestException as exc:
-            raise ServiceError(f"تعذر الاتصال بـPexels ({type(exc).__name__}).") from None
-        if response.status_code != 200:
-            raise ServiceError(f"Pexels أعاد HTTP {response.status_code}.")
-        try:
-            payload = response.json()
-        except ValueError:
-            raise ServiceError("استجابة بحث Pexels ليست JSON صالحًا.") from None
-        raw_videos = payload.get("videos") if isinstance(payload, dict) else None
-        videos = [video for video in (raw_videos or []) if isinstance(video, dict) and self._pick_file(video)]
-        if len(videos) < self.MIN_CLIPS:
-            raise ServiceError("لم يُعثر على مقطعين مرخّصين على الأقل في نتائج Pexels.")
-        # Deterministic per topic (so a rerun of the same text is reproducible), varied between verses.
-        random.Random(topic).shuffle(videos)
-        def long_enough(video: dict[str, Any]) -> bool:
-            try:
-                return float(video.get("duration") or 0) >= self.PREFERRED_MIN_DURATION
-            except (TypeError, ValueError):
-                return False
-        videos = [v for v in videos if long_enough(v)] + [v for v in videos if not long_enough(v)]
-        results: list[dict[str, Any]] = []
-        seen: set[Any] = set()
-        for video in videos:
-            if len(results) >= count:
-                break
-            if video.get("id") in seen:
-                continue
-            seen.add(video.get("id"))
-            chosen = self._pick_file(video)
-            if chosen is None:
-                continue
-            path = work_dir / f"clip-{len(results) + 1}.mp4"
-            self._download(chosen["link"], path)
-            user = video.get("user") if isinstance(video.get("user"), dict) else {}
-            results.append({
-                "kind": "background_video",
-                "provider": "Pexels",
-                "query": query,
-                "file": str(path),
-                "video_id": video.get("id"),
-                "source_page": video.get("url"),
-                "download_url": chosen["link"],
-                "creator": user.get("name"),
-                "playback_speed": speed,
-                "license": "Pexels License (operator confirmed); commercial use subject to current terms",
-                "license_url": PEXELS_LICENSE,
-                "attribution": "Pexels video " + str(video.get("url", "")),
-            })
-        if len(results) < self.MIN_CLIPS:
-            raise ServiceError("تعذر تنزيل مقطعي خلفية على الأقل.")
-        return results
 
 
 def _validate_tts_texts(texts: dict[str, str]) -> None:
@@ -1848,6 +1780,15 @@ if __name__ == "__main__":
                 "description": "هذه الآية تخاطب قلب كل من أنهكه الصبر. " * 12,
                 "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
                 "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
+                "visual_plan": {"visual_type": "obstacle_path", "scenes": [
+                    {"type": "obstacle_path", "duration_seconds": 8, "elements": [
+                        {"type": "path", "animation": "draw_progressively"},
+                        {"type": "obstacle", "animation": "appear_one_by_one"},
+                    ]},
+                    {"type": "timeline_counter", "duration_seconds": 8, "elements": [
+                        {"type": "person", "animation": "move_forward"},
+                    ]},
+                ]},
             }
             data.update(overrides)
             return data
@@ -1859,7 +1800,7 @@ if __name__ == "__main__":
             self.assertEqual(len(result["hashtags"]), 8)
             self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
             self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
-                                           "description", "keywords", "hashtags"})
+                                           "description", "keywords", "hashtags", "visual_plan"})
 
         def test_generated_content_rejects_rule_violations(self):
             good = self.valid_content()
@@ -1875,7 +1816,7 @@ if __name__ == "__main__":
             broken(description="وصف قصير")
             broken(description="نص " + "رابط https://example.org " * 40)
             broken(message=good["message"] + " صدق الله العظيم")
-            broken(description=good["description"] + " المصدر Pexels")
+            broken(description=good["description"] + " المصدر ابن كثير")
             broken(keywords=["واحدة", "اثنتان"])
             broken(hashtags=["#واحد"])
             same = [dict(good["hook_candidates"][0]) for _ in range(5)]
@@ -2387,88 +2328,6 @@ if __name__ == "__main__":
             healthy = FallbackTTSService(Fake("gemini", "Algieba", False), secondary)
             healthy.synthesize({"seal": "صدق الله العظيم"}, Path("."))
             self.assertEqual((healthy.voice, healthy.provider), ("Algieba", "gemini"))
-
-        # ----- Pexels multi-clip backgrounds -----
-        @staticmethod
-        def pexels_video(video_id, duration=15, files=None):
-            return {"id": video_id, "url": f"https://www.pexels.com/video/{video_id}/", "duration": duration,
-                    "user": {"name": f"Creator {video_id}"},
-                    "video_files": files or [
-                        {"link": f"https://videos.pexels.com/{video_id}-sd.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
-                        {"link": f"https://videos.pexels.com/{video_id}-hd.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
-                        {"link": f"https://videos.pexels.com/{video_id}-uhd.mp4", "file_type": "video/mp4", "width": 2160, "height": 3840},
-                    ]}
-
-        class PexelsSession:
-            def __init__(self, videos):
-                self.videos, self.downloads = videos, []
-            def get(self, url, **kwargs):
-                if url == PEXELS_SEARCH:
-                    return ServiceValidationTests.FakeResponse(200, {"videos": self.videos})
-                self.downloads.append(url)
-                class Download:
-                    def __enter__(self_inner):
-                        return self_inner
-                    def __exit__(self_inner, *args):
-                        return False
-                    def raise_for_status(self_inner):
-                        return None
-                    def iter_content(self_inner, _size):
-                        return [b"v" * 5000]
-                return Download()
-
-        def test_pexels_picks_the_smallest_tall_enough_https_pexels_mp4(self):
-            video = self.pexels_video(1, files=[
-                {"link": "https://videos.pexels.com/a.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
-                {"link": "https://videos.pexels.com/b.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
-                {"link": "https://videos.pexels.com/c.mp4", "file_type": "video/mp4", "width": 2160, "height": 3840},
-                {"link": "https://evil.example/d.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
-                {"link": "http://videos.pexels.com/e.mp4", "file_type": "video/mp4", "width": 1080, "height": 1920},
-                {"link": "https://videos.pexels.com/f.webm", "file_type": "video/webm", "width": 1080, "height": 1920},
-            ])
-            self.assertEqual(PexelsService._pick_file(video)["link"], "https://videos.pexels.com/b.mp4")
-            small_only = self.pexels_video(2, files=[
-                {"link": "https://videos.pexels.com/s1.mp4", "file_type": "video/mp4", "width": 360, "height": 640},
-                {"link": "https://videos.pexels.com/s2.mp4", "file_type": "video/mp4", "width": 540, "height": 960},
-            ])
-            self.assertEqual(PexelsService._pick_file(small_only)["link"], "https://videos.pexels.com/s2.mp4")
-            self.assertIsNone(PexelsService._pick_file({"video_files": [{"link": "https://evil.example/x.mp4", "file_type": "video/mp4"}]}))
-
-        def test_pexels_fetches_distinct_clips_with_metadata_and_clamps_count(self):
-            import tempfile
-            videos = [self.pexels_video(i) for i in range(1, 8)] + [self.pexels_video(3)]  # duplicate id
-            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "true"}):
-                session = self.PexelsSession(videos)
-                service = PexelsService(session=session)
-                with tempfile.TemporaryDirectory() as temp:
-                    clips = service.fetch_backgrounds("شرح الصبر والأمل", Path(temp), count=4, speed=0.75)
-                    self.assertEqual(len(clips), 4)
-                    self.assertEqual(len({c["video_id"] for c in clips}), 4)
-                    self.assertTrue(all(Path(c["file"]).is_file() for c in clips))
-                    self.assertTrue(all(c["playback_speed"] == 0.75 and c["kind"] == "background_video" for c in clips))
-                    self.assertTrue(all(link.endswith("-hd.mp4") for link in session.downloads))
-                    self.assertEqual(clips[0]["query"], "quiet ocean sunrise nature")
-                    self.assertTrue(clips[0]["creator"].startswith("Creator"))
-                    too_many = service.fetch_backgrounds("نص", Path(temp) / "more", count=99)
-                    self.assertEqual(len(too_many), 5)
-                    too_few = service.fetch_backgrounds("نص", Path(temp) / "less", count=1)
-                    self.assertEqual(len(too_few), 2)
-
-        def test_pexels_prefers_long_clips_and_needs_at_least_two_usable_videos(self):
-            import tempfile
-            videos = [self.pexels_video(1, duration=3), self.pexels_video(2, duration=20),
-                      self.pexels_video(3, duration=4), self.pexels_video(4, duration=30)]
-            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "true"}):
-                with tempfile.TemporaryDirectory() as temp:
-                    clips = PexelsService(session=self.PexelsSession(videos)).fetch_backgrounds("نص", Path(temp), count=2)
-                    self.assertEqual({c["video_id"] for c in clips}, {2, 4})
-                    with self.assertRaises(ServiceError):
-                        PexelsService(session=self.PexelsSession([self.pexels_video(1)])).fetch_backgrounds("نص", Path(temp), count=3)
-
-        def test_pexels_requires_license_confirmation(self):
-            with patch.dict(os.environ, {"PEXELS_API_KEY": "key", "PEXELS_LICENSE_CONFIRMED": "false"}):
-                with self.assertRaises(ServiceError):
-                    PexelsService()
 
         # ----- Make.com publisher -----
         class FakeHTTP:

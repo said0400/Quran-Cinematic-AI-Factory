@@ -10864,6 +10864,64 @@
       "verse_key": "2:2",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-29T18:50:05.326941+00:00",
+      "last_error": "نوع أحد المشاهد البصرية غير مسموح.",
+      "local_date": "2026-10-29",
+      "media_sources": [],
+      "mode": "manual",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-29-2-9-e6ef7445bf-report.json",
+      "run_id": "2026-10-29-2-9-e6ef7445bf",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:9"
+      },
+      "status": "failed",
+      "updated_at": "2026-10-29T18:50:26.139319+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "2:9",
+          "recitation_duration_seconds": 13.045,
+          "verse_source_and_key": true,
+          "verse_word_count": 10,
+          "word_segments_valid": 10
+        },
+        "status": "failed"
+      },
+      "verse": 9,
+      "verse_key": "2:9",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

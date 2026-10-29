@@ -87,7 +87,7 @@ def d_person(c: _Ctx, x, y, u, st):
     u *= st["grow"]; ink = _c(c.ink, st["alpha"]); w = max(2, int(1.5 * u)); sw = math.sin(st["step"]) * 2.2 * u
     c.d.line((x, y - 8 * u, x - sw, y), fill=ink, width=w)
     c.d.line((x, y - 8 * u, x + sw, y), fill=ink, width=w)
-    c.d.line((x, y - 8 * u, x, y - 13 * u), fill=ink, width=int(2.6 * u))
+    c.d.line((x, y - 8 * u, x, y - 13 * u), fill=ink, width=max(2, int(1.9 * u)))
     c.d.line((x, y - 12.5 * u, x - 2 * u + sw * .4, y - 9 * u), fill=ink, width=w)
     c.d.line((x, y - 12.5 * u, x + 2 * u - sw * .4, y - 9 * u), fill=ink, width=w)
     c.d.ellipse((x - 1.8 * u, y - 17 * u, x + 1.8 * u, y - 13.4 * u), fill=ink)
@@ -519,6 +519,8 @@ def render_background(destination: Path, width: int, height: int, fps: int, dura
         process.stdin.close()
         stderr = process.stderr.read().decode("utf-8", errors="replace") if process.stderr else ""
         return_code = process.wait()
+        if process.stderr:
+            process.stderr.close()
     except (BrokenPipeError, OSError) as exc:
         if process is not None:
             process.kill()

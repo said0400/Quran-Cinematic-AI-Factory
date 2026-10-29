@@ -1837,7 +1837,9 @@ if __name__ == "__main__":
                         {"mood": "day", "text_span": "كلمة30 كلمة31 كلمة32", "elements": [
                             {"type": "seed", "position": "center", "animation": "grow"}]}],
                     "closing": {"mood": "warm", "elements": [
-                        {"type": "heart", "position": "center", "animation": "pulse"}]}},
+                        {"type": "heart", "position": "center", "animation": "pulse"}]}
+                }
+            }
             data.update(overrides)
             return data
 

@@ -10742,6 +10742,67 @@
         ],
         "visual_type": "obstacle_path"
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-29T17:49:18.321640+00:00",
+      "last_error": "نوع أحد المشاهد البصرية غير مسموح.",
+      "local_date": "2026-10-29",
+      "media_sources": [],
+      "mode": "manual",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "status": "published",
+          "video_id": "video-d599eae83f06873e",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-d599eae83f06873e/video-d599eae83f06873e.mp4"
+        },
+        "youtube": {
+          "attempts": 2,
+          "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+          "status": "failed",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-29-2-3-f1245d3cb1-report.json",
+      "run_id": "2026-10-29-2-3-f1245d3cb1",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+      },
+      "status": "partially_published",
+      "updated_at": "2026-10-29T17:51:51.215842+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.905,
+          "verse_source_and_key": true,
+          "verse_word_count": 8,
+          "word_segments_valid": 8
+        },
+        "status": "failed"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

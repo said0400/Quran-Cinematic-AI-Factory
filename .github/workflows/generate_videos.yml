@@ -1,4 +1,4 @@
-name: Quran Cinematic AI Factorys
+name: Quran Cinematic AI Factory
 
 on:
   schedule:
@@ -70,6 +70,8 @@ jobs:
       ARABIC_FONT: ${{ vars.ARABIC_FONT }}
       ARABIC_FONT_LICENSE_URL: ${{ vars.ARABIC_FONT_LICENSE_URL }}
       ARABIC_FONT_LICENSE_CONFIRMED: ${{ vars.ARABIC_FONT_LICENSE_CONFIRMED }}
+      VISUAL_ASSETS_LICENSE_CONFIRMED: ${{ vars.VISUAL_ASSETS_LICENSE_CONFIRMED }}
+      VISUAL_ASSETS_LICENSE_URL: ${{ vars.VISUAL_ASSETS_LICENSE_URL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
       QF_CLIENT_ID: ${{ secrets.QF_CLIENT_ID }}
@@ -132,7 +134,7 @@ jobs:
       - name: Install FFmpeg and Arabic fonts
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ffmpeg fontconfig fonts-noto-core
+          sudo apt-get install --yes ffmpeg fontconfig fonts-noto-core libcairo2
           command -v ffmpeg
           command -v ffprobe
           fc-match 'Noto Naskh Arabic' -f '%{file}\n'
@@ -150,6 +152,7 @@ jobs:
         run: |
           python services.py
           python video_engine.py
+          python procedural_background.py
           python main.py --test
 
       - name: Generate, validate, and publish

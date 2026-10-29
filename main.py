@@ -17,12 +17,13 @@ from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from services import (
-    FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher, PexelsService,
+    FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher,
     QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     quran_words, validate_word_segments,
 )
+from procedural_background import render_background
 from video_engine import (
-    VideoError, build_verse_layout, build_video, compose_background, media_duration, validate_video,
+    VideoError, build_verse_layout, build_video, media_duration, validate_video,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -44,6 +45,7 @@ VERSE_TOPICS: dict[str, tuple[tuple[int, int], ...]] = {
     "الدنيا والغفلة ومحاسبة النفس": ((63, 9), (3, 185), (18, 46), (59, 18)),
     "الشكر وتغيير النفس": ((14, 7), (8, 53)),
     "الدعاء والثبات": ((2, 201), (3, 8)),
+    "الزمن والحساب": ((18, 25),),
 }
 
 
@@ -147,7 +149,7 @@ class Config:
             daily_video_count=integer("DAILY_VIDEO_COUNT", 1, 1, 5),
             width=width,
             height=height,
-            fps=integer("VIDEO_FPS", 30, 24, 60),
+            fps=integer("VIDEO_FPS", 24, 24, 60),
             target_min=target_min,
             target_max=target_max,
             max_candidates=integer("MAX_CANDIDATES_PER_RUN", 5, 1, 20),
@@ -184,7 +186,7 @@ def validate_generation_environment() -> None:
     required = [
         "GEMINI_API_KEY", "QF_CLIENT_ID", "QF_CLIENT_SECRET", "QURAN_TEXT_LICENSE_URL", "CHAPTER_RECITER_ID",
         "RECITATION_LICENSE_URL", "RECITATION_ALLOWLIST", "TAFSIR_ID", "TAFSIR_LICENSE_URL",
-        "TAFSIR_ALLOWLIST", "PEXELS_API_KEY", "TTS_LICENSE_URL",
+        "TAFSIR_ALLOWLIST", "TTS_LICENSE_URL",
     ]
     missing = [key for key in required if not os.getenv(key, "").strip()]
     if missing:
@@ -200,7 +202,6 @@ def validate_generation_environment() -> None:
         "QURAN_TEXT_LICENSE_CONFIRMED": "حق إعادة نشر النص القرآني من المصدر المحدد",
         "RECITATION_LICENSE_CONFIRMED": "ترخيص إعادة نشر التلاوة",
         "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "ترخيص التفسير التجاري وإعادة النشر",
-        "PEXELS_LICENSE_CONFIRMED": "مراجعة ترخيص Pexels",
         "TTS_TERMS_CONFIRMED": "حقوق استخدام TTS",
     }
     unconfirmed = [label for key, label in confirmations.items() if not env_bool(key)]
@@ -577,6 +578,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         message_budget = message_word_budget(config.target_max, recitation_duration)
         gemini = GeminiContentService()
         ai = gemini.create_and_review(verse, tafsir, topic=topic, message_words=message_budget)
+        row["visual_plan"] = ai["visual_plan"]
         row["verification"]["checks"]["model_content_schema"] = True
         row["verification"]["checks"]["model_source_review"] = ai["review"]
         row["verification"]["checks"]["content"] = {
@@ -586,6 +588,8 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "hook_words": len(ai["hook"].split()),
             "keywords": len(ai["keywords"]),
             "hashtags": len(ai["hashtags"]),
+            "visual_type": ai["visual_plan"]["visual_type"],
+            "visual_scene_count": len(ai["visual_plan"]["scenes"]),
         }
         generated_texts = (ai["hook"], ai["message"], ai["call_to_action"], ai["title"], ai["description"],
                            " ".join(ai["keywords"]), " ".join(ai["hashtags"]))
@@ -595,15 +599,13 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
-        # Several stock clips (2..5), each slowed (0.75 by default) and merged into one background.
-        media_items = PexelsService().fetch_backgrounds(
-            f"{topic or ''} {ai['message']}", work_dir / "clips",
-            config.background_clips, config.background_speed)
-        clip_files = [Path(item.pop("file")) for item in media_items]
+        # The visual layer is generated locally: no stock footage, image downloads, or external assets.
+        media_items: list[dict[str, Any]] = []
         background = work_dir / "background.mp4"
-        background_info = compose_background(
-            clip_files, background, config.width, config.height, config.fps,
-            speed=config.background_speed, target_duration=float(config.target_max))
+        background_info = render_background(
+            background, config.width, config.height, config.fps, float(config.target_max),
+            theme=f"{verse.key}|{topic or ''}|{ai['title']}|{ai['message'][:180]}",
+            plan=ai["visual_plan"])
         row["verification"]["checks"]["background"] = background_info
         update_record(history, row, report_dir)
 
@@ -633,6 +635,8 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         row["status"] = "validated"
         row["media_sources"] = _record_sources(verse, recitation, tafsir, media_items, tts.terms_url, tts.voice,
                                              getattr(tts, "provider", "edge-tts"))
+        row["media_sources"].insert(3, {"kind": "procedural_background", "provider": "Pillow + FFmpeg",
+                                        "external_assets": False, "metadata": background_info})
         font_source = video_validation.get("font_source", {})
         row["media_sources"].append({"kind": "font", **font_source})
         validated_video = True
@@ -1168,13 +1172,13 @@ if __name__ == "__main__":
             def test_make_settings_are_required_only_when_make_publishing_is_enabled(self):
                 base = {
                     "GEMINI_API_KEY": "k", "QF_CLIENT_ID": "i", "QF_CLIENT_SECRET": "s",
-                    "QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
-                    "RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
-                    "TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
-                    "TAFSIR_ALLOWLIST": "16|https://example.org/t", "PEXELS_API_KEY": "p",
-                    "TTS_LICENSE_URL": "https://example.org/tts",
-                    "QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
-                    "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true", "PEXELS_LICENSE_CONFIRMED": "true",
+					"QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
+					"RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
+					"TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
+					"TAFSIR_ALLOWLIST": "16|https://example.org/t",
+					"TTS_LICENSE_URL": "https://example.org/tts",
+					"QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
+					"TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true",
                     "TTS_TERMS_CONFIRMED": "true",
                 }
                 with patch.dict(os.environ, {**base, "MAKE_PUBLISH_ENABLED": "false"}):

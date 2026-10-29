@@ -10468,6 +10468,280 @@
       "verse_key": "25:63",
       "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
       "video_sha256": "f94c1ef8c7560a4d014efa022a233022c85addf7185c46890ef9aedd23b822cd"
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-29T16:56:55.149464+00:00",
+      "last_error": null,
+      "local_date": "2026-10-29",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/2:155",
+          "verse_key": "2:155"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/2?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:155"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "duration_seconds": 60.0,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "kind": "procedural_semantic_scenes",
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "theme_hash": "9565094e5fe67ff9",
+            "visual_type": "obstacle_path",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "a1469b6e946e45a14d06ae636c293a22116976e91b6b541afa74520ace342e52",
+          "status": "published",
+          "video_id": "video-a1469b6e946e45a1",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-a1469b6e946e45a1/video-a1469b6e946e45a1.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في خضم الحياة المتسارعة، يواجه الكثير منا لحظات من الخوف أو ضيق الرزق أو فقدان الأحبة. هذا المقطع يتناول حقيقة الابتلاءات التي نمر بها في دنيانا وكيفية التعامل معها بقلب صابر ومطمئن. استكشف المعنى الحقيقي للصبر في مواجهة تقلبات الأيام، وكيف يمكن لهذا المفهوم أن يغير نظرتك لكل تحدٍ تواجهه في يومك.\n\nتأمل في حكمة الابتلاءات التي تلمس واقعنا، وتعرف على جوهر الثبات الذي يمنح النفس السكينة وسط العواصف. هذا المحتوى يقدم لك نظرة تأملية تساعدك على فهم طبيعة الحياة الدنيا، ويدعوك لتبني الصبر كمنهج حياة يتجاوز مجرد التحمل إلى الرضا بحسن العاقبة.\n\nلا تجعل هذه الكلمات تقف عندك، شاركها مع أصدقائك وأحبتك، فربما يحتاج أحدهم إلى جرعة من الأمل والصبر في هذا الوقت.\n\nالكلمات المفتاحية: الصبر على الابتلاء، معنى الابتلاء في الحياة، كيف أصبر على ضيق الرزق، مواجهة الخوف والقلق، حكمة الابتلاءات، الثبات عند الشدائد، الرضا بحسن العاقبة، تجاوز أزمات الحياة، الصبر في القرآن، التعامل مع فقدان الأحبة، السكينة في وقت الضيق، فهم الحياة الدنيا\n\n#الصبر #الابتلاء #حكمة_الحياة #طمأنينة #ثبات #تأملات #الرضا #حياة_مطمئنة #Patience #LifeLessons",
+        "title": "لماذا نمر بأوقات صعبة في حياتنا وكيف نواجهها"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-29-2-155-d797cc3c29-report.json",
+      "run_id": "2026-10-29-2-155-d797cc3c29",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:155"
+      },
+      "status": "published",
+      "updated_at": "2026-10-29T17:01:36.579404+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "duration_seconds": 60.0,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "kind": "procedural_semantic_scenes",
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "theme_hash": "9565094e5fe67ff9",
+            "visual_type": "obstacle_path",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 14,
+            "keywords": 12,
+            "message_word_budget": [
+              38,
+              55
+            ],
+            "message_words": 53,
+            "topic": "الصبر والابتلاء",
+            "visual_scene_count": 3,
+            "visual_type": "obstacle_path"
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص يعكس المعاني الواردة في الآية والتفسير المرفق حول طبيعة الابتلاء (الخوف، ضيق الرزق، فقدان الأحبة) وأهمية الصبر وحسن العاقبة، دون إضافة أحكام شرعية أو ادعاءات غيبية خارجة عن سياق النص المصدر."
+          },
+          "recitation_api_verse_key": "2:155",
+          "recitation_duration_seconds": 20.435,
+          "verse_source_and_key": true,
+          "verse_word_count": 12,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 77.119,
+            "audio_segments": {
+              "cta": {
+                "end": 77.119,
+                "start": 62.388
+              },
+              "hook": {
+                "end": 7.891,
+                "start": 0.0
+              },
+              "message": {
+                "end": 62.388,
+                "start": 30.457
+              },
+              "recitation": {
+                "end": 28.326,
+                "start": 7.891
+              },
+              "seal": {
+                "end": 30.457,
+                "start": 28.326
+              }
+            },
+            "commentary_pages": {
+              "cta": 1,
+              "hook": 1,
+              "message": 3
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 77.133,
+            "file_size_bytes": 25009539,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 20.435,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 12
+        },
+        "status": "validated"
+      },
+      "verse": 155,
+      "verse_key": "2:155",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "a1469b6e946e45a14d06ae636c293a22116976e91b6b541afa74520ace342e52",
+      "visual_plan": {
+        "scenes": [
+          {
+            "duration_seconds": 3.0,
+            "elements": [
+              {
+                "animation": "draw",
+                "label": "path",
+                "type": "path",
+                "value": "winding_road"
+              },
+              {
+                "animation": "appear",
+                "label": "stone",
+                "type": "obstacle",
+                "value": "large_rock"
+              }
+            ],
+            "narration_anchor": "هذه الحياة دار اختبار",
+            "type": "obstacle_path"
+          },
+          {
+            "duration_seconds": 4.0,
+            "elements": [
+              {
+                "animation": "move_forward",
+                "label": "walker",
+                "type": "person",
+                "value": "human_figure"
+              },
+              {
+                "animation": "fade_in",
+                "label": "fear",
+                "type": "cloud",
+                "value": "dark_cloud"
+              }
+            ],
+            "narration_anchor": "يمر فيها الإنسان بضيق الرزق أو الخوف",
+            "type": "obstacle_path"
+          },
+          {
+            "duration_seconds": 3.0,
+            "elements": [
+              {
+                "animation": "rise",
+                "label": "hope",
+                "type": "sun",
+                "value": "bright_sun"
+              },
+              {
+                "animation": "scale_up",
+                "label": "success",
+                "type": "check",
+                "value": "checkmark"
+              }
+            ],
+            "narration_anchor": "تذكر أن العاقبة الحسنة لمن يصبر",
+            "type": "obstacle_path"
+          }
+        ],
+        "visual_type": "obstacle_path"
+      }
     }
   ],
   "version": 1

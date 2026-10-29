@@ -24,6 +24,7 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
+from procedural_background import ANIMATIONS, ELEMENT_TYPES, MOODS, POSITIONS, SIZES, SKY_TYPES
 
 QF_API = "https://apis.quran.foundation/content/api/v4"
 QF_PRELIVE_API = "https://apis-prelive.quran.foundation/content/api/v4"
@@ -541,32 +542,49 @@ FORBIDDEN_SOURCE_PATTERN = re.compile(
 URL_PATTERN = re.compile(r"(?:https?://|www\.)", re.I)
 SEAL_PHRASE = "صدق الله العظيم"
 
+_ELEMENT_SCHEMA = {"type": "OBJECT", "properties": {
+    "type": {"type": "STRING"}, "position": {"type": "STRING"},
+    "animation": {"type": "STRING"}, "size": {"type": "STRING"},
+}, "required": ["type", "position", "animation"]}
+_SCENE_SCHEMA = {"type": "OBJECT", "properties": {
+    "mood": {"type": "STRING"}, "text_span": {"type": "STRING"},
+    "elements": {"type": "ARRAY", "items": _ELEMENT_SCHEMA},
+}, "required": ["mood", "elements"]}
+
 GENERATION_SCHEMA = {
     "type": "OBJECT",
     "properties": {
-        "hook_candidates": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
-            "text": {"type": "STRING"},
-            **{key: {"type": "INTEGER"} for key in HOOK_SCORE_KEYS},
-        }, "required": ["text", *HOOK_SCORE_KEYS]}},
+        "hook_candidates": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "text": {"type": "STRING"},
+                    **{key: {"type": "INTEGER"} for key in HOOK_SCORE_KEYS},
+                },
+                "required": ["text", *HOOK_SCORE_KEYS]
+            }
+        },
         "message": {"type": "STRING"},
         "call_to_action": {"type": "STRING"},
         "title": {"type": "STRING"},
         "description": {"type": "STRING"},
         "keywords": {"type": "ARRAY", "items": {"type": "STRING"}},
         "hashtags": {"type": "ARRAY", "items": {"type": "STRING"}},
-        "visual_plan": {"type": "OBJECT", "properties": {
-            "visual_type": {"type": "STRING"},
-            "scenes": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
-                "type": {"type": "STRING"}, "title": {"type": "STRING"},
-                "duration_seconds": {"type": "NUMBER"}, "narration_anchor": {"type": "STRING"},
-                "elements": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
-                    "type": {"type": "STRING"}, "label": {"type": "STRING"},
-                    "value": {"type": "STRING"}, "animation": {"type": "STRING"},
-                }, "required": ["type", "animation"]}},
-            }, "required": ["type", "duration_seconds", "elements"]}},
-        }, "required": ["visual_type", "scenes"]},
+        "visual_plan": {
+            "type": "OBJECT",
+            "properties": {
+                "opening": _SCENE_SCHEMA,
+                "scenes": {"type": "ARRAY", "items": _SCENE_SCHEMA},
+                "closing": _SCENE_SCHEMA,
+            },
+            "required": ["opening", "scenes", "closing"]
+        },
     },
-    "required": ["hook_candidates", "message", "call_to_action", "title", "description", "keywords", "hashtags", "visual_plan"],
+    "required": [
+        "hook_candidates", "message", "call_to_action", 
+        "title", "description", "keywords", "hashtags", "visual_plan"
+    ],
 }
 REVIEW_SCHEMA = {
     "type": "OBJECT",
@@ -628,43 +646,61 @@ def _normalize_keywords(raw: Any) -> list[str]:
     return result[:KEYWORDS_MAX]
 
 
-def validate_visual_plan(raw: Any) -> dict[str, Any]:
-    """Validate Gemini's text-only scene plan before it reaches the local renderer."""
-    if not isinstance(raw, dict) or raw.get("visual_type") not in VISUAL_TYPES:
-        raise ContentValidationError("نوع الخطة البصرية غير مسموح أو مفقود.")
-    scenes = raw.get("scenes")
-    if not isinstance(scenes, list) or not 2 <= len(scenes) <= 6:
-        raise ContentValidationError("الخطة البصرية يجب أن تحتوي من مشهدين إلى ستة مشاهد.")
-    normalized_scenes: list[dict[str, Any]] = []
-    total = 0.0
-    for scene in scenes:
-        if not isinstance(scene, dict) or scene.get("type") not in VISUAL_TYPES:
-            raise ContentValidationError("نوع أحد المشاهد البصرية غير مسموح.")
-        try:
-            duration = float(scene.get("duration_seconds"))
-        except (TypeError, ValueError):
-            raise ContentValidationError("مدة المشهد البصري غير صالحة.") from None
-        if not 1 <= duration <= 30:
-            raise ContentValidationError("مدة المشهد البصري يجب أن تكون بين ثانية واحدة و30 ثانية.")
-        elements = scene.get("elements")
-        if not isinstance(elements, list) or not 1 <= len(elements) <= 10:
-            raise ContentValidationError("كل مشهد بصري يجب أن يحتوي من عنصر إلى عشرة عناصر.")
-        clean_elements = []
-        for element in elements:
-            if not isinstance(element, dict) or element.get("type") not in VISUAL_ELEMENT_TYPES:
-                raise ContentValidationError("نوع عنصر بصري غير مسموح.")
-            clean_elements.append({key: str(element[key])[:120] for key in ("type", "label", "value", "animation")
-                                   if key in element})
-        clean = {"type": scene["type"], "duration_seconds": duration, "elements": clean_elements}
-        if isinstance(scene.get("title"), str):
-            clean["title"] = scene["title"][:160]
-        if isinstance(scene.get("narration_anchor"), str):
-            clean["narration_anchor"] = scene["narration_anchor"][:160]
-        normalized_scenes.append(clean)
-        total += duration
-    if not 8 <= total <= 120:
-        raise ContentValidationError("إجمالي مدد الخطة البصرية خارج المجال المعقول.")
-    return {"visual_type": raw["visual_type"], "scenes": normalized_scenes}
+def _norm_tokens(text: str) -> list[tuple[int, str]]:
+    """(index in text.split(), normalised word); punctuation-only tokens are skipped."""
+    out = []
+    for index, word in enumerate((text or "").split()):
+        token = re.sub(r"[^\w]", "", normalize_arabic(word))
+        if token:
+            out.append((index, token))
+    return out
+
+
+def _clean_scene(raw: Any, label: str) -> dict[str, Any]:
+    if not isinstance(raw, dict) or raw.get("mood") not in MOODS:
+        raise ContentValidationError(f"مزاج المشهد {label} غير مسموح أو مفقود.")
+    elements = raw.get("elements")
+    if not isinstance(elements, list) or not 1 <= len(elements) <= 6:
+        raise ContentValidationError(f"المشهد {label} يجب أن يحتوي من عنصر إلى ستة عناصر.")
+    clean: list[dict[str, str]] = []
+    taken: set[tuple[str, str]] = set()
+    for item in elements:
+        if (not isinstance(item, dict) or item.get("type") not in ELEMENT_TYPES
+                or item.get("position") not in POSITIONS or item.get("animation") not in ANIMATIONS):
+            raise ContentValidationError("عنصر بصري غير مسموح (النوع أو الموضع أو الحركة).")
+        slot = (item["type"], "") if item["type"] in SKY_TYPES else ("ground", item["position"])
+        if slot in taken:
+            continue                                   # two things in one spot: keep the first
+        taken.add(slot)
+        size = item.get("size") if item.get("size") in SIZES else "medium"
+        clean.append({"type": item["type"], "position": item["position"], "animation": item["animation"], "size": size})
+    return {"mood": raw["mood"], "elements": clean}
+
+
+def validate_visual_plan(raw: Any, message: str) -> dict[str, Any]:
+    """Validate Gemini's scene plan and bind each scene to a word of the spoken message."""
+    if not isinstance(raw, dict):
+        raise ContentValidationError("الخطة البصرية ليست كائنًا.")
+    opening, closing = _clean_scene(raw.get("opening"), "opening"), _clean_scene(raw.get("closing"), "closing")
+    items = raw.get("scenes")
+    if not isinstance(items, list) or not 3 <= len(items) <= 6:
+        raise ContentValidationError("مشاهد الرسالة يجب أن تكون من ثلاثة إلى ستة.")
+    words = _norm_tokens(message)
+    cursor, scenes = 0, []
+    for number, item in enumerate(items, start=1):
+        scene = _clean_scene(item, str(number))
+        span = item.get("text_span") if isinstance(item.get("text_span"), str) else ""
+        tokens = [token for _, token in _norm_tokens(span)][:3]
+        if not tokens:
+            raise ContentValidationError(f"المشهد {number} بلا text_span.")
+        found = next((i for i in range(cursor, len(words) - len(tokens) + 1)
+                      if [token for _, token in words[i:i + len(tokens)]] == tokens), None)
+        if found is None:
+            raise ContentValidationError(f"عبارة المشهد {number} ليست في الرسالة بالترتيب.")
+        scene["word_start"], scene["text_span"] = words[found][0], span.strip()[:160]
+        cursor = found + 1
+        scenes.append(scene)
+    return {"opening": opening, "scenes": scenes, "closing": closing}
 
 
 def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[str, Any]:
@@ -727,7 +763,7 @@ def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[
         raise ContentValidationError("الوصف أقصر من الحد الأدنى.")
     keywords = _normalize_keywords(data.get("keywords"))
     hashtags = _normalize_hashtags(data.get("hashtags"))
-    visual_plan = validate_visual_plan(data.get("visual_plan"))
+    visual_plan = validate_visual_plan(data.get("visual_plan"), message)
     published_text = " ".join([title, description, *keywords, *hashtags])
     if FORBIDDEN_SOURCE_PATTERN.search(published_text):
         raise ContentValidationError("النص المنشور يذكر مصدرًا أو اسمًا ممنوعًا.")
@@ -854,6 +890,10 @@ class GeminiContentService:
     @staticmethod
     def _generation_prompt(verse: QuranVerse, tafsir: TafsirSource, topic: str | None,
                            message_words: tuple[int, int]) -> str:
+        moods = ", ".join(sorted(MOODS))
+        kinds = ", ".join(sorted(ELEMENT_TYPES))
+        places = ", ".join(POSITIONS)
+        moves = ", ".join(sorted(ANIMATIONS))
         low, high = message_words
         topic_line = f"الموضوع المقترح لزاوية الطرح: {topic}\n" if topic else ""
         return (
@@ -883,14 +923,18 @@ class GeminiContentService:
             "لا روابط، ولا تذكر أي مصدر أو قارئ أو موقع أو تفسير أو أداة أو ذكاءً اصطناعيًا.\n"
             f"6) keywords: من {KEYWORDS_MIN + 4} إلى {KEYWORDS_MAX} كلمة أو عبارة بحث عربية (كلمتان إلى أربع) يبحث بها الناس فعلًا عن هذا الموضوع.\n"
             f"7) hashtags: من {HASHTAGS_MIN + 2} إلى {HASHTAGS_MAX} هاشتاجًا عربيًا (ويجوز اثنان بالإنجليزية) يبدأ كل منها بعلامة # دون مسافات (استخدم _ بين الكلمات).\n\n"
-            "8) visual_plan: خطة نصية فقط لمحرك رسوم محلي. لا تنشئ صورة ولا تطلب صورة ولا تذكر API. "
-            "اختر visual_type واحدًا من: solar_lunar_year_comparison, timeline_counter, obstacle_path, "
-            "growth_and_provision, message_verification, storm_to_calm, home_relationship, room_diagram, "
-            "generic_explainer. أنشئ من 2 إلى 6 مشاهد، ولكل مشهد type وduration_seconds وelements. "
-            "كل عنصر يجب أن يكون من عناصر الرسم البسيطة مثل sun, moon, earth, orbit, counter, timeline, "
-            "path, obstacle, person, seed, tree, coin, phone, message, check, cloud, rain, house, arrow, "
-            "circle, label, number, scale. اربط الرسم بالموضوع المنقول من التفسير، ولا تضف رقمًا أو حقيقة "
-            "غير موجودة في الآية أو التفسير. narration_anchor جملة قصيرة تحدد العبارة التي يظهر عندها المشهد.\n\n"
+            "8) visual_plan: خطة رسوم لمحرك محلي (نص فقط؛ لا صور ولا API) تجعل الصورة تحكي ما يُقال بالضبط:\n"
+            "- opening: مشهد يرافق الهوك وحده ويجسّد الشعور أو المشكلة.\n"
+            "- scenes: من 3 إلى 6 مشاهد تتبع message بالترتيب. لكل مشهد text_span = أول 3 إلى 6 كلمات من الجملة "
+            "التي يبدأ عندها المشهد، منسوخة حرفيًا من message كما كُتبت، ليظهر المشهد لحظة نطقها. "
+            "يتبدل المشهد عند تحول المعنى (الشعور، معنى الآية، الأمل، الخطوة العملية).\n"
+            "- closing: مشهد دعوة المشاركة (قلب، دعاء، نور، باب).\n"
+            f"لكل مشهد: mood من [{moods}]، وعناصر elements من 2 إلى 4: type من [{kinds}]، "
+            f"position من [{places}]، animation من [{moves}]، وsize اختياري small أو medium أو large. "
+            "اجعل العناصر تجسّد المعنى حرفيًا: تعب وابتلاء = sitting_person مع cloud وrain؛ فرج وأمل = sun أو light_rays أو door؛ "
+            "رزق ونمو = seed ثم tree أو coin؛ ثبات وطريق = path مع person بحركة walk؛ دعاء = hands مع stars؛ "
+            "أسرة وبر = house مع heart؛ شائعات وهاتف = phone؛ حساب وميزان = scale أو clock؛ علم وقرآن = book. "
+            "لا تجسّد نبيًا ولا صحابيًا ولا ملاكًا، ولا تضع أرقامًا أو نصوصًا داخل الرسم، ولا تضف حقائق ليست في التفسير.\n\n"
             "أعد JSON وفق المخطط فقط.\n\n"
             f"{topic_line}"
             f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
@@ -1774,22 +1818,26 @@ if __name__ == "__main__":
                      for i in range(5)]
             data = {
                 "hook_candidates": hooks,
-                "message": " ".join(["كلمة"] * 45),
+                "message": " ".join(f"كلمة{i}" for i in range(45)),
                 "call_to_action": "شارك هذا المقطع الآن واجعله صدقة جارية عن والديك ومن تحب",
                 "title": "تعبك الذي لا يراه أحد يراه الله وحده",
                 "description": "هذه الآية تخاطب قلب كل من أنهكه الصبر. " * 12,
                 "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
                 "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
-                "visual_plan": {"visual_type": "obstacle_path", "scenes": [
-                    {"type": "obstacle_path", "duration_seconds": 8, "elements": [
-                        {"type": "path", "animation": "draw_progressively"},
-                        {"type": "obstacle", "animation": "appear_one_by_one"},
-                    ]},
-                    {"type": "timeline_counter", "duration_seconds": 8, "elements": [
-                        {"type": "person", "animation": "move_forward"},
-                    ]},
-                ]},
-            }
+                "visual_plan": {
+                    "opening": {"mood": "night", "elements": [
+                        {"type": "sitting_person", "position": "center", "animation": "fade_in"},
+                        {"type": "moon", "position": "right", "animation": "float"}]},
+                    "scenes": [
+                        {"mood": "storm", "text_span": "كلمة0 كلمة1 كلمة2", "elements": [
+                            {"type": "cloud", "position": "left", "animation": "float"},
+                            {"type": "rain", "position": "center", "animation": "none"}]},
+                        {"mood": "dawn", "text_span": "كلمة15 كلمة16 كلمة17", "elements": [
+                            {"type": "sun", "position": "right", "animation": "grow"}]},
+                        {"mood": "day", "text_span": "كلمة30 كلمة31 كلمة32", "elements": [
+                            {"type": "seed", "position": "center", "animation": "grow"}]}],
+                    "closing": {"mood": "warm", "elements": [
+                        {"type": "heart", "position": "center", "animation": "pulse"}]}},
             data.update(overrides)
             return data
 
@@ -1801,6 +1849,21 @@ if __name__ == "__main__":
             self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
             self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
                                            "description", "keywords", "hashtags", "visual_plan"})
+        def test_visual_plan_binds_scenes_to_message_words_in_order(self):
+            result = validate_generated_content(self.valid_content())
+            self.assertEqual([s["word_start"] for s in result["visual_plan"]["scenes"]], [0, 15, 30])
+
+        def test_visual_plan_rejects_unknown_phrase_wrong_order_and_bad_elements(self):
+            good = self.valid_content()["visual_plan"]
+            for mutate in (lambda p: p["scenes"][1].update(text_span="عبارة ليست في الرسالة"),
+                           lambda p: p["scenes"].reverse(),
+                           lambda p: p["scenes"].pop(),
+                           lambda p: p["opening"]["elements"][0].update(type="dragon"),
+                           lambda p: p["closing"].update(mood="neon")):
+                plan = json.loads(json.dumps(good))
+                mutate(plan)
+                with self.assertRaises(ContentValidationError):
+                    validate_generated_content(self.valid_content(visual_plan=plan))
 
         def test_generated_content_rejects_rule_violations(self):
             good = self.valid_content()

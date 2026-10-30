@@ -10922,6 +10922,496 @@
       "verse_key": "2:9",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 12,
+      "created_at": "2026-10-30T00:09:48.261892+00:00",
+      "last_error": "رفضت مراجعة المحتوى أو طلبت مراجعة بشرية: النص تضمن عبارة 'وتكون صدقة جارية لك' وهي إضافة لم ترد في الآية أو التفسير المرفق، وتعد حكماً شرعياً أو نتيجة غيبية غير موجودة في المصدر.",
+      "local_date": "2026-10-30",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-30-12-87-bf50171db7-report.json",
+      "run_id": "2026-10-30-12-87-bf50171db7",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/12:87"
+      },
+      "status": "failed",
+      "updated_at": "2026-10-30T00:10:16.493334+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "12:87",
+          "recitation_duration_seconds": 23.555,
+          "verse_source_and_key": true,
+          "verse_word_count": 20,
+          "word_segments_valid": 20
+        },
+        "status": "failed"
+      },
+      "verse": 87,
+      "verse_key": "12:87",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 12,
+      "created_at": "2026-10-30T00:10:16.531476+00:00",
+      "last_error": null,
+      "local_date": "2026-10-30",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/12:87",
+          "verse_key": "12:87"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/12.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/12?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/12:87"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 71.319,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "kind": "script_synced_semantic_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "cloud"
+                ],
+                "end": 7.171,
+                "mood": "storm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.817,
+                "mood": "storm",
+                "name": "recitation",
+                "start": 7.171
+              },
+              {
+                "elements": [
+                  "path",
+                  "person"
+                ],
+                "end": 43.91,
+                "mood": "day",
+                "name": "message-1",
+                "start": 32.817
+              },
+              {
+                "elements": [
+                  "light_rays",
+                  "heart"
+                ],
+                "end": 53.773,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 43.91
+              },
+              {
+                "elements": [
+                  "seed",
+                  "sun"
+                ],
+                "end": 60.428,
+                "mood": "dawn",
+                "name": "message-3",
+                "start": 53.773
+              },
+              {
+                "elements": [
+                  "heart",
+                  "door"
+                ],
+                "end": 71.319,
+                "mood": "warm",
+                "name": "cta",
+                "start": 60.428
+              }
+            ],
+            "theme_hash": "32e4665f8c54bfbd",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "4a0de6a2e6109631617fa54f84dfec24559c652bb00d8862478822b6bb8630cb",
+          "status": "published",
+          "video_id": "video-4a0de6a2e6109631",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-4a0de6a2e6109631/video-4a0de6a2e6109631.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في غمرة انشغالنا بضغوط الحياة وتراكم الهموم، قد يتسلل اليأس إلى قلوبنا ويجعلنا نرى الأبواب مغلقة. هذا المقطع يقدم وقفة تأملية حول أهمية السعي وعدم انقطاع الرجاء من رحمة الله، مستلهمًا معاني الصبر والبحث عن الفرج في أصعب الظروف. ستجد هنا رسالة تذكيرية بأن الثقة بقدرة الله هي الدافع الحقيقي للاستمرار في السعي نحو أهدافك، مهما كانت التحديات التي تواجهها. شارك هذا المحتوى مع من تحب ليكون رسالة أمل ودعم لكل من يحتاجه في يومه، ولنساهم معًا في نشر الطمأنينة واليقين.\n\nالكلمات المفتاحية: كيف أتخلص من اليأس، الأمل في الله، الفرج بعد الضيق، الثقة برحمة الله، تجاوز الصعوبات، كيف أستعيد الأمل، الاستمرار في السعي، معنى الرجاء، التفاؤل في الحياة، كيف أواجه ضغوط الحياة، الطمأنينة النفسية، الاستعانة بالله\n\n#أمل #رحمة_الله #تفاؤل #ثقة_بالله #فرج #طمأنينة #حياة #صبر #تطوير_الذات #رسالة_أمل #Hope #Faith",
+        "title": "كيف تتجاوز لحظات اليأس وتستعيد الأمل في حياتك"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-30-12-87-d5b996071b-report.json",
+      "run_id": "2026-10-30-12-87-d5b996071b",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/12:87"
+      },
+      "status": "published",
+      "updated_at": "2026-10-30T00:12:45.630173+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 71.319,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "kind": "script_synced_semantic_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "cloud"
+                ],
+                "end": 7.171,
+                "mood": "storm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.817,
+                "mood": "storm",
+                "name": "recitation",
+                "start": 7.171
+              },
+              {
+                "elements": [
+                  "path",
+                  "person"
+                ],
+                "end": 43.91,
+                "mood": "day",
+                "name": "message-1",
+                "start": 32.817
+              },
+              {
+                "elements": [
+                  "light_rays",
+                  "heart"
+                ],
+                "end": 53.773,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 43.91
+              },
+              {
+                "elements": [
+                  "seed",
+                  "sun"
+                ],
+                "end": 60.428,
+                "mood": "dawn",
+                "name": "message-3",
+                "start": 53.773
+              },
+              {
+                "elements": [
+                  "heart",
+                  "door"
+                ],
+                "end": 71.319,
+                "mood": "warm",
+                "name": "cta",
+                "start": 60.428
+              }
+            ],
+            "theme_hash": "32e4665f8c54bfbd",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 12,
+            "hook_words": 14,
+            "keywords": 12,
+            "message_word_budget": [
+              33,
+              48
+            ],
+            "message_words": 51,
+            "topic": "اليأس والأمل ورحمة الله",
+            "visual_scene_count": 3
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص يعكس المعاني المستفادة من الآية والتفسير المرفق حول أهمية السعي وعدم اليأس من رحمة الله دون إضافة أحكام شرعية أو ادعاءات غيبية خارجة عن سياق النص."
+          },
+          "recitation_api_verse_key": "12:87",
+          "recitation_duration_seconds": 23.555,
+          "verse_source_and_key": true,
+          "verse_word_count": 20,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 71.319,
+            "audio_segments": {
+              "cta": {
+                "end": 71.319,
+                "start": 60.428
+              },
+              "hook": {
+                "end": 7.171,
+                "start": 0.0
+              },
+              "message": {
+                "end": 60.428,
+                "start": 32.817
+              },
+              "recitation": {
+                "end": 30.726,
+                "start": 7.171
+              },
+              "seal": {
+                "end": 32.817,
+                "start": 30.726
+              }
+            },
+            "commentary_pages": {
+              "cta": 1,
+              "hook": 1,
+              "message": 3
+            },
+            "dim_strength": 0.3,
+            "duration_seconds": 71.333,
+            "file_size_bytes": 6635758,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 23.555,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 20
+        },
+        "status": "validated"
+      },
+      "verse": 87,
+      "verse_key": "12:87",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "4a0de6a2e6109631617fa54f84dfec24559c652bb00d8862478822b6bb8630cb",
+      "visual_plan": {
+        "closing": {
+          "elements": [
+            {
+              "animation": "pulse",
+              "position": "center",
+              "size": "medium",
+              "type": "heart"
+            },
+            {
+              "animation": "fade_in",
+              "position": "right",
+              "size": "medium",
+              "type": "door"
+            }
+          ],
+          "mood": "warm"
+        },
+        "opening": {
+          "elements": [
+            {
+              "animation": "fade_in",
+              "position": "center",
+              "size": "medium",
+              "type": "sitting_person"
+            },
+            {
+              "animation": "float",
+              "position": "right",
+              "size": "medium",
+              "type": "cloud"
+            }
+          ],
+          "mood": "storm"
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              },
+              {
+                "animation": "walk",
+                "position": "left",
+                "size": "medium",
+                "type": "person"
+              }
+            ],
+            "mood": "day",
+            "text_span": "تأمرنا هذه الكلمات بالبحث",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "right",
+                "size": "medium",
+                "type": "light_rays"
+              },
+              {
+                "animation": "pulse",
+                "position": "center",
+                "size": "medium",
+                "type": "heart"
+              }
+            ],
+            "mood": "warm",
+            "text_span": "حين تواجه ضيقًا في",
+            "word_start": 21
+          },
+          {
+            "elements": [
+              {
+                "animation": "grow",
+                "position": "center",
+                "size": "medium",
+                "type": "seed"
+              },
+              {
+                "animation": "rise",
+                "position": "far_right",
+                "size": "medium",
+                "type": "sun"
+              }
+            ],
+            "mood": "dawn",
+            "text_span": "ابدأ اليوم بخطوة عملية",
+            "word_start": 39
+          }
+        ]
+      }
     }
   ],
   "version": 1

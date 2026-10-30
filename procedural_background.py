@@ -451,25 +451,93 @@ def render_scene_image(width: int, height: int, scene: dict[str, Any], local_t: 
     return image
 
 
+# ------------------------------------------------------------------ AI image scenes (Ken Burns)
+KEN_BURNS_ZOOM = 0.14
+CALM_DARKEN = 0.22
+VIGNETTE_STRENGTH = 0.5
+
+
+class _ImageStore:
+    """Loads each scene image once; a missing or corrupt file just means 'use the procedural scene'."""
+    def __init__(self) -> None:
+        self._cache: dict[str, Image.Image | None] = {}
+
+    def get(self, path: str) -> Image.Image | None:
+        if path not in self._cache:
+            try:
+                with Image.open(path) as handle:
+                    self._cache[path] = handle.convert("RGB")
+            except Exception:
+                self._cache[path] = None
+        return self._cache[path]
+
+
+@lru_cache(maxsize=8)
+def _vignette_mask(width: int, height: int) -> Image.Image:
+    mask = Image.radial_gradient("L").resize((width, height), Image.Resampling.BILINEAR)
+    return mask.point(lambda v: int(max(0, v - 90) / 165 * 255 * VIGNETTE_STRENGTH))
+
+
+def render_image_frame(width: int, height: int, source: Image.Image, progress: float, variant: int,
+                       calm: bool = False) -> Image.Image:
+    """Slow zoom + drift over `source` (cover-fit to width x height); direction alternates by `variant`."""
+    p = _ease(progress)
+    zoom = 1.0 + KEN_BURNS_ZOOM * (p if variant % 2 == 0 else 1.0 - p)
+    sw, sh = source.size
+    aspect = width / height
+    if sw / sh >= aspect:
+        view_h = sh / zoom
+        view_w = view_h * aspect
+    else:
+        view_w = sw / zoom
+        view_h = view_w / aspect
+    slack_x, slack_y = (sw - view_w) / 2, (sh - view_h) / 2
+    drift = (progress - .5) * 2
+    cx = sw / 2 + (-1, 1, 1, -1)[variant % 4] * drift * slack_x * .7
+    cy = sh / 2 + (1, -1)[(variant // 2) % 2] * drift * slack_y * .5
+    left = min(max(cx - view_w / 2, 0.0), sw - view_w)
+    top = min(max(cy - view_h / 2, 0.0), sh - view_h)
+    frame = source.resize((width, height), Image.Resampling.BICUBIC, box=(left, top, left + view_w, top + view_h))
+    black = Image.new("RGB", (width, height), (0, 0, 0))
+    frame = Image.composite(black, frame, _vignette_mask(width, height))
+    if calm:
+        frame = Image.blend(frame, black, CALM_DARKEN)
+    return frame
+
+
+def _render_entry(width: int, height: int, index: int, entry: dict[str, Any], local: float, t: float,
+                  assets: VisualAssets | None, store: _ImageStore) -> Image.Image:
+    path = entry.get("image")
+    if path:
+        source = store.get(path)
+        if source is not None:
+            length = max(entry["end"] - entry["start"], .001)
+            return render_image_frame(width, height, source, max(0.0, min(1.0, local / length)), index,
+                                      bool(entry.get("calm")))
+    return render_scene_image(width, height, entry["scene"], local, t, assets)
+
+
 def frames(width: int, height: int, fps: int, duration: float, timeline: list[dict[str, Any]],
            assets: VisualAssets | None = None) -> Iterator[bytes]:
     starts = [entry["start"] for entry in timeline]
+    store = _ImageStore()
     for number in range(int(math.ceil(duration * fps))):
         t = number / fps
         index = max(0, bisect_right(starts, t) - 1)
         entry = timeline[index]
         local = t - entry["start"]
-        image = render_scene_image(width, height, entry["scene"], local, t, assets)
-        if index > 0 and local < XFADE_SECONDS:           # soft cross-fade; the old scene keeps animating
+        image = _render_entry(width, height, index, entry, local, t, assets, store)
+        if index > 0 and local < XFADE_SECONDS:           # soft cross-fade; the old scene keeps moving
             previous = timeline[index - 1]
-            old = render_scene_image(width, height, previous["scene"], t - previous["start"], t, assets)
+            old = _render_entry(width, height, index - 1, previous, t - previous["start"], t, assets, store)
             image = Image.blend(old, image, _ease(local / XFADE_SECONDS))
         yield image.tobytes()
 
 
 # ------------------------------------------------------------------ script -> timeline
 def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, float, int]],
-                   intervals: dict[str, tuple[float, float]], duration: float) -> list[dict[str, Any]]:
+                   intervals: dict[str, tuple[float, float]], duration: float,
+                   images: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Turn the validated plan into absolute, gap-free scene intervals.
 
     `message_timings` are the voice-over word timings RELATIVE to the message audio (as returned by
@@ -479,8 +547,9 @@ def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, floa
     for key in ("hook", "recitation", "seal", "message", "cta"):
         if key not in intervals:
             raise ValueError(f"فترة الصوت {key} مفقودة.")
+    images = images or {}
     message_start, message_end = intervals["message"]
-    kept: list[tuple[float, dict[str, Any]]] = []
+    kept: list[tuple[float, dict[str, Any], int]] = []
     for position, scene in enumerate(plan["scenes"]):
         if position == 0:
             start = message_start                          # the first scene opens with the message
@@ -491,7 +560,7 @@ def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, floa
             start = message_start + message_timings[index][0]
         if kept and start - kept[-1][0] < MIN_SCENE_SECONDS:
             continue                                       # too close to the previous scene: merge
-        kept.append((start, scene))
+        kept.append((start, scene, position))
     if len(kept) > 1 and message_end - kept[-1][0] < MIN_SCENE_SECONDS:
         kept.pop()
     if not kept:
@@ -500,16 +569,18 @@ def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, floa
             "elements": [{"type": "light_rays", "position": "center", "animation": "fade_in", "size": "medium"}]}
     entries: list[dict[str, Any]] = []
 
-    def add(name: str, start: float, end: float, scene: dict[str, Any]) -> None:
+    def add(name: str, start: float, end: float, scene: dict[str, Any], image_key: str, calm: bool = False) -> None:
         if end > start + 1e-6:
-            entries.append({"name": name, "start": round(start, 3), "end": round(end, 3), "scene": scene})
+            image = images.get(image_key)
+            entries.append({"name": name, "start": round(start, 3), "end": round(end, 3), "scene": scene,
+                            "image_key": image_key, "image": image["path"] if image else None, "calm": calm})
 
-    add("hook", *intervals["hook"], plan["opening"])
-    add("recitation", intervals["recitation"][0], intervals["seal"][1], calm)
-    for number, (start, scene) in enumerate(kept):
+    add("hook", *intervals["hook"], plan["opening"], "opening")
+    add("recitation", intervals["recitation"][0], intervals["seal"][1], calm, "opening", calm=True)
+    for number, (start, scene, position) in enumerate(kept):
         end = kept[number + 1][0] if number + 1 < len(kept) else message_end
-        add(f"message-{number + 1}", start, end, scene)
-    add("cta", intervals["cta"][0], max(duration, intervals["cta"][1]), plan["closing"])
+        add(f"message-{number + 1}", start, end, scene, f"scene-{position + 1}")
+    add("cta", intervals["cta"][0], max(duration, intervals["cta"][1]), plan["closing"], "closing")
     return entries
 
 
@@ -547,11 +618,13 @@ def render_background(destination: Path, width: int, height: int, fps: int, dura
         raise RuntimeError(f"فشل إنشاء الخلفية الإجرائية: {stderr[-500:]}")
     if not destination.is_file() or destination.stat().st_size < 1024:
         raise RuntimeError("لم ينتج مولّد الخلفية ملفًا صالحًا.")
-    return {"kind": "script_synced_semantic_scenes", "width": width, "height": height,
+    return {"kind": "script_synced_scenes", "width": width, "height": height,
             "render_width": rw, "render_height": rh, "render_scale": render_scale, "fps": fps,
             "duration_seconds": round(duration, 3),
             "theme_hash": hashlib.sha256(theme.encode("utf-8")).hexdigest()[:16],
+            "image_scenes": sum(1 for e in timeline if e.get("image")),
             "scenes": [{"name": e["name"], "start": e["start"], "end": e["end"], "mood": e["scene"]["mood"],
+                        "image": bool(e.get("image")),
                         "elements": [x["type"] for x in e["scene"]["elements"]]} for e in timeline],
             "operator_supplied_assets": list(assets.used.values()), "asset_notes": assets.notes,
             "external_assets": False}
@@ -651,5 +724,54 @@ if __name__ == "__main__":
                 self.assertTrue(out.stat().st_size > 1024)
                 self.assertEqual(len(info["scenes"]), 6)
                 self.assertFalse(info["external_assets"])
+
+        # ----- AI image scenes -----
+        @staticmethod
+        def _photo(path, size=(512, 512)):
+            from PIL import ImageChops
+            gradient = Image.linear_gradient("L").resize(size)
+            noise = Image.effect_noise(size, 40)
+            Image.merge("RGB", (ImageChops.add(gradient, noise, scale=2), gradient, noise)).save(path, "JPEG")
+            return str(path)
+
+        def test_timeline_attaches_images_by_original_scene_position_and_flags_the_calm_scene(self):
+            with tempfile.TemporaryDirectory() as temp:
+                images = {key: {"path": self._photo(Path(temp) / f"{key}.jpg")} for key in ("opening", "scene-1", "scene-3", "closing")}
+                plan = sample_plan(); plan["scenes"][1]["word_start"] = 2          # scene-2 is merged away
+                line = build_timeline(plan, timings(50), INTERVALS, 42.0, images=images)
+            by_name = {e["name"]: e for e in line}
+            self.assertEqual(by_name["hook"]["image_key"], "opening")
+            self.assertTrue(by_name["recitation"]["calm"] and by_name["recitation"]["image"].endswith("opening.jpg"))
+            self.assertEqual([by_name[n]["image_key"] for n in ("message-1", "message-2")], ["scene-1", "scene-3"])
+            self.assertTrue(by_name["message-2"]["image"].endswith("scene-3.jpg"))
+            self.assertTrue(by_name["cta"]["image"].endswith("closing.jpg"))
+            self.assertIsNone(build_timeline(sample_plan(), timings(50), INTERVALS, 42.0)[0]["image"])
+
+        def test_ken_burns_moves_and_stays_inside_the_frame(self):
+            with tempfile.TemporaryDirectory() as temp:
+                source = Image.open(self._photo(Path(temp) / "a.jpg", (512, 512)))
+                for variant in range(4):
+                    start = render_image_frame(90, 160, source, 0.0, variant)
+                    end = render_image_frame(90, 160, source, 1.0, variant)
+                    self.assertEqual((start.size, end.size), ((90, 160), (90, 160)))
+                    self.assertNotEqual(start.tobytes(), end.tobytes())             # the camera really moves
+                wide = Image.new("RGB", (900, 300), (90, 120, 200))
+                self.assertEqual(render_image_frame(90, 160, wide, .5, 1).size, (90, 160))
+                plain = render_image_frame(90, 160, source, .5, 0)
+                dark = render_image_frame(90, 160, source, .5, 0, calm=True)
+                from PIL import ImageStat
+                self.assertLess(ImageStat.Stat(dark.convert("L")).mean[0], ImageStat.Stat(plain.convert("L")).mean[0])
+
+        def test_image_scenes_render_and_a_broken_image_falls_back_to_the_procedural_scene(self):
+            with tempfile.TemporaryDirectory() as temp:
+                images = {"opening": {"path": self._photo(Path(temp) / "o.jpg")}, "scene-1": {"path": str(Path(temp) / "missing.jpg")}}
+                line = build_timeline(sample_plan(), timings(50), INTERVALS, 42.0, images=images)
+                got = list(frames(90, 160, 2, 6.0, line))
+                self.assertEqual(len(got), 12)
+                self.assertTrue(all(len(f) == 90 * 160 * 3 for f in got))
+                out = Path(temp) / "bg.mp4"
+                info = render_background(out, 180, 320, 4, 42.0, line, theme="t", render_scale=.5)
+                self.assertEqual(info["image_scenes"], 3)                           # hook, recitation (calm) and scene-1 entries carry a path
+                self.assertTrue(out.stat().st_size > 1024)
 
     unittest.main()

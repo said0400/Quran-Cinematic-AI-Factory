@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import math
 import os
 import random
@@ -305,10 +306,22 @@ def layer_of(element_type: str) -> str:
 # ------------------------------------------------------------------ optional Lottie / SVG assets
 class _LottieAsset:
     def __init__(self, path: Path):
+        # Validate in Python first: rlottie accepts some garbage files without raising, and
+        # calling into the native library with a null animation is unsafe.
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raise ValueError("ملف Lottie ليس JSON صالحًا.") from None
+        layers = data.get("layers") if isinstance(data, dict) else None
+        if (not isinstance(layers, list) or not layers
+                or not all(isinstance(data.get(key), (int, float)) and data[key] > 0 for key in ("fr", "w", "h"))
+                or not isinstance(data.get("op"), (int, float)) or data["op"] <= data.get("ip", 0)):
+            raise ValueError("ملف Lottie ينقصه layers أو fr أو w أو h أو op.")
         from rlottie_python import LottieAnimation
         self.anim = LottieAnimation.from_file(str(path))
         self.frames = max(1, int(self.anim.lottie_animation_get_totalframe()))
         self.fps = float(self.anim.lottie_animation_get_framerate() or 24)
+        self.frame(0.0, 16)                    # fail now (and fall back) rather than in the middle of a render
 
     def frame(self, t: float, size: int) -> Image.Image:
         number = int(t * self.fps) % self.frames
@@ -411,10 +424,15 @@ def _draw_element(c: _Ctx, element: dict[str, Any], local_t: float) -> None:
     asset = c.assets.get(kind) if c.assets else None
     if asset is not None and st["alpha"] > 0:
         size = max(8, int(u * ASSET_PIXELS))
-        frame = asset.frame(c.t, size)
-        mask = frame.getchannel("A").point(lambda v, k=st["alpha"]: int(v * k))
-        c.img.paste(frame.convert("RGB"), (int(x - size / 2), int(y - (size / 2 if sky else size))), mask)
-        return
+        try:
+            frame = asset.frame(c.t, size)
+            mask = frame.getchannel("A").point(lambda v, k=st["alpha"]: int(v * k))
+            c.img.paste(frame.convert("RGB"), (int(x - size / 2), int(y - (size / 2 if sky else size))), mask)
+            return
+        except Exception:                          # a broken asset must never break the video
+            c.assets._cache[kind] = None
+            c.assets.used.pop(kind, None)
+            c.assets.notes.append(f"{kind}: render failed, built-in drawer used")
     if st["alpha"] > 0:
         DRAWERS[kind](c, x, y, u, st)
 

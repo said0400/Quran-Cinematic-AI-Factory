@@ -152,12 +152,11 @@ def _text_center_offset(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.Fr
 
 
 def _draw_text(draw: ImageDraw.ImageDraw, xy: tuple[float, float], text: str, font: ImageFont.FreeTypeFont,
-               fill: tuple[int, int, int, int], stroke: bool = True) -> None:
+               fill: tuple[int, int, int, int], stroke: bool = True, stroke_width: int = 1) -> None:
     kwargs: dict[str, Any] = {"font": font, "fill": fill, "direction": TEXT_DIRECTION, "language": TEXT_LANGUAGE}
     if stroke:
-        kwargs.update(stroke_width=1, stroke_fill=(0, 0, 0, 255))
+        kwargs.update(stroke_width=stroke_width, stroke_fill=(0, 0, 0, 255))
     draw.text(xy, _visual(text), **kwargs)
-
 
 def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
     try:
@@ -268,6 +267,7 @@ class TextLayout:
     placements: list[tuple[float, float, str]]  # (x, y, word); list index == word index
     highlight: tuple[int, int, int, int]
     word_count: int
+    stroke: int = 1                             # outline width around every word (captions use a thicker one)
 
 
 def draw_layout(layout: TextLayout, current_word: int | None = None) -> Image.Image:
@@ -278,9 +278,8 @@ def draw_layout(layout: TextLayout, current_word: int | None = None) -> Image.Im
     draw = ImageDraw.Draw(image)
     for index, (x, y, word) in enumerate(layout.placements):
         color = layout.highlight if index == current_word else WHITE
-        _draw_text(draw, (x, y), word, layout.font, color)
+        _draw_text(draw, (x, y), word, layout.font, color, stroke_width=layout.stroke)
     return image
-
 
 def _place_lines(words: list[str], lines: list[list[int]], font: ImageFont.FreeTypeFont, gap: int,
                  draw: ImageDraw.ImageDraw, width: int, start_y: float,

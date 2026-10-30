@@ -1,7 +1,7 @@
 """External services for Quran Cinematic AI Factory.
 
-All network access is isolated here. Rights are never inferred from API access;
-operators must configure and record the applicable source-specific permissions.
+All network access is isolated here (scene images live in scene_images.py). Rights are never
+inferred from API access; operators must configure and record the applicable source-specific permissions.
 """
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from procedural_background import ANIMATIONS, ELEMENT_TYPES, MOODS, POSITIONS, SIZES, SKY_TYPES
+from scene_images import sanitize_image_prompt
 
 QF_API = "https://apis.quran.foundation/content/api/v4"
 QF_PRELIVE_API = "https://apis-prelive.quran.foundation/content/api/v4"
@@ -526,15 +527,6 @@ KEYWORDS_MIN, KEYWORDS_MAX = 6, 15
 HASHTAGS_MIN, HASHTAGS_MAX = 6, 12
 CONTENT_ATTEMPTS = 3                    # regenerations when the content fails validation or review
 SHARE_VERB_PATTERN = re.compile(r"شارك|انشر|أرسل|ارسل|مرّر|مرر")
-VISUAL_TYPES = {
-    "solar_lunar_year_comparison", "timeline_counter", "obstacle_path", "growth_and_provision",
-    "message_verification", "storm_to_calm", "home_relationship", "room_diagram", "generic_explainer",
-}
-VISUAL_ELEMENT_TYPES = {
-    "sun", "moon", "earth", "orbit", "counter", "timeline", "path", "obstacle", "person",
-    "seed", "tree", "coin", "phone", "message", "check", "cloud", "rain", "house", "arrow",
-    "circle", "label", "number", "scale",
-}
 # The published text must not name sources (reciter, tafsir, stock site, AI vendors).
 FORBIDDEN_SOURCE_PATTERN = re.compile(
     r"pexels|quran\.foundation|gemini|جيميناي|الميسر|مشاري|العفاسي|ابن كثير|الطبري|السعدي|القرطبي|البغوي",
@@ -547,9 +539,9 @@ _ELEMENT_SCHEMA = {"type": "OBJECT", "properties": {
     "animation": {"type": "STRING"}, "size": {"type": "STRING"},
 }, "required": ["type", "position", "animation"]}
 _SCENE_SCHEMA = {"type": "OBJECT", "properties": {
-    "mood": {"type": "STRING"}, "text_span": {"type": "STRING"},
+    "mood": {"type": "STRING"}, "text_span": {"type": "STRING"}, "image_prompt": {"type": "STRING"},
     "elements": {"type": "ARRAY", "items": _ELEMENT_SCHEMA},
-}, "required": ["mood", "elements"]}
+}, "required": ["mood", "elements", "image_prompt"]}
 
 GENERATION_SCHEMA = {
     "type": "OBJECT",
@@ -582,7 +574,7 @@ GENERATION_SCHEMA = {
         },
     },
     "required": [
-        "hook_candidates", "message", "call_to_action", 
+        "hook_candidates", "message", "call_to_action",
         "title", "description", "keywords", "hashtags", "visual_plan"
     ],
 }
@@ -674,7 +666,8 @@ def _clean_scene(raw: Any, label: str) -> dict[str, Any]:
         taken.add(slot)
         size = item.get("size") if item.get("size") in SIZES else "medium"
         clean.append({"type": item["type"], "position": item["position"], "animation": item["animation"], "size": size})
-    return {"mood": raw["mood"], "elements": clean}
+    # An unusable prompt only costs this scene its picture (it is drawn procedurally); it never fails the video.
+    return {"mood": raw["mood"], "elements": clean, "image_prompt": sanitize_image_prompt(raw.get("image_prompt"))}
 
 
 def validate_visual_plan(raw: Any, message: str) -> dict[str, Any]:
@@ -934,6 +927,11 @@ class GeminiContentService:
             "اجعل العناصر تجسّد المعنى حرفيًا: تعب وابتلاء = sitting_person مع cloud وrain؛ فرج وأمل = sun أو light_rays أو door؛ "
             "رزق ونمو = seed ثم tree أو coin؛ ثبات وطريق = path مع person بحركة walk؛ دعاء = hands مع stars؛ "
             "أسرة وبر = house مع heart؛ شائعات وهاتف = phone؛ حساب وميزان = scale أو clock؛ علم وقرآن = book. "
+            "وأضف لكل مشهد (opening وscenes وclosing) الحقل image_prompt: وصف بصري بالإنجليزية فقط "
+            "(من 20 إلى 60 كلمة، وأقل من 400 حرف) للمشهد نفسه، يطابق ما يُقال في تلك اللحظة: المكان والإضاءة "
+            "والألوان والأشياء الواضحة والحالة الشعورية. استعمل رموزًا بصرية (طريق، نافذة، مطر، بحر، بذرة، ضوء، باب، "
+            "يدان مرفوعتان، بيت من بعيد) وأشخاصًا كظلال بعيدة فقط. ممنوع ذكر الأنبياء والملائكة والصحابة والكعبة "
+            "والمصحف والوجوه والأشخاص القريبين والكتابة والشعارات والأعلام والروابط. لا تذكر الأسلوب الفني فهو يُضاف تلقائيًا.\n"
             "لا تجسّد نبيًا ولا صحابيًا ولا ملاكًا، ولا تضع أرقامًا أو نصوصًا داخل الرسم، ولا تضف حقائق ليست في التفسير.\n\n"
             "أعد JSON وفق المخطط فقط.\n\n"
             f"{topic_line}"
@@ -986,7 +984,6 @@ class GeminiContentService:
         if review["needs_review"] or not all(review[k] for k in ("grounded_in_source", "no_unsupported_claims", "no_contradiction")):
             raise ContentValidationError("رفضت مراجعة المحتوى أو طلبت مراجعة بشرية: " + review["reason"][:240])
         return review
-
 
 
 def _validate_tts_texts(texts: dict[str, str]) -> None:
@@ -1816,6 +1813,7 @@ if __name__ == "__main__":
         def valid_content(**overrides):
             hooks = [{"text": f"تعبك الذي لا يراه أحد يراه الله رقم {i}", **{key: 4 for key in HOOK_SCORE_KEYS}}
                      for i in range(5)]
+            prompt = "A lone traveller walking a winding road toward a glowing sunrise over quiet hills"
             data = {
                 "hook_candidates": hooks,
                 "message": " ".join(f"كلمة{i}" for i in range(45)),
@@ -1825,18 +1823,18 @@ if __name__ == "__main__":
                 "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
                 "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
                 "visual_plan": {
-                    "opening": {"mood": "night", "elements": [
+                    "opening": {"mood": "night", "image_prompt": prompt, "elements": [
                         {"type": "sitting_person", "position": "center", "animation": "fade_in"},
                         {"type": "moon", "position": "right", "animation": "float"}]},
                     "scenes": [
-                        {"mood": "storm", "text_span": "كلمة0 كلمة1 كلمة2", "elements": [
+                        {"mood": "storm", "text_span": "كلمة0 كلمة1 كلمة2", "image_prompt": prompt, "elements": [
                             {"type": "cloud", "position": "left", "animation": "float"},
                             {"type": "rain", "position": "center", "animation": "none"}]},
-                        {"mood": "dawn", "text_span": "كلمة15 كلمة16 كلمة17", "elements": [
+                        {"mood": "dawn", "text_span": "كلمة15 كلمة16 كلمة17", "image_prompt": prompt, "elements": [
                             {"type": "sun", "position": "right", "animation": "grow"}]},
-                        {"mood": "day", "text_span": "كلمة30 كلمة31 كلمة32", "elements": [
+                        {"mood": "day", "text_span": "كلمة30 كلمة31 كلمة32", "image_prompt": prompt, "elements": [
                             {"type": "seed", "position": "center", "animation": "grow"}]}],
-                    "closing": {"mood": "warm", "elements": [
+                    "closing": {"mood": "warm", "image_prompt": prompt, "elements": [
                         {"type": "heart", "position": "center", "animation": "pulse"}]}
                 }
             }
@@ -1851,6 +1849,7 @@ if __name__ == "__main__":
             self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
             self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
                                            "description", "keywords", "hashtags", "visual_plan"})
+
         def test_visual_plan_binds_scenes_to_message_words_in_order(self):
             result = validate_generated_content(self.valid_content())
             self.assertEqual([s["word_start"] for s in result["visual_plan"]["scenes"]], [0, 15, 30])
@@ -1866,6 +1865,22 @@ if __name__ == "__main__":
                 mutate(plan)
                 with self.assertRaises(ContentValidationError):
                     validate_generated_content(self.valid_content(visual_plan=plan))
+
+        def test_unsafe_or_missing_image_prompt_only_removes_the_picture(self):
+            full = validate_generated_content(self.valid_content())["visual_plan"]
+            self.assertTrue(full["opening"]["image_prompt"] and full["closing"]["image_prompt"])
+            self.assertTrue(all(s["image_prompt"] for s in full["scenes"]))
+            plan = json.loads(json.dumps(self.valid_content()["visual_plan"]))
+            plan["scenes"][0]["image_prompt"] = "The prophet standing alone in the desert at dawn with light behind him"
+            del plan["scenes"][1]["image_prompt"]
+            result = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]
+            self.assertEqual((result["scenes"][0]["image_prompt"], result["scenes"][1]["image_prompt"]), ("", ""))
+            self.assertTrue(result["scenes"][2]["image_prompt"])
+
+        def test_generation_schema_requires_an_image_prompt_per_scene(self):
+            scene = GENERATION_SCHEMA["properties"]["visual_plan"]["properties"]["opening"]
+            self.assertIn("image_prompt", scene["required"])
+            self.assertIn("image_prompt", scene["properties"])
 
         def test_generated_content_rejects_rule_violations(self):
             good = self.valid_content()
@@ -1950,6 +1965,7 @@ if __name__ == "__main__":
             self.assertIn("نص التفسير الموثق", prompt)
             self.assertIn("صدقة جارية", prompt)
             self.assertIn("لا تذكر أي مصدر", prompt)
+            self.assertIn("image_prompt", prompt)
             self.assertNotIn("الموضوع المقترح", GeminiContentService._generation_prompt(verse, tafsir, None, (42, 61)))
 
         # ----- Quran words (waqf signs are not words) -----
@@ -2146,7 +2162,6 @@ if __name__ == "__main__":
                     service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
             self.assertEqual(len(attempts), 1)
             self.assertEqual(sleeps, [])
-
 
         # ----- Surah names / TTS word boundaries -----
         def test_surah_names_table_is_complete_and_used_for_verse_card(self):

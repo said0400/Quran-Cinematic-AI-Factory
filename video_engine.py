@@ -2,14 +2,15 @@
 
 Rendering model
 ---------------
-* The background is one or several stock clips merged by `compose_background` (cover-crop each
-  clip to the vertical frame, slow it down, concatenate), then processed by FFmpeg again in
-  `build_video` (slow time-based zoom, light dark filter).
+* The background is a ready video (script-synchronised picture scenes from procedural_background.py);
+  `build_video` processes it again with FFmpeg (slow time-based zoom, light dark filter).
+  `compose_background` remains available for merging stock clips.
 * All text is drawn here with Pillow/RAQM as RGBA frames and piped to FFmpeg as raw video, so the
   number of FFmpeg inputs does not grow with the number of words.
 * The Quran verse sits on an ornamental card and is highlighted word by word using the source
-  timestamps. Commentary texts (hook, message, call to action) stay fully visible on a plain card
-  with the current spoken word highlighted; a long text is split into consecutive cards.
+  timestamps. Commentary (hook, message, call to action) is shown either as short subtitle-style
+  captions (4-5 words at a time, `commentary_style="captions"`, the picture stays visible) or as a
+  plain card with the current spoken word highlighted (`"card"`); long cards are split into pages.
 """
 from __future__ import annotations
 
@@ -158,6 +159,7 @@ def _draw_text(draw: ImageDraw.ImageDraw, xy: tuple[float, float], text: str, fo
         kwargs.update(stroke_width=stroke_width, stroke_fill=(0, 0, 0, 255))
     draw.text(xy, _visual(text), **kwargs)
 
+
 def _font(path: str, size: int) -> ImageFont.FreeTypeFont:
     try:
         return ImageFont.truetype(path, size=size, layout_engine=ImageFont.Layout.RAQM)
@@ -226,6 +228,9 @@ def quran_words(text: str) -> list[str]:
 SENTENCE_END_CHARS = "،,.؟?!؛:"
 PAGE_MAX_WORDS = 24      # a card holds at most 7 lines; 24 words fit even at the smallest font size
 PAGE_MIN_WORDS = 10
+CAPTION_MAX_WORDS = 5    # a caption page shows a few words at a time, like short-form video subtitles
+CAPTION_MIN_WORDS = 4
+COMMENTARY_STYLES = ("card", "captions")
 
 
 def _best_cut(words: list[str], low: int, high: int) -> int:
@@ -257,6 +262,28 @@ def paginate_text(text: str, max_words: int = PAGE_MAX_WORDS, min_words: int = P
     return pages
 
 
+def paginate_captions(text: str) -> list[list[str]]:
+    """Split spoken text into pages of at most CAPTION_MAX_WORDS, preferring breaks after punctuation.
+
+    A short last page is balanced with the one before it, so no page ever holds a lone word.
+    """
+    words = text.split()
+    if not words:
+        raise VideoError("نص المشهد فارغ.")
+    pages: list[list[str]] = []
+    start = 0
+    while len(words) - start > CAPTION_MAX_WORDS:
+        end = _best_cut(words, start + CAPTION_MIN_WORDS, start + CAPTION_MAX_WORDS)
+        pages.append(words[start:end])
+        start = end
+    pages.append(words[start:])
+    if len(pages) > 1 and len(pages[-1]) < 3:
+        combined = pages[-2] + pages[-1]
+        cut = (len(combined) + 1) // 2
+        pages[-2:] = [combined[:cut], combined[cut:]]
+    return pages
+
+
 # --------------------------------------------------------------------------------------------
 # Layouts: static card + word positions. A frame is the card plus the words with one highlighted.
 # --------------------------------------------------------------------------------------------
@@ -280,6 +307,7 @@ def draw_layout(layout: TextLayout, current_word: int | None = None) -> Image.Im
         color = layout.highlight if index == current_word else WHITE
         _draw_text(draw, (x, y), word, layout.font, color, stroke_width=layout.stroke)
     return image
+
 
 def _place_lines(words: list[str], lines: list[list[int]], font: ImageFont.FreeTypeFont, gap: int,
                  draw: ImageDraw.ImageDraw, width: int, start_y: float,
@@ -335,6 +363,44 @@ def build_text_layout(text: str, label: str = "", width: int = 1080, height: int
     start_y = top + (int(78 * s) if label else int(20 * s))
     placements = _place_lines(words, lines, font, gap, draw, width, start_y, line_height)
     return TextLayout(base, font, placements, PLAIN_HIGHLIGHT, len(words))
+
+
+def build_caption_layout(text: str, width: int = 1080, height: int = 1920, font_path: str | None = None,
+                         y_center: float = 0.80, size: int = 60) -> TextLayout:
+    """Subtitle-style text: no card, a soft dark band behind it, thick outline, current word in yellow.
+
+    The picture stays visible because only a few words (at most two lines) are on screen at once.
+    """
+    if not isinstance(text, str) or not text.strip() or "�" in text:
+        raise VideoError("نص الترجمة فارغ أو يحوي رمزًا تالفًا.")
+    font_path = font_path or discover_font()
+    s = width / 1080.0
+    probe_draw = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
+    words = text.split()
+    chosen = None
+    for pt in range(int(size), 35, -2):
+        pixel_size = max(8, int(round(pt * s)))
+        font = _font(font_path, pixel_size)
+        gap = max(4, pixel_size // 3)
+        lines = _wrap_words(words, font, int(width * 0.86), probe_draw, gap)
+        if len(lines) <= 2:
+            chosen = (font, lines, pixel_size, gap)
+            break
+    if chosen is None:
+        raise VideoError("النص أطول من مساحة الترجمة؛ رُفض بدل إسقاط كلمات.")
+    font, lines, pixel_size, gap = chosen
+    line_height = int(pixel_size * 1.5)
+    block_height = len(lines) * line_height
+    top = int(height * y_center - block_height / 2)
+    base = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(base)
+    margin = int(120 * s)
+    band_top, band_bottom = max(0, top - margin), min(height, top + block_height + margin)
+    span = max(1, band_bottom - band_top)
+    for y in range(band_top, band_bottom):
+        draw.line((0, y, width, y), fill=(0, 0, 0, int(150 * math.sin(math.pi * (y - band_top) / span))))
+    placements = _place_lines(words, lines, font, gap, draw, width, top, line_height)
+    return TextLayout(base, font, placements, PLAIN_HIGHLIGHT, len(words), stroke=max(2, int(round(3 * s))))
 
 
 def build_verse_layout(text: str, chapter_name: str = "", verse_number: int | None = None,
@@ -689,14 +755,18 @@ def compose_background(clips: list[Path], destination: Path, width: int = 1080, 
 
 def commentary_scenes(name: str, label: str, text: str, start: float, end: float,
                       timings: list[tuple[float, float, int]], width: int, height: int, font_path: str,
-                      first_fade_in: float = FADE_SECONDS, last_fade_out: float = FADE_SECONDS) -> list[Scene]:
-    """Scenes for one spoken text: one card, or consecutive cards when the text is long.
+                      first_fade_in: float = FADE_SECONDS, last_fade_out: float = FADE_SECONDS,
+                      mode: str = "card", caption_y: float = 0.80, caption_size: int = 60) -> list[Scene]:
+    """Scenes for one spoken text: one card, or consecutive cards/caption pages when the text is long.
 
-    `timings` are absolute (start_s, end_s, word_index) rows over `text.split()`. Each card starts
-    when its first word is spoken and lasts until the next card begins, so the screen is never blank
-    between cards.
+    `timings` are absolute (start_s, end_s, word_index) rows over `text.split()`. Each page starts
+    when its first word is spoken and lasts until the next page begins, so the screen is never blank
+    between pages. mode="captions" shows 4-5 words at a time as subtitles instead of a big card.
     """
-    pages = paginate_text(text)
+    if mode not in COMMENTARY_STYLES:
+        raise VideoError("نمط النص يجب أن يكون card أو captions.")
+    captions = mode == "captions"
+    pages = paginate_captions(text) if captions else paginate_text(text)
     scenes: list[Scene] = []
     first = 0
     for number, page in enumerate(pages):
@@ -706,9 +776,11 @@ def commentary_scenes(name: str, label: str, text: str, start: float, end: float
         page_end = end if last_page else timings[following][0]
         page_end = max(page_end, page_start + 0.05)
         page_timings = [(a, b, index - first) for a, b, index in timings if first <= index < following]
+        layout = (build_caption_layout(" ".join(page), width, height, font_path, caption_y, caption_size) if captions
+                  else build_text_layout(" ".join(page), label, width, height, font_path))
         scenes.append(Scene(name if len(pages) == 1 else f"{name}-{number + 1}", page_start, page_end,
-                            build_text_layout(" ".join(page), label, width, height, font_path), page_timings,
-                            fade_in=first_fade_in if number == 0 else 0.12,
+                            layout, page_timings,
+                            fade_in=first_fade_in if number == 0 else (0.06 if captions else 0.12),
                             fade_out=last_fade_out if last_page else 0.0))
         first = following
     return scenes
@@ -720,13 +792,15 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                 target_min_duration: float = 45, target_max_duration: float = 60,
                 tts_word_boundaries: dict[str, list[dict[str, Any]]] | None = None,
                 chapter_name: str = "", verse_number: int | None = None,
-                dim_strength: float = 0.30) -> dict[str, Any]:
+                dim_strength: float = 0.30, commentary_style: str = "card") -> dict[str, Any]:
     """Build exactly ordered scenes without cropping or speeding up the recitation."""
     required = ["hook", "message", "call_to_action"]
     if not all(isinstance(content.get(key), str) and content[key].strip() for key in required):
         raise VideoError("نصوص الفيديو المطلوبة ناقصة.")
     if "صدق الله العظيم" in " ".join(content[key] for key in required):
         raise VideoError("عبارة «صدق الله العظيم» يجب أن تكون مقطعًا مستقلًا بعد التلاوة فقط.")
+    if commentary_style not in COMMENTARY_STYLES:
+        raise VideoError("commentary_style يجب أن يكون card أو captions.")
     keys = ["hook", "recitation", "seal", "message", "cta"]
     if any(key not in audio_files for key in keys):
         raise VideoError("مقاطع الصوت الخمسة المطلوبة غير مكتملة.")
@@ -774,7 +848,8 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
     hook_timings, timing_sources["hook"] = align_speech_words(content["hook"], boundaries.get("hook"), durations["hook"])
     hook_scenes = commentary_scenes("hook", "", content["hook"], hook_start, hook_end,
                                     [(hook_start + a, hook_start + b, i) for a, b, i in hook_timings],
-                                    width, height, font_path, first_fade_in=0.0)
+                                    width, height, font_path, first_fade_in=0.0,
+                                    mode=commentary_style, caption_y=0.50, caption_size=76)
     commentary_pages["hook"] = len(hook_scenes)
     scenes.extend(hook_scenes)
 
@@ -813,7 +888,8 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
             last_fade_out = 0.0
         key_scenes = commentary_scenes(key, label, content[text_key], start, end,
                                        [(start + a, start + b, i) for a, b, i in timings],
-                                       width, height, font_path, last_fade_out=last_fade_out)
+                                       width, height, font_path, last_fade_out=last_fade_out,
+                                       mode=commentary_style)
         commentary_pages[key] = len(key_scenes)
         scenes.extend(key_scenes)
 
@@ -852,6 +928,7 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                        "target_duration_met": video_duration >= target_min_duration,
                        "padding_seconds": round(max(0, video_duration - total_audio), 3),
                        "dim_strength": float(dim_strength),
+                       "commentary_style": commentary_style,
                        "tts_word_timing": dict(timing_sources),
                        "commentary_pages": commentary_pages,
                        "font_source": {"path": font_path, **_font_license_metadata(font_path)}})
@@ -906,7 +983,7 @@ def validate_video(path: Path, width: int = 1080, height: int = 1920, fps: int =
     }
 
 
-# Tests are embedded to keep the requested source-file count at five.
+# Tests are embedded to keep the source-file count small.
 if __name__ == "__main__":
     import unittest
     from unittest.mock import patch
@@ -958,6 +1035,16 @@ if __name__ == "__main__":
                                 "بسم الله", {"hook": "سؤال", "message": "صدق الله العظيم", "call_to_action": "شارك"},
                                 Path(temp) / "final_output.mp4")
 
+        def test_unknown_commentary_style_is_rejected_before_any_work(self):
+            with tempfile.TemporaryDirectory() as temp:
+                dummy = Path(temp) / "dummy"
+                dummy.write_bytes(b"x" * 1000)
+                audio = {key: dummy for key in ["hook", "recitation", "seal", "message", "cta"]}
+                with self.assertRaisesRegex(VideoError, "commentary_style"):
+                    build_video(dummy, audio, [{"word_index": 0, "start_ms": 0, "end_ms": 500}], "بسم الله",
+                                {"hook": "سؤال", "message": "نص", "call_to_action": "شارك"},
+                                Path(temp) / "final_output.mp4", commentary_style="neon")
+
         def test_final_mp4_probe_checks_video_and_audio_streams(self):
             with tempfile.TemporaryDirectory() as temp:
                 path = Path(temp) / "test.mp4"
@@ -983,8 +1070,10 @@ if __name__ == "__main__":
                 return real_text(self, xy, text, *args, **kwargs)
             with patch.object(ImageDraw.ImageDraw, "text", spy):
                 plain = build_text_layout("ما هو الإيمان بالغيب؟", "فكرة الآية", width=540, height=960)
+                caption = build_caption_layout("ما هو الإيمان بالغيب", width=540, height=960)
                 verse = build_verse_layout("بسم الله الرحمن", "الفاتحة", 1, width=540, height=960)
                 draw_layout(plain, 0)
+                draw_layout(caption, 1)
                 draw_layout(verse, 1)
             self.assertTrue(calls)
             allowed_ornate = {ORNATE_OPEN_BRACKET, ORNATE_CLOSE_BRACKET}
@@ -1186,6 +1275,51 @@ if __name__ == "__main__":
                                        270, 480, discover_font(), first_fade_in=0.0)
             self.assertEqual((len(single), single[0].name, single[0].fade_in), (1, "hook", 0.0))
 
+        # ----- Captions (subtitle style) -----
+        def test_caption_layout_sits_in_the_lower_third_with_a_soft_band_and_thick_outline(self):
+            layout = build_caption_layout("واحد اثنان ثلاثة أربعة خمسة", 540, 960)
+            self.assertEqual((layout.base.size, layout.word_count, len(layout.placements)), ((540, 960), 5, 5))
+            self.assertTrue(all(y > 960 * 0.65 for _, y, _ in layout.placements))
+            self.assertGreaterEqual(layout.stroke, 2)
+            alpha = layout.base.getchannel("A")
+            self.assertEqual(alpha.getpixel((10, 5)), 0)                                    # nothing near the top
+            self.assertGreater(max(alpha.getpixel((10, y)) for y in range(500, 900)), 100)    # band behind the text
+            self.assertNotEqual(draw_layout(layout, None).tobytes(), draw_layout(layout, 2).tobytes())
+            with self.assertRaises(VideoError):
+                draw_layout(layout, 5)
+            hook = build_caption_layout("واحد اثنان ثلاثة", 540, 960, y_center=0.5, size=76)
+            self.assertTrue(all(abs(y - 480) < 120 for _, y, _ in hook.placements))
+
+        def test_caption_layout_rejects_empty_and_overlong_text(self):
+            with self.assertRaises(VideoError):
+                build_caption_layout("  ")
+            with self.assertRaises(VideoError):
+                build_caption_layout(" ".join(["كلمةطويلةجدااا"] * 30), 540, 960)
+
+        def test_caption_pages_hold_two_to_five_words_and_are_gapless(self):
+            for n in range(1, 60):
+                sizes = [len(page) for page in paginate_captions(" ".join(f"w{i}" for i in range(n)))]
+                self.assertTrue(max(sizes) <= CAPTION_MAX_WORDS and (n <= 5 or min(sizes) >= 2), (n, sizes))
+            words = [f"كلمة{i}." if i % 9 == 8 else f"كلمة{i}" for i in range(33)]
+            timings = [(2.0 + i * .4, 2.0 + i * .4 + .35, i) for i in range(33)]
+            scenes = commentary_scenes("message", "x", " ".join(words), 2.0, 16.0, timings, 270, 480,
+                                       discover_font(), mode="captions")
+            self.assertGreaterEqual(len(scenes), 6)
+            self.assertEqual(sum(s.layout.word_count for s in scenes), 33)
+            self.assertEqual((scenes[0].start, scenes[-1].end), (2.0, 16.0))
+            for left, right in zip(scenes, scenes[1:]):
+                self.assertAlmostEqual(left.end, right.start, places=6)
+                self.assertEqual(left.fade_out, 0.0)
+                self.assertEqual(right.fade_in, 0.06)
+            for scene in scenes:
+                self.assertEqual([i for _, _, i in scene.words], list(range(scene.layout.word_count)))
+            hook = commentary_scenes("hook", "", "واحد اثنان ثلاثة أربعة", 0.0, 3.0,
+                                     [(0.1 * i, 0.1 * i + .08, i) for i in range(4)], 270, 480, discover_font(),
+                                     first_fade_in=0.0, mode="captions", caption_y=.5, caption_size=76)
+            self.assertEqual((len(hook), hook[0].name, hook[0].fade_in), (1, "hook", 0.0))
+            with self.assertRaises(VideoError):
+                commentary_scenes("x", "", "a b", 0, 1, [(0, 1, 0), (0, 1, 1)], 270, 480, discover_font(), mode="neon")
+
         # ----- Whole pipeline at a small size -----
         def test_full_build_uses_card_dim_and_reports_timing_sources(self):
             with tempfile.TemporaryDirectory() as temp:
@@ -1214,6 +1348,7 @@ if __name__ == "__main__":
                 self.assertEqual(result["tts_word_timing"]["hook"], "tts_word_boundary")
                 self.assertEqual(result["tts_word_timing"]["message"], "estimated")
                 self.assertEqual(result["commentary_pages"], {"hook": 1, "message": 1, "cta": 1})
+                self.assertEqual(result["commentary_style"], "card")
                 self.assertEqual(result["dim_strength"], 0.30)
 
                 def frame_at(second: float) -> Image.Image:
@@ -1233,6 +1368,42 @@ if __name__ == "__main__":
                 # The dark filter darkens the plain background (0x30 = 48) at the very top of the frame.
                 top_pixel = recitation_frame.getpixel((135, 2))
                 self.assertLess(top_pixel[0], 44)
+
+        def test_full_build_with_captions_shows_short_pages_and_keeps_the_picture_visible(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                             "-i", "color=c=0x2060a0:s=360x640:r=10:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                             str(temp_path / "bg.mp4")])
+                lengths = {"hook": 2.0, "recitation": 2.0, "seal": 1.0, "message": 4.0, "cta": 2.0}
+                audio = {}
+                for name, seconds in lengths.items():
+                    audio[name] = temp_path / f"{name}.wav"
+                    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                                 "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
+                segments = [{"word_index": i, "start_ms": 100 + i * 450, "end_ms": 500 + i * 450} for i in range(4)]
+                content = {"hook": "تعبك الذي لا يراه أحد يسمعه الله",
+                           "message": "هذه الآية تقول لك إن الصبر ليس ضعفًا. ابدأ اليوم بخطوة صغيرة واحدة.",
+                           "call_to_action": "شارك هذا المقطع واجعله صدقة جارية"}
+                output = temp_path / "final_output.mp4"
+                result = build_video(temp_path / "bg.mp4", audio, segments, "بسم الله الرحمن الرحيم", content, output,
+                                     width=270, height=480, fps=10, target_min_duration=10, target_max_duration=60,
+                                     chapter_name="الفاتحة", verse_number=1, dim_strength=0.0,
+                                     commentary_style="captions")
+                self.assertTrue(result["valid"])
+                self.assertEqual(result["commentary_style"], "captions")
+                self.assertGreaterEqual(result["commentary_pages"]["hook"], 2)
+                self.assertGreaterEqual(result["commentary_pages"]["message"], 3)
+                self.assertGreaterEqual(result["commentary_pages"]["cta"], 1)
+                frame = temp_path / "message-frame.png"
+                run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", "6.0",
+                             "-i", str(output), "-frames:v", "1", str(frame)])
+                with Image.open(frame) as image:
+                    picture = image.convert("RGB")
+                    # During the message the middle of the screen is still the background picture (no big card).
+                    middle = picture.getpixel((135, 200))
+                    self.assertGreater(middle[2], 100)                      # still blue-ish background
+                    self.assertGreater(middle[2], middle[0] + 30)
 
         def test_full_build_accepts_a_composed_multi_clip_background(self):
             with tempfile.TemporaryDirectory() as temp:

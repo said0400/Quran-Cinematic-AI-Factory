@@ -22,6 +22,7 @@ from services import (
     quran_words, validate_word_segments,
 )
 from procedural_background import build_timeline, render_background
+from scene_images import SceneImageService
 from video_engine import (
     VideoError, align_speech_words, build_verse_layout, build_video, media_duration, validate_video,
 )
@@ -69,6 +70,7 @@ SPEECH_WORDS_PER_SECOND = 2.3
 MESSAGE_WORDS_FLOOR, MESSAGE_WORDS_CAP = 30, 80
 DESCRIPTION_LIMIT = 1900     # title (<=95) + blank line + description stays under the 2000-char caption limit
 DEFAULT_TTS_VOICE = "ar-EG-ShakirNeural"
+COMMENTARY_STYLES = ("captions", "card")
 PLATFORM_KEYS = ("youtube", "facebook", "make")
 
 
@@ -100,6 +102,7 @@ class Config:
     background_speed: float = 0.75
     min_verse_words: int = 10
     max_recitation_seconds: int = 40
+    commentary_style: str = "captions"
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -144,6 +147,9 @@ class Config:
         height = integer("VIDEO_HEIGHT", 1920, 640, 3840)
         if width * 16 != height * 9 or width % 2 or height % 2:
             raise FactoryError("يجب أن تكون أبعاد الفيديو زوجية وتحافظ على نسبة 9:16.")
+        commentary_style = os.getenv("COMMENTARY_STYLE", "").strip().lower() or "captions"
+        if commentary_style not in COMMENTARY_STYLES:
+            raise FactoryError("COMMENTARY_STYLE يجب أن يكون captions أو card.")
         return cls(
             timezone_name=timezone_name,
             daily_video_count=integer("DAILY_VIDEO_COUNT", 1, 1, 5),
@@ -163,6 +169,7 @@ class Config:
             background_speed=decimal("BACKGROUND_SPEED", 0.75, 0.25, 1.0),
             min_verse_words=integer("MIN_VERSE_WORDS", 10, 1, 100),
             max_recitation_seconds=integer("MAX_RECITATION_SECONDS", 40, 10, 300),
+            commentary_style=commentary_style,
         )
 
 
@@ -588,7 +595,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "hook_words": len(ai["hook"].split()),
             "keywords": len(ai["keywords"]),
             "hashtags": len(ai["hashtags"]),
-		    "visual_scene_count": len(ai["visual_plan"]["scenes"]),
+            "visual_scene_count": len(ai["visual_plan"]["scenes"]),
         }
         generated_texts = (ai["hook"], ai["message"], ai["call_to_action"], ai["title"], ai["description"],
                            " ".join(ai["keywords"]), " ".join(ai["hashtags"]))
@@ -620,7 +627,23 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         video_duration = max(cursor, float(config.target_min))
         message_timings, message_timing_source = align_speech_words(
             ai["message"], tts.word_boundaries.get("message"), durations["message"])
-        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration)
+
+        # One generated picture per scene (free providers); a scene without a picture is drawn procedurally.
+        images = SceneImageService()
+        scene_images = images.generate(ai["visual_plan"], work_dir / "images", config.width, config.height)
+        row["verification"]["checks"]["scene_images"] = {
+            "requested": len(ai["visual_plan"]["scenes"]) + 2,
+            "generated": len(scene_images),
+            "providers": sorted({item["provider"] for item in scene_images.values()}),
+            "notes": images.notes[:12],
+        }
+        for key, item in scene_images.items():
+            media_items.append({"kind": "ai_generated_image", "scene": key, "provider": item["provider"],
+                                "model": item["model"], "prompt": item["prompt"], "sha256": item["sha256"],
+                                "license_url": os.getenv("IMAGE_GEN_LICENSE_URL"),
+                                "license_status": "operator-confirmed current provider terms; AI-generated"})
+
+        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration, images=scene_images)
         background = work_dir / "background.mp4"
         background_info = render_background(
             background, config.width, config.height, config.fps, video_duration, timeline,
@@ -628,7 +651,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         background_info["message_timing_source"] = message_timing_source
         row["verification"]["checks"]["background"] = background_info
         update_record(history, row, report_dir)
-        
+
         output_path = config.output_dir / config.final_video_name
         # Quran word highlighting always uses the source timestamps; the commentary highlighting uses
         # the TTS word boundaries when valid and an estimate otherwise (reported in the video checks).
@@ -638,6 +661,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             target_min_duration=config.target_min, target_max_duration=config.target_max,
             tts_word_boundaries=tts.word_boundaries, chapter_name=verse.chapter_name,
             verse_number=verse.verse, dim_strength=config.dim_strength,
+            commentary_style=config.commentary_style,
         )
         row["video_path"] = str(output_path)
         row["video_sha256"] = sha256_file(output_path)
@@ -791,7 +815,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# Embedded tests keep the repository at exactly five source files.
+# Embedded tests keep the repository at a small, fixed set of source files.
 if __name__ == "__main__":
     if "--test" in sys.argv:
         import unittest
@@ -835,6 +859,15 @@ if __name__ == "__main__":
                         with self.assertRaises(FactoryError):
                             Config.from_env(Path("/tmp/project"))
 
+            def test_commentary_style_defaults_to_captions_and_rejects_unknown_values(self):
+                with patch.dict(os.environ, {"COMMENTARY_STYLE": ""}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).commentary_style, "captions")
+                with patch.dict(os.environ, {"COMMENTARY_STYLE": " Card "}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).commentary_style, "card")
+                with patch.dict(os.environ, {"COMMENTARY_STYLE": "neon"}):
+                    with self.assertRaises(FactoryError):
+                        Config.from_env(Path("/tmp/project"))
+
             def test_background_settings_default_parse_and_reject_out_of_range(self):
                 with patch.dict(os.environ, {}, clear=False):
                     os.environ.pop("BACKGROUND_CLIP_COUNT", None)
@@ -877,17 +910,18 @@ if __name__ == "__main__":
                 entry = [i for i in gemini if i["kind"] == "tts"][0]
                 self.assertEqual((entry["provider"], entry["voice"]), ("gemini-tts (m)", "Algieba"))
 
-            def test_record_sources_lists_every_background_clip(self):
+            def test_record_sources_lists_every_generated_image(self):
                 class Obj:
                     def __init__(self, **kwargs):
                         self.__dict__.update(kwargs)
                 verse = Obj(key="2:3")
                 recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
                 tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
-                clips = [{"kind": "background_video", "video_id": 1}, {"kind": "background_video", "video_id": 2},
-                         {"kind": "background_video", "video_id": 3}]
-                sources = _record_sources(verse, recitation, tafsir, clips, "https://terms", "ar-EG-ShakirNeural")
-                self.assertEqual([item["video_id"] for item in sources if item["kind"] == "background_video"], [1, 2, 3])
+                images = [{"kind": "ai_generated_image", "scene": "opening"}, {"kind": "ai_generated_image", "scene": "scene-1"},
+                          {"kind": "ai_generated_image", "scene": "closing"}]
+                sources = _record_sources(verse, recitation, tafsir, images, "https://terms", "ar-EG-ShakirNeural")
+                self.assertEqual([item["scene"] for item in sources if item["kind"] == "ai_generated_image"],
+                                 ["opening", "scene-1", "closing"])
                 self.assertEqual(sources[-1]["kind"], "tts")
 
             @staticmethod
@@ -1183,13 +1217,13 @@ if __name__ == "__main__":
             def test_make_settings_are_required_only_when_make_publishing_is_enabled(self):
                 base = {
                     "GEMINI_API_KEY": "k", "QF_CLIENT_ID": "i", "QF_CLIENT_SECRET": "s",
-					"QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
-					"RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
-					"TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
-					"TAFSIR_ALLOWLIST": "16|https://example.org/t",
-					"TTS_LICENSE_URL": "https://example.org/tts",
-					"QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
-					"TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true",
+                    "QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
+                    "RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
+                    "TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
+                    "TAFSIR_ALLOWLIST": "16|https://example.org/t",
+                    "TTS_LICENSE_URL": "https://example.org/tts",
+                    "QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
+                    "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true",
                     "TTS_TERMS_CONFIRMED": "true",
                 }
                 with patch.dict(os.environ, {**base, "MAKE_PUBLISH_ENABLED": "false"}):
@@ -1202,6 +1236,25 @@ if __name__ == "__main__":
                                               "MAKE_WEBHOOK_URL": "https://hook.eu1.make.com/abc",
                                               "GITHUB_TOKEN": "t", "GITHUB_REPOSITORY": "o/r"}):
                     validate_generation_environment()
+
+            def test_image_generation_settings_are_never_required_for_production(self):
+                # Pictures are optional: a run without any image configuration must still pass validation.
+                base = {
+                    "GEMINI_API_KEY": "k", "QF_CLIENT_ID": "i", "QF_CLIENT_SECRET": "s",
+                    "QURAN_TEXT_LICENSE_URL": "https://example.org/q", "CHAPTER_RECITER_ID": "7",
+                    "RECITATION_LICENSE_URL": "https://example.org/r", "RECITATION_ALLOWLIST": "7|https://example.org/r",
+                    "TAFSIR_ID": "16", "TAFSIR_LICENSE_URL": "https://example.org/t",
+                    "TAFSIR_ALLOWLIST": "16|https://example.org/t", "TTS_LICENSE_URL": "https://example.org/tts",
+                    "QURAN_TEXT_LICENSE_CONFIRMED": "true", "RECITATION_LICENSE_CONFIRMED": "true",
+                    "TAFSIR_COMMERCIAL_LICENSE_VERIFIED": "true", "TTS_TERMS_CONFIRMED": "true",
+                    "MAKE_PUBLISH_ENABLED": "false", "CLOUDFLARE_ACCOUNT_ID": "", "CLOUDFLARE_API_TOKEN": "",
+                    "IMAGE_GEN_LICENSE_CONFIRMED": "", "IMAGE_GEN_LICENSE_URL": "",
+                }
+                with patch.dict(os.environ, base):
+                    validate_generation_environment()
+                    service = SceneImageService()
+                    self.assertEqual(service.providers, [])
+                    self.assertEqual(service.generate({"opening": {}, "scenes": [], "closing": {}}, Path("/tmp/none"), 1080, 1920), {})
 
             def test_unresolved_platform_id_excludes_verse_from_auto_selection(self):
                 chapter, verse = AUTO_VERSE_POOL[1]

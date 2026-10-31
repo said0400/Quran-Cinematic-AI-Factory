@@ -322,7 +322,7 @@ def already_processed_today(history_rows: list[dict[str, Any]], local_date: str,
     today = [row for row in history_rows if row.get("mode") == "auto" and row.get("local_date") == local_date]
     completed = sum(1 for row in today if row.get("status") == "published")
     if completed >= daily_target:
-        return False
+        return True
     # Known pre-publication failures can be retried the same day. A crashed/in-progress
     # row or uncertain/partial submission blocks fresh uploads until it is recovered.
     return any(row.get("status") in {"started", "generated", "validated", "partially_published"}

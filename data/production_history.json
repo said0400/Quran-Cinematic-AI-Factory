@@ -11412,6 +11412,516 @@
           }
         ]
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 17,
+      "created_at": "2026-10-31T00:10:38.977260+00:00",
+      "last_error": null,
+      "local_date": "2026-10-31",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/17:24",
+          "verse_key": "17:24"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/17.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/17?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:24"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 65.579,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 6,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "sun"
+                ],
+                "end": 6.371,
+                "image": true,
+                "mood": "calm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 20.597,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation",
+                "start": 6.371
+              },
+              {
+                "elements": [
+                  "heart",
+                  "light_rays"
+                ],
+                "end": 30.255,
+                "image": true,
+                "mood": "warm",
+                "name": "message-1",
+                "start": 20.597
+              },
+              {
+                "elements": [
+                  "path",
+                  "clock"
+                ],
+                "end": 41.539,
+                "image": true,
+                "mood": "calm",
+                "name": "message-2",
+                "start": 30.255
+              },
+              {
+                "elements": [
+                  "hands",
+                  "stars"
+                ],
+                "end": 54.648,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-3",
+                "start": 41.539
+              },
+              {
+                "elements": [
+                  "house",
+                  "heart"
+                ],
+                "end": 65.579,
+                "image": true,
+                "mood": "warm",
+                "name": "cta",
+                "start": 54.648
+              }
+            ],
+            "theme_hash": "15b123f0634c0986",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A silhouette of a person standing alone in a quiet room looking out of a large window at a soft sunset, feeling the weight of memories and gratitude.",
+          "provider": "cloudflare",
+          "scene": "opening",
+          "sha256": "7ae8466f147858fa7bb357ce542b44956a00ef7a3e6f7cefb8419441e4786f33"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A warm, soft-lit interior scene showing two chairs side by side, representing companionship and care, with gentle light rays filtering through.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "86dd7ed929c7f1c5fb3644b3b208f7bc3991455882ed4db8489eebc8b4b7c9c5"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A busy path with blurred movement of shadows, representing the rush of daily life, with a single person standing still in the middle.",
+          "provider": "cloudflare",
+          "scene": "scene-2",
+          "sha256": "0382d5a7fed0516968cc9fdda3f650702fe24b17170420458f17eb4ed6f217fc"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A pair of hands gently held together in a gesture of prayer or offering, set against a soft, hopeful morning sky.",
+          "provider": "cloudflare",
+          "scene": "scene-3",
+          "sha256": "7d3c4c885a78786536bf6203171d9084fc3b861ca0780dba3bd9dd2ea144301d"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A cozy house silhouette seen from a distance at twilight, with a warm light glowing from the window, symbolizing family and connection.",
+          "provider": "cloudflare",
+          "scene": "closing",
+          "sha256": "84c6e2ebdc476ad648e8f259b8430671715a5fbccf8e85b8d86d0e4d1738da2a"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "d2618bc86d2108b5c7e6f94de286f8c3790621126911b1a779faf35b85014a30",
+          "status": "published",
+          "video_id": "video-d2618bc86d2108b5",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-d2618bc86d2108b5/video-d2618bc86d2108b5.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في هذا المقطع نتأمل معنى التواضع والرحمة تجاه الوالدين، وكيف نترجم هذا الشعور إلى واقع ملموس في حياتنا اليومية. نستعرض أهمية استحضار فضل من تعبوا في تربيتنا ونحن صغار، وكيف يكون الدعاء واللين هما السبيل الأجمل لرد الجميل. هذا المحتوى يهدف إلى تعزيز مشاعر الامتنان والبر، ويقدم خطوة عملية بسيطة يمكن لكل شخص القيام بها تجاه والديه. شارك هذا المقطع مع أحبائك لتعم الفائدة وتتجدد مشاعر الوفاء والرحمة في القلوب.\n\nالكلمات المفتاحية: بر الوالدين، فضل الوالدين، طاعة الوالدين، الرحمة بالوالدين، رد الجميل، الامتنان للوالدين، تربية الأبناء، اللين مع الوالدين، الدعاء للوالدين، الوفاء للوالدين، التواضع للوالدين، حقوق الوالدين\n\n#بر_الوالدين #الرحمة #الوفاء #امتنان #تربية #عائلة #مشاعر #حياة #ParentalLove #Kindness",
+        "title": "كيف ترد الجميل لمن أفنوا حياتهم من أجلك"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-31-17-24-bea0ea033d-report.json",
+      "run_id": "2026-10-31-17-24-bea0ea033d",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:24"
+      },
+      "status": "published",
+      "updated_at": "2026-10-31T00:14:42.452812+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 65.579,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 6,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "sun"
+                ],
+                "end": 6.371,
+                "image": true,
+                "mood": "calm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 20.597,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation",
+                "start": 6.371
+              },
+              {
+                "elements": [
+                  "heart",
+                  "light_rays"
+                ],
+                "end": 30.255,
+                "image": true,
+                "mood": "warm",
+                "name": "message-1",
+                "start": 20.597
+              },
+              {
+                "elements": [
+                  "path",
+                  "clock"
+                ],
+                "end": 41.539,
+                "image": true,
+                "mood": "calm",
+                "name": "message-2",
+                "start": 30.255
+              },
+              {
+                "elements": [
+                  "hands",
+                  "stars"
+                ],
+                "end": 54.648,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-3",
+                "start": 41.539
+              },
+              {
+                "elements": [
+                  "house",
+                  "heart"
+                ],
+                "end": 65.579,
+                "image": true,
+                "mood": "warm",
+                "name": "cta",
+                "start": 54.648
+              }
+            ],
+            "theme_hash": "15b123f0634c0986",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 12,
+            "keywords": 12,
+            "message_word_budget": [
+              52,
+              75
+            ],
+            "message_words": 61,
+            "topic": "بر الوالدين",
+            "visual_scene_count": 3
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يلتزم بالمعنى التفسيري للآية الكريمة، حيث ركز على التواضع واللين والرحمة والدعاء للوالدين، ولم يضف أحكاماً شرعية أو وعوداً بأجور غيبية محددة لم تذكر في المصدر."
+          },
+          "recitation_api_verse_key": "17:24",
+          "recitation_duration_seconds": 11.855,
+          "scene_images": {
+            "generated": 5,
+            "notes": [],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 5
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 12,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 65.579,
+            "audio_segments": {
+              "cta": {
+                "end": 65.579,
+                "start": 54.648
+              },
+              "hook": {
+                "end": 6.371,
+                "start": 0.0
+              },
+              "message": {
+                "end": 54.648,
+                "start": 20.597
+              },
+              "recitation": {
+                "end": 18.226,
+                "start": 6.371
+              },
+              "seal": {
+                "end": 20.597,
+                "start": 18.226
+              }
+            },
+            "commentary_pages": {
+              "cta": 4,
+              "hook": 3,
+              "message": 13
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 65.6,
+            "file_size_bytes": 18316786,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 11.855,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 12
+        },
+        "status": "validated"
+      },
+      "verse": 24,
+      "verse_key": "17:24",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "d2618bc86d2108b5c7e6f94de286f8c3790621126911b1a779faf35b85014a30",
+      "visual_plan": {
+        "closing": {
+          "elements": [
+            {
+              "animation": "none",
+              "position": "center",
+              "size": "medium",
+              "type": "house"
+            },
+            {
+              "animation": "grow",
+              "position": "right",
+              "size": "medium",
+              "type": "heart"
+            }
+          ],
+          "image_prompt": "A cozy house silhouette seen from a distance at twilight, with a warm light glowing from the window, symbolizing family and connection.",
+          "mood": "warm"
+        },
+        "opening": {
+          "elements": [
+            {
+              "animation": "none",
+              "position": "center",
+              "size": "medium",
+              "type": "sitting_person"
+            },
+            {
+              "animation": "fade_in",
+              "position": "right",
+              "size": "medium",
+              "type": "sun"
+            }
+          ],
+          "image_prompt": "A silhouette of a person standing alone in a quiet room looking out of a large window at a soft sunset, feeling the weight of memories and gratitude.",
+          "mood": "calm"
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "pulse",
+                "position": "center",
+                "size": "medium",
+                "type": "heart"
+              },
+              {
+                "animation": "float",
+                "position": "right",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A warm, soft-lit interior scene showing two chairs side by side, representing companionship and care, with gentle light rays filtering through.",
+            "mood": "warm",
+            "text_span": "المعنى هو أن تكون",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              },
+              {
+                "animation": "float",
+                "position": "left",
+                "size": "medium",
+                "type": "clock"
+              }
+            ],
+            "image_prompt": "A busy path with blurred movement of shadows, representing the rush of daily life, with a single person standing still in the middle.",
+            "mood": "calm",
+            "text_span": "في زحام يومك، قد",
+            "word_start": 17
+          },
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "center",
+                "size": "medium",
+                "type": "hands"
+              },
+              {
+                "animation": "fade_in",
+                "position": "far_right",
+                "size": "medium",
+                "type": "stars"
+              }
+            ],
+            "image_prompt": "A pair of hands gently held together in a gesture of prayer or offering, set against a soft, hopeful morning sky.",
+            "mood": "dawn",
+            "text_span": "ابدأ اليوم بكلمة طيبة",
+            "word_start": 39
+          }
+        ]
+      }
     }
   ],
   "version": 1

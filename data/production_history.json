@@ -11922,6 +11922,524 @@
           }
         ]
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-10-31T00:40:09.143903+00:00",
+      "last_error": null,
+      "local_date": "2026-10-31",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/2:3",
+          "verse_key": "2:3"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/2?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 68.789,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 6,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "cloud"
+                ],
+                "end": 7.171,
+                "image": true,
+                "mood": "storm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 21.287,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation",
+                "start": 7.171
+              },
+              {
+                "elements": [
+                  "light_rays",
+                  "door"
+                ],
+                "end": 32.104,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-1",
+                "start": 21.287
+              },
+              {
+                "elements": [
+                  "path",
+                  "tree"
+                ],
+                "end": 39.089,
+                "image": true,
+                "mood": "day",
+                "name": "message-2",
+                "start": 32.104
+              },
+              {
+                "elements": [
+                  "seed",
+                  "coin"
+                ],
+                "end": 57.578,
+                "image": true,
+                "mood": "warm",
+                "name": "message-3",
+                "start": 39.089
+              },
+              {
+                "elements": [
+                  "hands",
+                  "stars",
+                  "heart"
+                ],
+                "end": 68.789,
+                "image": true,
+                "mood": "warm",
+                "name": "cta",
+                "start": 57.578
+              }
+            ],
+            "theme_hash": "54cfaee4ab126d6a",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A silhouette of a person standing alone on a dark, windy cliff looking at a vast, foggy horizon, representing the feeling of uncertainty and the search for truth beyond the physical world.",
+          "provider": "cloudflare",
+          "scene": "opening",
+          "sha256": "363678e322f4060e65d016860379e0f112e1c246dd41cfe508b90a9aa5bb2c79"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A soft, golden light breaking through dark clouds over a calm landscape, symbolizing the clarity and peace that comes from believing in truths beyond the physical realm.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "e8f3f354553cdd5611234920e922c3d7a141de1ecae3edb39661433326f4a623"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A peaceful path leading towards a distant, serene horizon, with soft sunlight filtering through trees, representing the consistency and stability of performing prayers.",
+          "provider": "cloudflare",
+          "scene": "scene-2",
+          "sha256": "db79dd2a473ad9967f48732bcab75aba13507cebcbe3888f35c19c874b2b3970"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A small seed being planted in fertile soil, with gentle light shining down, symbolizing the act of giving and the growth that comes from charity.",
+          "provider": "cloudflare",
+          "scene": "scene-3",
+          "sha256": "0995ae070ea37e77617f2322db7cd31fb574095a72b8f8773347573c98584f08"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A pair of hands gently cupped together under a starry night sky, with a soft glow emanating from them, representing connection, care, and the act of sharing goodness.",
+          "provider": "cloudflare",
+          "scene": "closing",
+          "sha256": "607a6b3ae55489bfc21c07dcfe2958d7cd0b4420a7a6551d24c706fcffa7616d"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "manual",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "status": "published",
+          "video_id": "video-d599eae83f06873e",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-d599eae83f06873e/video-d599eae83f06873e.mp4"
+        },
+        "youtube": {
+          "attempts": 2,
+          "last_error": "المتغير المطلوب YOUTUBE_CLIENT_ID غير مضبوط.",
+          "status": "failed",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في ظل انشغالنا الدائم بالماديات، نغفل عن حقائق كبرى لا تدركها الحواس. هذا المقطع يوضح معنى الإيمان بالغيب وكيف يتحول هذا التصديق إلى أفعال يومية تمنح حياتك معنى وعمقاً. ستتعرف على أهمية الصلاة في وقتها وأثر العطاء في استقامة النفس، وكيف يمكن لهذه الخطوات البسيطة أن تغير نظرتك للواقع وتمنحك سكينة حقيقية وسط ضغوط الحياة اليومية.\n\nهذا المحتوى يقدم إضاءة هادئة حول كيفية الربط بين التصديق القلبي والعمل الجوارحي، بعيداً عن التعقيد. إذا وجدت في هذه الكلمات ما يلامس قلبك، شاركها مع من تحب لتعم الفائدة.\n\nالكلمات المفتاحية: الإيمان بالغيب، طمأنينة القلب، أثر الصلاة، فضل الصدقة، معنى الحياة، الثبات على الحق، تزكية النفس، العمل الصالح، السكينة النفسية، التصديق بالله، الرزق والإنفاق\n\n#طمأنينة #إيمان #سكينة #تأملات #حياة_أفضل #عطاء #تطوير_الذات #رسالة_إيجابية #Faith #Peace",
+        "title": "كيف تجد الطمأنينة في عالم لا يؤمن إلا بما يراه"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-10-31-2-3-5ca7aaf414-report.json",
+      "run_id": "2026-10-31-2-3-5ca7aaf414",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:3"
+      },
+      "status": "published",
+      "updated_at": "2026-10-31T00:42:54.455891+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 68.789,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 6,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "sitting_person",
+                  "cloud"
+                ],
+                "end": 7.171,
+                "image": true,
+                "mood": "storm",
+                "name": "hook",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 21.287,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation",
+                "start": 7.171
+              },
+              {
+                "elements": [
+                  "light_rays",
+                  "door"
+                ],
+                "end": 32.104,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-1",
+                "start": 21.287
+              },
+              {
+                "elements": [
+                  "path",
+                  "tree"
+                ],
+                "end": 39.089,
+                "image": true,
+                "mood": "day",
+                "name": "message-2",
+                "start": 32.104
+              },
+              {
+                "elements": [
+                  "seed",
+                  "coin"
+                ],
+                "end": 57.578,
+                "image": true,
+                "mood": "warm",
+                "name": "message-3",
+                "start": 39.089
+              },
+              {
+                "elements": [
+                  "hands",
+                  "stars",
+                  "heart"
+                ],
+                "end": 68.789,
+                "image": true,
+                "mood": "warm",
+                "name": "cta",
+                "start": 57.578
+              }
+            ],
+            "theme_hash": "54cfaee4ab126d6a",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 12,
+            "keywords": 11,
+            "message_word_budget": [
+              51,
+              74
+            ],
+            "message_words": 62,
+            "topic": null,
+            "visual_scene_count": 3
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص التزم بالمعاني الواردة في الآية والتفسير المرفق، حيث ربط الإيمان بالغيب بتجاوز حدود الحواس، وربط الصلاة والإنفاق بالعمل الجوارحي المترجم للإيمان، ولم يضف أحكاماً شرعية أو وعوداً غيبية غير موجودة في المصدر."
+          },
+          "recitation_api_verse_key": "2:3",
+          "recitation_duration_seconds": 11.905,
+          "scene_images": {
+            "generated": 5,
+            "notes": [],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 5
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 8,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 68.789,
+            "audio_segments": {
+              "cta": {
+                "end": 68.789,
+                "start": 57.578
+              },
+              "hook": {
+                "end": 7.171,
+                "start": 0.0
+              },
+              "message": {
+                "end": 57.578,
+                "start": 21.287
+              },
+              "recitation": {
+                "end": 19.076,
+                "start": 7.171
+              },
+              "seal": {
+                "end": 21.287,
+                "start": 19.076
+              }
+            },
+            "commentary_pages": {
+              "cta": 4,
+              "hook": 3,
+              "message": 13
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 68.8,
+            "file_size_bytes": 23417328,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 11.905,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 8
+        },
+        "status": "validated"
+      },
+      "verse": 3,
+      "verse_key": "2:3",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "cd3144bec260b52d1a37ef085f19f5279a067094036f5cb07a450965bbdad10c",
+      "visual_plan": {
+        "closing": {
+          "elements": [
+            {
+              "animation": "pulse",
+              "position": "center",
+              "size": "medium",
+              "type": "hands"
+            },
+            {
+              "animation": "float",
+              "position": "right",
+              "size": "medium",
+              "type": "stars"
+            },
+            {
+              "animation": "fade_in",
+              "position": "left",
+              "size": "medium",
+              "type": "heart"
+            }
+          ],
+          "image_prompt": "A pair of hands gently cupped together under a starry night sky, with a soft glow emanating from them, representing connection, care, and the act of sharing goodness.",
+          "mood": "warm"
+        },
+        "opening": {
+          "elements": [
+            {
+              "animation": "none",
+              "position": "center",
+              "size": "medium",
+              "type": "sitting_person"
+            },
+            {
+              "animation": "float",
+              "position": "right",
+              "size": "medium",
+              "type": "cloud"
+            }
+          ],
+          "image_prompt": "A silhouette of a person standing alone on a dark, windy cliff looking at a vast, foggy horizon, representing the feeling of uncertainty and the search for truth beyond the physical world.",
+          "mood": "storm"
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              },
+              {
+                "animation": "fade_in",
+                "position": "right",
+                "size": "medium",
+                "type": "door"
+              }
+            ],
+            "image_prompt": "A soft, golden light breaking through dark clouds over a calm landscape, symbolizing the clarity and peace that comes from believing in truths beyond the physical realm.",
+            "mood": "dawn",
+            "text_span": "هذا المعنى يفتح",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "walk",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              },
+              {
+                "animation": "none",
+                "position": "left",
+                "size": "medium",
+                "type": "tree"
+              }
+            ],
+            "image_prompt": "A peaceful path leading towards a distant, serene horizon, with soft sunlight filtering through trees, representing the consistency and stability of performing prayers.",
+            "mood": "day",
+            "text_span": "حين تلتزم بأداء",
+            "word_start": 17
+          },
+          {
+            "elements": [
+              {
+                "animation": "grow",
+                "position": "center",
+                "size": "medium",
+                "type": "seed"
+              },
+              {
+                "animation": "float",
+                "position": "right",
+                "size": "medium",
+                "type": "coin"
+              }
+            ],
+            "image_prompt": "A small seed being planted in fertile soil, with gentle light shining down, symbolizing the act of giving and the growth that comes from charity.",
+            "mood": "warm",
+            "text_span": "وحين تخرج مما",
+            "word_start": 29
+          }
+        ]
+      }
     }
   ],
   "version": 1

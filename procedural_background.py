@@ -30,7 +30,7 @@ from PIL import Image, ImageDraw
 GROUND_Y = 0.84
 SKY_Y = 0.15
 APPEAR_SECONDS = 0.9
-XFADE_SECONDS = 0.6
+XFADE_SECONDS = 0.4
 MIN_SCENE_SECONDS = 1.6
 ASSET_ROOT = Path(__file__).resolve().parent / "assets" / "visuals"
 
@@ -535,52 +535,151 @@ def frames(width: int, height: int, fps: int, duration: float, timeline: list[di
 
 
 # ------------------------------------------------------------------ script -> timeline
+MAX_SHOT_SECONDS = 3.2        # a picture is held about 2.5-3.2 s; a longer shot is cut into several crops
+SPLIT_THRESHOLD = 1.35
+RECITATION_SHOT_SECONDS = 4.0
+OPENING_MIN_SHOT_SECONDS = 1.2      # the hook may cut faster than the rest to grab attention
+DEFAULT_ELEMENTS = ({"type": "light_rays", "position": "center", "animation": "fade_in", "size": "medium"},)
+
+
+def _segment_shots(shots: list[dict[str, Any]], timings: list[tuple[float, float, int]] | None, start: float,
+                   end: float, key_prefix: str, min_len: float = MIN_SCENE_SECONDS) -> list[dict[str, Any]]:
+    """Cut one spoken segment into shots.
+
+    With `timings` (the message) each shot opens at the word it is bound to; without them (the hook
+    and the call to action, whose wording is not known to the planner) the shots share the segment
+    evenly. The first shot always opens the segment; a shot that would start too close to the
+    previous one is merged into it.
+    """
+    kept: list[tuple[float, dict[str, Any], int]] = []
+    for position, shot in enumerate(shots):
+        if position == 0:
+            shot_start = start
+        elif timings is None:
+            shot_start = start + (end - start) * position / len(shots)
+        else:
+            index = shot.get("word_start")
+            if not isinstance(index, int) or not 0 <= index < len(timings):
+                continue
+            shot_start = start + timings[index][0]
+        if kept and shot_start - kept[-1][0] < min_len:
+            continue
+        kept.append((shot_start, shot, position))
+    if len(kept) > 1 and end - kept[-1][0] < min_len:
+        kept.pop()
+    if not kept:
+        raise ValueError("لا توجد لقطات صالحة لهذا المقطع.")
+    entries = []
+    for number, (shot_start, shot, position) in enumerate(kept):
+        shot_end = kept[number + 1][0] if number + 1 < len(kept) else end
+        scene = {**shot, "elements": list(shot.get("elements") or DEFAULT_ELEMENTS)}
+        entries.append({"start": shot_start, "end": shot_end, "scene": scene, "image_key": f"{key_prefix}-{position + 1}"})
+    return entries
+
+
+def _split_long(entries: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
+    """A shot longer than ~4.3 s becomes several equal parts, each with its own camera move on the same picture."""
+    result: list[dict[str, Any]] = []
+    for entry in entries:
+        length = entry["end"] - entry["start"]
+        parts = 1 if length <= MAX_SHOT_SECONDS * SPLIT_THRESHOLD else math.ceil(length / MAX_SHOT_SECONDS)
+        for part in range(parts):
+            result.append({**entry, "name": f"{name}-{len(result) + 1}",
+                           "start": round(entry["start"] + length * part / parts, 3),
+                           "end": round(entry["start"] + length * (part + 1) / parts, 3),
+                           "image": None, "calm": False})
+    return result
+
+
+def shot_index(plan: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Every shot of the plan by its image key: opening-N, scene-N, closing-N."""
+    index: dict[str, dict[str, Any]] = {}
+    for number, shot in enumerate((plan.get("opening") or {}).get("shots", []), start=1):
+        index[f"opening-{number}"] = shot
+    for number, shot in enumerate(plan.get("scenes", []), start=1):
+        index[f"scene-{number}"] = shot
+    for number, shot in enumerate((plan.get("closing") or {}).get("shots", []), start=1):
+        index[f"closing-{number}"] = shot
+    return index
+
+
+def timeline_image_keys(timeline: list[dict[str, Any]]) -> list[str]:
+    return list(dict.fromkeys(entry["image_key"] for entry in timeline))
+
+
+def pick_image_keys(keys: list[str], limit: int) -> list[str]:
+    """Which shots get a generated picture when the budget is smaller than the shot count.
+
+    The opening and closing shots always come first; the message shots are sampled evenly.
+    """
+    keys = list(dict.fromkeys(keys))
+    if len(keys) <= limit:
+        return keys
+    fixed = [key for key in keys if not key.startswith("scene-")][:max(0, limit)]
+    middle = [key for key in keys if key.startswith("scene-")]
+    room = max(0, limit - len(fixed))
+    chosen: set[str] = set()
+    if room and middle:
+        step = len(middle) / room
+        chosen = {middle[min(len(middle) - 1, int(i * step))] for i in range(room)}
+    keep = set(fixed) | chosen
+    return [key for key in keys if key in keep]
+
+
+def apply_images(timeline: list[dict[str, Any]], images: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach generated pictures; a shot without one reuses the nearest picture instead of switching style."""
+    for entry in timeline:
+        found = (images.get(entry["image_key"]) or {}).get("path")
+        entry["image"], entry["reused_image"] = found, False
+    last = None
+    for entry in timeline:
+        if entry["image"]:
+            last = entry["image"]
+        elif last:
+            entry["image"], entry["reused_image"] = last, True
+    following = None
+    for entry in reversed(timeline):
+        if entry["image"] and not entry["reused_image"]:
+            following = entry["image"]
+        elif not entry["image"] and following:
+            entry["image"], entry["reused_image"] = following, True
+    return timeline
+
+
 def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, float, int]],
                    intervals: dict[str, tuple[float, float]], duration: float,
                    images: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
-    """Turn the validated plan into absolute, gap-free scene intervals.
+    """Turn the validated plan into absolute, gap-free shots: a new picture about every 2.5-3 seconds.
 
-    `message_timings` are the voice-over word timings RELATIVE to the message audio (as returned by
-    video_engine.align_speech_words); `intervals` are the absolute (start, end) of each audio
-    segment (hook, recitation, seal, message, cta) exactly as build_video lays them out.
+    The message shots open at the words they are bound to (`message_timings` are RELATIVE to the
+    message audio, as returned by video_engine.align_speech_words); the hook and call-to-action shots
+    share their segment evenly. `intervals` are the absolute (start, end) of each audio segment exactly
+    as build_video lays them out. During the recitation the opening pictures come back one after
+    another under a dark veil.
     """
     for key in ("hook", "recitation", "seal", "message", "cta"):
         if key not in intervals:
             raise ValueError(f"فترة الصوت {key} مفقودة.")
-    images = images or {}
-    message_start, message_end = intervals["message"]
-    kept: list[tuple[float, dict[str, Any], int]] = []
-    for position, scene in enumerate(plan["scenes"]):
-        if position == 0:
-            start = message_start                          # the first scene opens with the message
-        else:
-            index = scene.get("word_start")
-            if not isinstance(index, int) or not 0 <= index < len(message_timings):
-                continue
-            start = message_start + message_timings[index][0]
-        if kept and start - kept[-1][0] < MIN_SCENE_SECONDS:
-            continue                                       # too close to the previous scene: merge
-        kept.append((start, scene, position))
-    if len(kept) > 1 and message_end - kept[-1][0] < MIN_SCENE_SECONDS:
-        kept.pop()
-    if not kept:
-        raise ValueError("لا توجد مشاهد صالحة للرسالة.")
-    calm = {"mood": plan["opening"]["mood"],
-            "elements": [{"type": "light_rays", "position": "center", "animation": "fade_in", "size": "medium"}]}
-    entries: list[dict[str, Any]] = []
-
-    def add(name: str, start: float, end: float, scene: dict[str, Any], image_key: str, calm: bool = False) -> None:
-        if end > start + 1e-6:
-            image = images.get(image_key)
-            entries.append({"name": name, "start": round(start, 3), "end": round(end, 3), "scene": scene,
-                            "image_key": image_key, "image": image["path"] if image else None, "calm": calm})
-
-    add("hook", *intervals["hook"], plan["opening"], "opening")
-    add("recitation", intervals["recitation"][0], intervals["seal"][1], calm, "opening", calm=True)
-    for number, (start, scene, position) in enumerate(kept):
-        end = kept[number + 1][0] if number + 1 < len(kept) else message_end
-        add(f"message-{number + 1}", start, end, scene, f"scene-{position + 1}")
-    add("cta", intervals["cta"][0], max(duration, intervals["cta"][1]), plan["closing"], "closing")
+    hook = _split_long(_segment_shots(plan["opening"]["shots"], None, *intervals["hook"], "opening",
+                                      min_len=OPENING_MIN_SHOT_SECONDS), "hook")
+    message = _split_long(_segment_shots(plan["scenes"], message_timings, *intervals["message"], "scene"), "message")
+    cta_end = max(duration, intervals["cta"][1])
+    cta = _split_long(_segment_shots(plan["closing"]["shots"], None, intervals["cta"][0], cta_end, "closing"), "cta")
+    rec_start, rec_end = intervals["recitation"][0], intervals["seal"][1]
+    opening_keys = list(dict.fromkeys(entry["image_key"] for entry in hook))
+    mood_of = {entry["image_key"]: entry["scene"]["mood"] for entry in hook}
+    parts = max(1, int(round((rec_end - rec_start) / RECITATION_SHOT_SECONDS)))
+    recitation = []
+    for part in range(parts):
+        key = opening_keys[part % len(opening_keys)]
+        recitation.append({"name": f"recitation-{part + 1}",
+                           "start": round(rec_start + (rec_end - rec_start) * part / parts, 3),
+                           "end": round(rec_start + (rec_end - rec_start) * (part + 1) / parts, 3),
+                           "scene": {"mood": mood_of[key], "elements": list(DEFAULT_ELEMENTS)},
+                           "image_key": key, "image": None, "calm": True})
+    entries = [*hook, *recitation, *message, *cta]
+    if images:
+        apply_images(entries, images)
     return entries
 
 
@@ -638,18 +737,28 @@ if __name__ == "__main__":
     def element(kind, position="center", animation="fade_in", size="medium"):
         return {"type": kind, "position": position, "animation": animation, "size": size}
 
+    def shot(mood, *els, start=None, prompt=""):
+        out = {"mood": mood, "elements": list(els) or [element("light_rays")], "image_prompt": prompt}
+        if start is not None:
+            out["word_start"] = start
+        return out
+
     def sample_plan():
-        scene = lambda mood, *els, start=None: {"mood": mood, "elements": list(els), **({"word_start": start} if start is not None else {})}
-        return {"opening": scene("night", element("sitting_person", "center"), element("moon", "right")),
-                "scenes": [scene("storm", element("cloud"), element("rain"), element("person", "left", "walk"), start=0),
-                           scene("dawn", element("sun", "right"), element("path", "center", "draw" if False else "fade_in"), start=10),
-                           scene("day", element("seed", "center", "grow"), element("tree", "right", "grow"), start=22)],
-                "closing": scene("warm", element("heart"), element("hands", "left"))}
+        return {"opening": {"shots": [shot("night", element("sitting_person"), element("moon", "right"), start=0),
+                                      shot("storm", element("cloud"), element("rain"), start=6)]},
+                "scenes": [shot("storm", element("cloud"), element("rain"), element("person", "left", "walk"), start=0),
+                           shot("dawn", element("sun", "right"), element("path", "center"), start=10),
+                           shot("day", element("seed", "center", "grow"), element("tree", "right", "grow"), start=22),
+                           shot("warm", element("heart"), element("hands", "left"), start=30)],
+                "closing": {"shots": [shot("warm", element("heart"), element("hands", "left"), start=0)]}}
 
     def timings(count, step=.4):
         return [(i * step, i * step + step - .05, i) for i in range(count)]
 
-    INTERVALS = {"hook": (0.0, 3.0), "recitation": (3.0, 15.0), "seal": (15.0, 17.0), "message": (17.0, 37.0), "cta": (37.0, 42.0)}
+    INTERVALS = {"hook": (0.0, 6.0), "recitation": (6.0, 18.0), "seal": (18.0, 20.0), "message": (20.0, 44.0), "cta": (44.0, 50.0)}
+
+    def line_for(plan=None, **kwargs):
+        return build_timeline(plan or sample_plan(), timings(60), INTERVALS, 50.0, **kwargs)
 
     class BackgroundTests(unittest.TestCase):
         def test_every_element_type_renders_with_every_animation(self):
@@ -668,29 +777,77 @@ if __name__ == "__main__":
             changed = [y for y in range(320) for x in range(0, 180, 3) if a.getpixel((x, y)) != b.getpixel((x, y))]
             self.assertTrue(changed and min(changed) > 320 * .60)
 
-        def test_timeline_changes_scene_exactly_when_the_sentence_is_spoken(self):
-            line = build_timeline(sample_plan(), timings(50), INTERVALS, 42.0)
-            names = [e["name"] for e in line]
-            self.assertEqual(names, ["hook", "recitation", "message-1", "message-2", "message-3", "cta"])
-            self.assertAlmostEqual(line[3]["start"], 17.0 + 10 * .4, places=3)
-            self.assertAlmostEqual(line[4]["start"], 17.0 + 22 * .4, places=3)
-            self.assertEqual(line[0]["start"], 0.0)
-            self.assertEqual(line[-1]["end"], 42.0)
+        def test_timeline_cuts_exactly_when_each_phrase_is_spoken_and_is_gap_free(self):
+            line = line_for()
+            message = [e for e in line if e["name"].startswith("message")]
+            self.assertEqual(timeline_image_keys(message), ["scene-1", "scene-2", "scene-3", "scene-4"])
+            starts = {e["image_key"]: e["start"] for e in reversed(message)}
+            for key, expected in (("scene-1", 20.0), ("scene-2", 20.0 + 10 * .4), ("scene-3", 20.0 + 22 * .4), ("scene-4", 20.0 + 30 * .4)):
+                self.assertAlmostEqual(starts[key], expected, places=3)
+            hook = [e for e in line if e["name"].startswith("hook")]
+            self.assertEqual(timeline_image_keys(hook), ["opening-1", "opening-2"])
+            self.assertAlmostEqual([e for e in hook if e["image_key"] == "opening-2"][0]["start"], 3.0, places=3)   # even split of 6 s
+            self.assertEqual((line[0]["start"], line[-1]["end"]), (0.0, 50.0))
             for left, right in zip(line, line[1:]):
-                self.assertAlmostEqual(left["end"], right["start"], places=3)       # gap-free
+                self.assertAlmostEqual(left["end"], right["start"], places=3)
 
-        def test_timeline_merges_scenes_that_are_too_close_and_extends_the_last_cta(self):
-            plan = sample_plan(); plan["scenes"][1]["word_start"] = 2          # 0.8s after the first: merged away
-            line = build_timeline(plan, timings(50), INTERVALS, 45.0)
-            self.assertEqual([e["name"] for e in line if e["name"].startswith("message")], ["message-1", "message-2"])
-            self.assertEqual(line[-1]["end"], 45.0)
+        def test_no_picture_is_held_much_longer_than_three_seconds_outside_the_recitation(self):
+            for entry in line_for():
+                limit = RECITATION_SHOT_SECONDS * 1.5 if entry["calm"] else MAX_SHOT_SECONDS * SPLIT_THRESHOLD
+                self.assertLessEqual(entry["end"] - entry["start"], limit + 0.01, entry["name"])
+            names = [e["name"] for e in line_for() if e["name"].startswith("message")]
+            self.assertGreaterEqual(len(names), 8)                     # ~24 s of message => a new picture every ~2.5-3 s
+
+        def test_recitation_cycles_the_opening_pictures_under_a_veil(self):
+            rec = [e for e in line_for() if e["name"].startswith("recitation")]
+            self.assertEqual(len(rec), 4)
+            self.assertEqual([e["image_key"] for e in rec], ["opening-1", "opening-2", "opening-1", "opening-2"])
+            self.assertTrue(all(e["calm"] for e in rec))
+
+        def test_timeline_merges_shots_that_are_too_close_and_keeps_fast_hook_cuts(self):
+            plan = sample_plan(); plan["scenes"][1]["word_start"] = 2          # 0.8 s after the first: merged away
+            self.assertEqual(timeline_image_keys([e for e in line_for(plan) if e["name"].startswith("message")]),
+                             ["scene-1", "scene-3", "scene-4"])
+            short = dict(INTERVALS, hook=(0.0, 2.0), recitation=(2.0, 18.0))      # a 2 s hook: 1.0 s per shot is too short
+            fast = build_timeline(sample_plan(), timings(60), short, 50.0)
+            self.assertEqual(timeline_image_keys([e for e in fast if e["name"].startswith("hook")]), ["opening-1"])
+            ok = dict(INTERVALS, hook=(0.0, 2.6), recitation=(2.6, 18.0))         # 1.3 s per shot is allowed for the hook
+            self.assertEqual(timeline_image_keys([e for e in build_timeline(sample_plan(), timings(60), ok, 50.0)
+                                                  if e["name"].startswith("hook")]), ["opening-1", "opening-2"])
+            self.assertEqual(fast[-1]["end"], 50.0)
             with self.assertRaises(ValueError):
-                build_timeline(plan, timings(50), {"hook": (0, 1)}, 10.0)
+                build_timeline(sample_plan(), timings(60), {"hook": (0, 1)}, 10.0)
+
+        def test_shot_index_pick_image_keys_and_apply_images(self):
+            plan = sample_plan()
+            self.assertEqual(sorted(shot_index(plan)), ["closing-1", "opening-1", "opening-2", "scene-1", "scene-2", "scene-3", "scene-4"])
+            keys = ["opening-1", "opening-2", *[f"scene-{i}" for i in range(1, 13)], "closing-1"]
+            self.assertEqual(pick_image_keys(keys, 99), keys)
+            picked = pick_image_keys(keys, 8)
+            self.assertEqual(len(picked), 8)
+            self.assertTrue({"opening-1", "opening-2", "closing-1"} <= set(picked))
+            self.assertEqual(picked, [k for k in keys if k in picked])           # order preserved
+            self.assertEqual(len(pick_image_keys(keys, 2)), 2)
+            line = line_for()
+            apply_images(line, {"opening-1": {"path": "/x/o1.jpg"}, "scene-2": {"path": "/x/s2.jpg"}})
+            by_key = {}
+            for e in line:
+                by_key.setdefault(e["image_key"], e)
+            self.assertEqual(by_key["opening-1"]["image"], "/x/o1.jpg")
+            self.assertFalse(by_key["opening-1"]["reused_image"])
+            self.assertEqual(by_key["opening-2"]["image"], "/x/o1.jpg")           # reuses the nearest earlier picture
+            self.assertTrue(by_key["opening-2"]["reused_image"])
+            self.assertEqual(by_key["scene-2"]["image"], "/x/s2.jpg")
+            self.assertEqual(by_key["closing-1"]["image"], "/x/s2.jpg")
+            apply_images(line, {})
+            self.assertTrue(all(e["image"] is None for e in line))
+            only_late = line_for()
+            apply_images(only_late, {"scene-3": {"path": "/x/s3.jpg"}})
+            self.assertTrue(all(e["image"] == "/x/s3.jpg" for e in only_late))      # earlier shots borrow the first real picture
 
         def test_frames_stream_has_exact_size_and_count(self):
-            line = build_timeline(sample_plan(), timings(50), INTERVALS, 42.0)
-            got = list(frames(90, 160, 2, 42.0, line))
-            self.assertEqual(len(got), 84)
+            got = list(frames(90, 160, 2, 50.0, line_for()))
+            self.assertEqual(len(got), 100)
             self.assertTrue(all(len(f) == 90 * 160 * 3 for f in got))
 
         def test_assets_are_ignored_without_license_confirmation(self):
@@ -718,11 +875,11 @@ if __name__ == "__main__":
 
         def test_render_background_encodes_a_valid_video(self):
             with tempfile.TemporaryDirectory() as temp:
-                line = build_timeline(sample_plan(), timings(50), INTERVALS, 42.0)
+                line = line_for()
                 out = Path(temp) / "bg.mp4"
-                info = render_background(out, 180, 320, 4, 42.0, line, theme="t", render_scale=.5)
+                info = render_background(out, 180, 320, 4, 50.0, line, theme="t", render_scale=.5)
                 self.assertTrue(out.stat().st_size > 1024)
-                self.assertEqual(len(info["scenes"]), 6)
+                self.assertEqual(len(info["scenes"]), len(line))
                 self.assertFalse(info["external_assets"])
 
         # ----- AI image scenes -----
@@ -733,19 +890,6 @@ if __name__ == "__main__":
             noise = Image.effect_noise(size, 40)
             Image.merge("RGB", (ImageChops.add(gradient, noise, scale=2), gradient, noise)).save(path, "JPEG")
             return str(path)
-
-        def test_timeline_attaches_images_by_original_scene_position_and_flags_the_calm_scene(self):
-            with tempfile.TemporaryDirectory() as temp:
-                images = {key: {"path": self._photo(Path(temp) / f"{key}.jpg")} for key in ("opening", "scene-1", "scene-3", "closing")}
-                plan = sample_plan(); plan["scenes"][1]["word_start"] = 2          # scene-2 is merged away
-                line = build_timeline(plan, timings(50), INTERVALS, 42.0, images=images)
-            by_name = {e["name"]: e for e in line}
-            self.assertEqual(by_name["hook"]["image_key"], "opening")
-            self.assertTrue(by_name["recitation"]["calm"] and by_name["recitation"]["image"].endswith("opening.jpg"))
-            self.assertEqual([by_name[n]["image_key"] for n in ("message-1", "message-2")], ["scene-1", "scene-3"])
-            self.assertTrue(by_name["message-2"]["image"].endswith("scene-3.jpg"))
-            self.assertTrue(by_name["cta"]["image"].endswith("closing.jpg"))
-            self.assertIsNone(build_timeline(sample_plan(), timings(50), INTERVALS, 42.0)[0]["image"])
 
         def test_ken_burns_moves_and_stays_inside_the_frame(self):
             with tempfile.TemporaryDirectory() as temp:
@@ -764,14 +908,15 @@ if __name__ == "__main__":
 
         def test_image_scenes_render_and_a_broken_image_falls_back_to_the_procedural_scene(self):
             with tempfile.TemporaryDirectory() as temp:
-                images = {"opening": {"path": self._photo(Path(temp) / "o.jpg")}, "scene-1": {"path": str(Path(temp) / "missing.jpg")}}
-                line = build_timeline(sample_plan(), timings(50), INTERVALS, 42.0, images=images)
-                got = list(frames(90, 160, 2, 6.0, line))
-                self.assertEqual(len(got), 12)
+                images = {"opening-1": {"path": self._photo(Path(temp) / "o.jpg")},
+                          "scene-1": {"path": str(Path(temp) / "missing.jpg")}}
+                line = line_for(images=images)
+                got = list(frames(90, 160, 2, 12.0, line))
+                self.assertEqual(len(got), 24)
                 self.assertTrue(all(len(f) == 90 * 160 * 3 for f in got))
                 out = Path(temp) / "bg.mp4"
-                info = render_background(out, 180, 320, 4, 42.0, line, theme="t", render_scale=.5)
-                self.assertEqual(info["image_scenes"], 3)                           # hook, recitation (calm) and scene-1 entries carry a path
+                info = render_background(out, 180, 320, 4, 50.0, line, theme="t", render_scale=.5)
+                self.assertEqual(info["image_scenes"], len(line))               # every shot carries a (possibly reused) path
                 self.assertTrue(out.stat().st_size > 1024)
 
     unittest.main()

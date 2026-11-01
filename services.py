@@ -25,7 +25,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from procedural_background import ANIMATIONS, ELEMENT_TYPES, MOODS, POSITIONS, SIZES, SKY_TYPES
-from scene_images import sanitize_image_prompt
+from scene_images import sanitize_image_prompt, sanitize_theme
 
 QF_API = "https://apis.quran.foundation/content/api/v4"
 QF_PRELIVE_API = "https://apis-prelive.quran.foundation/content/api/v4"
@@ -538,10 +538,10 @@ _ELEMENT_SCHEMA = {"type": "OBJECT", "properties": {
     "type": {"type": "STRING"}, "position": {"type": "STRING"},
     "animation": {"type": "STRING"}, "size": {"type": "STRING"},
 }, "required": ["type", "position", "animation"]}
-_SCENE_SCHEMA = {"type": "OBJECT", "properties": {
-    "mood": {"type": "STRING"}, "text_span": {"type": "STRING"}, "image_prompt": {"type": "STRING"},
+_SHOT_SCHEMA = {"type": "OBJECT", "properties": {
+    "text_span": {"type": "STRING"}, "mood": {"type": "STRING"}, "image_prompt": {"type": "STRING"},
     "elements": {"type": "ARRAY", "items": _ELEMENT_SCHEMA},
-}, "required": ["mood", "elements", "image_prompt"]}
+}, "required": ["text_span", "mood", "image_prompt"]}
 
 GENERATION_SCHEMA = {
     "type": "OBJECT",
@@ -566,11 +566,14 @@ GENERATION_SCHEMA = {
         "visual_plan": {
             "type": "OBJECT",
             "properties": {
-                "opening": _SCENE_SCHEMA,
-                "scenes": {"type": "ARRAY", "items": _SCENE_SCHEMA},
-                "closing": _SCENE_SCHEMA,
+                "visual_theme": {"type": "STRING"},
+                "opening": {"type": "OBJECT", "properties": {"shots": {"type": "ARRAY", "items": _SHOT_SCHEMA}},
+                            "required": ["shots"]},
+                "scenes": {"type": "ARRAY", "items": _SHOT_SCHEMA},
+                "closing": {"type": "OBJECT", "properties": {"shots": {"type": "ARRAY", "items": _SHOT_SCHEMA}},
+                            "required": ["shots"]},
             },
-            "required": ["opening", "scenes", "closing"]
+            "required": ["visual_theme", "opening", "scenes", "closing"]
         },
     },
     "required": [
@@ -648,12 +651,21 @@ def _norm_tokens(text: str) -> list[tuple[int, str]]:
     return out
 
 
+DEFAULT_SHOT_ELEMENT = {"type": "light_rays", "position": "center", "animation": "fade_in", "size": "medium"}
+OPENING_SHOTS = (1, 3)
+MESSAGE_SHOTS = (4, 16)
+CLOSING_SHOTS = (1, 2)
+
+
 def _clean_scene(raw: Any, label: str) -> dict[str, Any]:
+    """One shot: mood, optional fallback elements, and the (possibly empty) image prompt."""
     if not isinstance(raw, dict) or raw.get("mood") not in MOODS:
-        raise ContentValidationError(f"مزاج المشهد {label} غير مسموح أو مفقود.")
+        raise ContentValidationError(f"مزاج اللقطة {label} غير مسموح أو مفقود.")
     elements = raw.get("elements")
-    if not isinstance(elements, list) or not 1 <= len(elements) <= 6:
-        raise ContentValidationError(f"المشهد {label} يجب أن يحتوي من عنصر إلى ستة عناصر.")
+    if elements is None:
+        elements = []
+    if not isinstance(elements, list) or len(elements) > 6:
+        raise ContentValidationError(f"عناصر اللقطة {label} يجب أن تكون قائمة من ستة عناصر على الأكثر.")
     clean: list[dict[str, str]] = []
     taken: set[tuple[str, str]] = set()
     for item in elements:
@@ -666,34 +678,63 @@ def _clean_scene(raw: Any, label: str) -> dict[str, Any]:
         taken.add(slot)
         size = item.get("size") if item.get("size") in SIZES else "medium"
         clean.append({"type": item["type"], "position": item["position"], "animation": item["animation"], "size": size})
-    # An unusable prompt only costs this scene its picture (it is drawn procedurally); it never fails the video.
-    return {"mood": raw["mood"], "elements": clean, "image_prompt": sanitize_image_prompt(raw.get("image_prompt"))}
+    # An unusable prompt only costs this shot its own picture (it reuses a neighbour's or is drawn
+    # procedurally); it never fails the video.
+    return {"mood": raw["mood"], "elements": clean or [dict(DEFAULT_SHOT_ELEMENT)],
+            "image_prompt": sanitize_image_prompt(raw.get("image_prompt"))}
+
+
+def _shot_list(value: Any, label: str, bounds: tuple[int, int]) -> list[Any]:
+    items = value.get("shots") if isinstance(value, dict) else value
+    if not isinstance(items, list) or not bounds[0] <= len(items) <= bounds[1]:
+        raise ContentValidationError(f"عدد لقطات {label} يجب أن يكون من {bounds[0]} إلى {bounds[1]}.")
+    return items
+
+
+def _clean_shots(value: Any, label: str, bounds: tuple[int, int]) -> list[dict[str, Any]]:
+    """Hook / call-to-action shots: shared evenly over their segment, so no wording is needed."""
+    return [_clean_scene(item, f"{label}-{number}")
+            for number, item in enumerate(_shot_list(value, label, bounds), start=1)]
+
+
+def _bind_shots(value: Any, text: str, label: str, bounds: tuple[int, int]) -> list[dict[str, Any]]:
+    """Message shots: each opens at the first words of its `text_span`, found in order in the spoken text.
+
+    The first shot always opens the segment. A later shot whose words cannot be found in order is
+    dropped; the plan is rejected (and regenerated) only when too few shots remain.
+    """
+    items = _shot_list(value, label, bounds)
+    words = _norm_tokens(text)
+    cursor, shots = 0, []
+    for number, item in enumerate(items, start=1):
+        shot = _clean_scene(item, f"{label}-{number}")
+        span = item.get("text_span") if isinstance(item.get("text_span"), str) else ""
+        tokens = [token for _, token in _norm_tokens(span)][:3]
+        found = None
+        if tokens:
+            found = next((i for i in range(cursor, len(words) - len(tokens) + 1)
+                          if [token for _, token in words[i:i + len(tokens)]] == tokens), None)
+        if found is None:
+            if number == 1:
+                shot["word_start"], shot["text_span"] = 0, span.strip()[:160]
+                shots.append(shot)
+            continue
+        shot["word_start"], shot["text_span"] = words[found][0], span.strip()[:160]
+        cursor = found + 1
+        shots.append(shot)
+    if len(shots) < bounds[0]:
+        raise ContentValidationError(f"لقطات {label} لا تطابق كلمات النص بالترتيب (بقي {len(shots)} فقط).")
+    return shots
 
 
 def validate_visual_plan(raw: Any, message: str) -> dict[str, Any]:
-    """Validate Gemini's scene plan and bind each scene to a word of the spoken message."""
+    """Validate Gemini's shot list: 1-3 hook shots, 4-16 message shots bound to words, 1-2 closing shots."""
     if not isinstance(raw, dict):
         raise ContentValidationError("الخطة البصرية ليست كائنًا.")
-    opening, closing = _clean_scene(raw.get("opening"), "opening"), _clean_scene(raw.get("closing"), "closing")
-    items = raw.get("scenes")
-    if not isinstance(items, list) or not 3 <= len(items) <= 6:
-        raise ContentValidationError("مشاهد الرسالة يجب أن تكون من ثلاثة إلى ستة.")
-    words = _norm_tokens(message)
-    cursor, scenes = 0, []
-    for number, item in enumerate(items, start=1):
-        scene = _clean_scene(item, str(number))
-        span = item.get("text_span") if isinstance(item.get("text_span"), str) else ""
-        tokens = [token for _, token in _norm_tokens(span)][:3]
-        if not tokens:
-            raise ContentValidationError(f"المشهد {number} بلا text_span.")
-        found = next((i for i in range(cursor, len(words) - len(tokens) + 1)
-                      if [token for _, token in words[i:i + len(tokens)]] == tokens), None)
-        if found is None:
-            raise ContentValidationError(f"عبارة المشهد {number} ليست في الرسالة بالترتيب.")
-        scene["word_start"], scene["text_span"] = words[found][0], span.strip()[:160]
-        cursor = found + 1
-        scenes.append(scene)
-    return {"opening": opening, "scenes": scenes, "closing": closing}
+    return {"visual_theme": sanitize_theme(raw.get("visual_theme")),
+            "opening": {"shots": _clean_shots(raw.get("opening"), "opening", OPENING_SHOTS)},
+            "scenes": _bind_shots(raw.get("scenes"), message, "scenes", MESSAGE_SHOTS),
+            "closing": {"shots": _clean_shots(raw.get("closing"), "closing", CLOSING_SHOTS)}}
 
 
 def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[str, Any]:
@@ -916,23 +957,25 @@ class GeminiContentService:
             "لا روابط، ولا تذكر أي مصدر أو قارئ أو موقع أو تفسير أو أداة أو ذكاءً اصطناعيًا.\n"
             f"6) keywords: من {KEYWORDS_MIN + 4} إلى {KEYWORDS_MAX} كلمة أو عبارة بحث عربية (كلمتان إلى أربع) يبحث بها الناس فعلًا عن هذا الموضوع.\n"
             f"7) hashtags: من {HASHTAGS_MIN + 2} إلى {HASHTAGS_MAX} هاشتاجًا عربيًا (ويجوز اثنان بالإنجليزية) يبدأ كل منها بعلامة # دون مسافات (استخدم _ بين الكلمات).\n\n"
-            "8) visual_plan: خطة رسوم لمحرك محلي (نص فقط؛ لا صور ولا API) تجعل الصورة تحكي ما يُقال بالضبط:\n"
-            "- opening: مشهد يرافق الهوك وحده ويجسّد الشعور أو المشكلة.\n"
-            "- scenes: من 3 إلى 6 مشاهد تتبع message بالترتيب. لكل مشهد text_span = أول 3 إلى 6 كلمات من الجملة "
-            "التي يبدأ عندها المشهد، منسوخة حرفيًا من message كما كُتبت، ليظهر المشهد لحظة نطقها. "
-            "يتبدل المشهد عند تحول المعنى (الشعور، معنى الآية، الأمل، الخطوة العملية).\n"
-            "- closing: مشهد دعوة المشاركة (قلب، دعاء، نور، باب).\n"
-            f"لكل مشهد: mood من [{moods}]، وعناصر elements من 2 إلى 4: type من [{kinds}]، "
-            f"position من [{places}]، animation من [{moves}]، وsize اختياري small أو medium أو large. "
-            "اجعل العناصر تجسّد المعنى حرفيًا: تعب وابتلاء = sitting_person مع cloud وrain؛ فرج وأمل = sun أو light_rays أو door؛ "
-            "رزق ونمو = seed ثم tree أو coin؛ ثبات وطريق = path مع person بحركة walk؛ دعاء = hands مع stars؛ "
-            "أسرة وبر = house مع heart؛ شائعات وهاتف = phone؛ حساب وميزان = scale أو clock؛ علم وقرآن = book. "
-            "وأضف لكل مشهد (opening وscenes وclosing) الحقل image_prompt: وصف بصري بالإنجليزية فقط "
-            "(من 20 إلى 60 كلمة، وأقل من 400 حرف) للمشهد نفسه، يطابق ما يُقال في تلك اللحظة: المكان والإضاءة "
-            "والألوان والأشياء الواضحة والحالة الشعورية. استعمل رموزًا بصرية (طريق، نافذة، مطر، بحر، بذرة، ضوء، باب، "
-            "يدان مرفوعتان، بيت من بعيد) وأشخاصًا كظلال بعيدة فقط. ممنوع ذكر الأنبياء والملائكة والصحابة والكعبة "
-            "والمصحف والوجوه والأشخاص القريبين والكتابة والشعارات والأعلام والروابط. لا تذكر الأسلوب الفني فهو يُضاف تلقائيًا.\n"
-            "لا تجسّد نبيًا ولا صحابيًا ولا ملاكًا، ولا تضع أرقامًا أو نصوصًا داخل الرسم، ولا تضف حقائق ليست في التفسير.\n\n"
+            "8) visual_plan: قائمة لقطات تتبع الكلام لقطةً بلقطة، بصورة جديدة كل 2.5 إلى 3 ثوانٍ تقريبًا ليبقى المشاهد منتبهًا، "
+            "وأسرع في البداية:\n"
+            "- visual_theme: وصف بالإنجليزية (من 3 إلى 25 كلمة) لهوية بصرية واحدة للفيديو كله، أي الألوان والإضاءة والبيئة العامة، "
+            "مرتبطة بموضوع الآية (مثال: warm dusk light, quiet village road, olive trees).\n"
+            "- opening.shots: من لقطة إلى 3 لقطات تظهر بالتتابع أثناء الهوك (تتوزع على مدته تلقائيًا): أولاها تصوّر الشعور أو "
+            "الموقف الذي يضربه الهوك مباشرة، والبقية تتصاعد منه.\n"
+            "- scenes: لقطة لكل جملة أو عبارة قصيرة من message بالترتيب، أي لقطة كل 6 إلى 8 كلمات تقريبًا (من 6 إلى 14 لقطة)، "
+            "وتُقسَّم الجملة الطويلة عند الفاصلة. لكل لقطة text_span = أول 3 كلمات من عبارتها منسوخة حرفيًا من message كما كُتبت.\n"
+            "- closing.shots: لقطة أو لقطتان ترافقان دعوة المشاركة (خير، دعاء، نور، قلب، باب).\n"
+            f"لكل لقطة: text_span، وmood من [{moods}]، وimage_prompt، وعناصر elements اختيارية (حتى 3) تُستعمل رسمًا احتياطيًا فقط: "
+            f"type من [{kinds}]، position من [{places}]، animation من [{moves}].\n"
+            "قواعد image_prompt (بالإنجليزية فقط، من 20 إلى 60 كلمة، وأقل من 400 حرف): صوّر المعنى الحرفي لتلك العبارة بالذات، "
+            "أي ما الذي سيراه المشاهد لو تحولت هذه الجملة إلى مشهد؟ اذكر موضوعًا محددًا (شخص من الخلف أو ظل بعيد، طريق، نافذة، بيت، "
+            "شجرة، بحر، سماء، مائدة، يدان) مع المكان والوقت من اليوم وحالة أو حركة، وشيئًا رمزيًا واحدًا. فكرة واحدة فقط في كل صورة. "
+            "لا تكتب كلمات مجردة وحدها مثل hope أو patience، بل حوّلها إلى مشهد ملموس. "
+            "مثال جيد: A lone traveller seen from behind walking a winding dirt road at dawn, small lantern in hand, mist over the hills. "
+            "مثال سيئ: The feeling of patience and hope. نوّع الزاوية بين اللقطات المتتالية (واسعة، قريبة على شيء، من الأعلى)، ولا تكرر الصورة نفسها. "
+            "ممنوع ذكر الأنبياء والملائكة والصحابة والكعبة والمصحف والوجوه والأشخاص القريبين والكتابة والشعارات والأعلام والروابط، "
+            "ولا تذكر الأسلوب الفني فهو يُضاف تلقائيًا، ولا تضف حقائق ليست في التفسير.\n\n"
             "أعد JSON وفق المخطط فقط.\n\n"
             f"{topic_line}"
             f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
@@ -1823,19 +1866,26 @@ if __name__ == "__main__":
                 "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
                 "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
                 "visual_plan": {
-                    "opening": {"mood": "night", "image_prompt": prompt, "elements": [
-                        {"type": "sitting_person", "position": "center", "animation": "fade_in"},
-                        {"type": "moon", "position": "right", "animation": "float"}]},
+                    "visual_theme": "warm dusk light, quiet village road, olive trees",
+                    "opening": {"shots": [
+                        {"text_span": "تعبك الذي لا", "mood": "night", "image_prompt": prompt, "elements": [
+                            {"type": "sitting_person", "position": "center", "animation": "fade_in"},
+                            {"type": "moon", "position": "right", "animation": "float"}]},
+                        {"text_span": "أحد يراه الله", "mood": "storm", "image_prompt": prompt}]},
                     "scenes": [
-                        {"mood": "storm", "text_span": "كلمة0 كلمة1 كلمة2", "image_prompt": prompt, "elements": [
+                        {"text_span": "كلمة0 كلمة1 كلمة2", "mood": "storm", "image_prompt": prompt, "elements": [
                             {"type": "cloud", "position": "left", "animation": "float"},
                             {"type": "rain", "position": "center", "animation": "none"}]},
-                        {"mood": "dawn", "text_span": "كلمة15 كلمة16 كلمة17", "image_prompt": prompt, "elements": [
+                        {"text_span": "كلمة7 كلمة8 كلمة9", "mood": "dawn", "image_prompt": prompt},
+                        {"text_span": "كلمة14 كلمة15 كلمة16", "mood": "dawn", "image_prompt": prompt, "elements": [
                             {"type": "sun", "position": "right", "animation": "grow"}]},
-                        {"mood": "day", "text_span": "كلمة30 كلمة31 كلمة32", "image_prompt": prompt, "elements": [
-                            {"type": "seed", "position": "center", "animation": "grow"}]}],
-                    "closing": {"mood": "warm", "image_prompt": prompt, "elements": [
-                        {"type": "heart", "position": "center", "animation": "pulse"}]}
+                        {"text_span": "كلمة21 كلمة22 كلمة23", "mood": "day", "image_prompt": prompt},
+                        {"text_span": "كلمة28 كلمة29 كلمة30", "mood": "day", "image_prompt": prompt, "elements": [
+                            {"type": "seed", "position": "center", "animation": "grow"}]},
+                        {"text_span": "كلمة35 كلمة36 كلمة37", "mood": "warm", "image_prompt": prompt}],
+                    "closing": {"shots": [
+                        {"text_span": "شارك هذا المقطع", "mood": "warm", "image_prompt": prompt, "elements": [
+                            {"type": "heart", "position": "center", "animation": "pulse"}]}]}
                 }
             }
             data.update(overrides)
@@ -1850,37 +1900,66 @@ if __name__ == "__main__":
             self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
                                            "description", "keywords", "hashtags", "visual_plan"})
 
-        def test_visual_plan_binds_scenes_to_message_words_in_order(self):
-            result = validate_generated_content(self.valid_content())
-            self.assertEqual([s["word_start"] for s in result["visual_plan"]["scenes"]], [0, 15, 30])
+        def test_visual_plan_binds_message_shots_to_words_in_order(self):
+            plan = validate_generated_content(self.valid_content())["visual_plan"]
+            self.assertEqual([s["word_start"] for s in plan["scenes"]], [0, 7, 14, 21, 28, 35])
+            self.assertEqual((len(plan["opening"]["shots"]), len(plan["closing"]["shots"])), (2, 1))
+            self.assertEqual(plan["visual_theme"], "warm dusk light, quiet village road, olive trees")
+            self.assertTrue(all(s["image_prompt"] for s in plan["scenes"]))
 
-        def test_visual_plan_rejects_unknown_phrase_wrong_order_and_bad_elements(self):
+        def test_visual_plan_elements_are_optional_and_default_to_a_neutral_fallback(self):
+            plan = validate_generated_content(self.valid_content())["visual_plan"]
+            self.assertEqual(plan["scenes"][1]["elements"][0]["type"], "light_rays")      # none given -> default
+            self.assertEqual(plan["scenes"][0]["elements"][0]["type"], "cloud")           # given -> kept
+
+        def test_a_later_shot_with_unfindable_words_is_dropped_but_too_few_shots_are_rejected(self):
+            plan = json.loads(json.dumps(self.valid_content()["visual_plan"]))
+            plan["scenes"][2]["text_span"] = "عبارة ليست في الرسالة"
+            result = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]
+            self.assertEqual([s["word_start"] for s in result["scenes"]], [0, 7, 21, 28, 35])
+            plan["scenes"][0]["text_span"] = "كلام مختلف تماما"                             # the first shot always opens the segment
+            first = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]["scenes"][0]
+            self.assertEqual(first["word_start"], 0)
+            few = json.loads(json.dumps(self.valid_content()["visual_plan"]))
+            for shot in few["scenes"][1:]:
+                shot["text_span"] = "لا شيء هنا إطلاقا"
+            with self.assertRaises(ContentValidationError):
+                validate_generated_content(self.valid_content(visual_plan=few))
+
+        def test_visual_plan_rejects_wrong_counts_order_and_bad_vocabulary(self):
             good = self.valid_content()["visual_plan"]
-            for mutate in (lambda p: p["scenes"][1].update(text_span="عبارة ليست في الرسالة"),
-                           lambda p: p["scenes"].reverse(),
-                           lambda p: p["scenes"].pop(),
-                           lambda p: p["opening"]["elements"][0].update(type="dragon"),
-                           lambda p: p["closing"].update(mood="neon")):
+            for name, mutate in (
+                    ("too few message shots", lambda p: p.update(scenes=p["scenes"][:3])),
+                    ("too many message shots", lambda p: p.update(scenes=[dict(p["scenes"][0]) for _ in range(20)])),
+                    ("reversed order", lambda p: p["scenes"].reverse()),
+                    ("no hook shots", lambda p: p["opening"].update(shots=[])),
+                    ("too many hook shots", lambda p: p["opening"].update(shots=p["opening"]["shots"] * 3)),
+                    ("too many closing shots", lambda p: p["closing"].update(shots=p["closing"]["shots"] * 3)),
+                    ("unknown element", lambda p: p["opening"]["shots"][0]["elements"][0].update(type="dragon")),
+                    ("unknown mood", lambda p: p["closing"]["shots"][0].update(mood="neon")),
+                    ("not a dict", lambda p: p.update(opening="x"))):
                 plan = json.loads(json.dumps(good))
                 mutate(plan)
-                with self.assertRaises(ContentValidationError):
+                with self.assertRaises(ContentValidationError, msg=name):
                     validate_generated_content(self.valid_content(visual_plan=plan))
 
-        def test_unsafe_or_missing_image_prompt_only_removes_the_picture(self):
-            full = validate_generated_content(self.valid_content())["visual_plan"]
-            self.assertTrue(full["opening"]["image_prompt"] and full["closing"]["image_prompt"])
-            self.assertTrue(all(s["image_prompt"] for s in full["scenes"]))
+        def test_unsafe_or_missing_image_prompt_only_removes_that_picture(self):
             plan = json.loads(json.dumps(self.valid_content()["visual_plan"]))
             plan["scenes"][0]["image_prompt"] = "The prophet standing alone in the desert at dawn with light behind him"
             del plan["scenes"][1]["image_prompt"]
+            plan["visual_theme"] = "the prophet at sunset"
             result = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]
             self.assertEqual((result["scenes"][0]["image_prompt"], result["scenes"][1]["image_prompt"]), ("", ""))
             self.assertTrue(result["scenes"][2]["image_prompt"])
+            self.assertEqual(result["visual_theme"], "")
 
-        def test_generation_schema_requires_an_image_prompt_per_scene(self):
-            scene = GENERATION_SCHEMA["properties"]["visual_plan"]["properties"]["opening"]
-            self.assertIn("image_prompt", scene["required"])
-            self.assertIn("image_prompt", scene["properties"])
+        def test_generation_schema_describes_shots_with_an_image_prompt(self):
+            plan = GENERATION_SCHEMA["properties"]["visual_plan"]
+            self.assertEqual(set(plan["required"]), {"visual_theme", "opening", "scenes", "closing"})
+            shot = plan["properties"]["scenes"]["items"]
+            self.assertTrue({"text_span", "mood", "image_prompt"} <= set(shot["required"]))
+            self.assertNotIn("elements", shot["required"])
+            self.assertIs(plan["properties"]["opening"]["properties"]["shots"]["items"], shot)
 
         def test_generated_content_rejects_rule_violations(self):
             good = self.valid_content()
@@ -1966,6 +2045,8 @@ if __name__ == "__main__":
             self.assertIn("صدقة جارية", prompt)
             self.assertIn("لا تذكر أي مصدر", prompt)
             self.assertIn("image_prompt", prompt)
+            self.assertIn("visual_theme", prompt)
+            self.assertIn("2.5 إلى 3 ثوانٍ", prompt)
             self.assertNotIn("الموضوع المقترح", GeminiContentService._generation_prompt(verse, tafsir, None, (42, 61)))
 
         # ----- Quran words (waqf signs are not words) -----

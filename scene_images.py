@@ -74,8 +74,26 @@ def sanitize_image_prompt(text: Any) -> str:
     return value
 
 
-def build_final_prompt(prompt: str) -> str:
-    return f"{prompt.rstrip('. ')}. {STYLE_SUFFIX}"
+def sanitize_theme(text: Any) -> str:
+    """The video-wide visual theme (palette, light, setting): short, English, and as strictly filtered as a prompt."""
+    if not isinstance(text, str):
+        return ""
+    value = re.sub(r"\s+", " ", text).strip().strip("\"'.")
+    if not 3 <= len(value) <= 200:
+        return ""
+    letters = [char for char in value if char.isalpha()]
+    if not letters or sum(1 for char in letters if char.isascii()) / len(letters) < 0.95:
+        return ""
+    return "" if FORBIDDEN_PROMPT_TERMS.search(value) else value
+
+
+def build_final_prompt(prompt: str, theme: str = "") -> str:
+    """Scene prompt + the video's shared theme (keeps all pictures one family) + the house style, added in code."""
+    parts = [prompt.rstrip(". ")]
+    if theme:
+        parts.append(theme.rstrip(". "))
+    parts.append(STYLE_SUFFIX)
+    return ". ".join(parts)
 
 
 def normalize_image(data: bytes, destination: Path) -> dict[str, Any]:
@@ -244,21 +262,20 @@ class SceneImageService:
             self.notes.append("لا يوجد مزوّد صور صالح؛ ستُرسم المشاهد إجرائيًا.")
         return providers
 
-    def generate(self, plan: dict[str, Any], out_dir: Path, width: int, height: int) -> dict[str, dict[str, Any]]:
-        """Return {"opening"|"scene-N"|"closing": {path, provider, model, prompt, sha256, ...}}."""
-        if not self.providers:
+    def generate_jobs(self, jobs: list[tuple[str, Any]], out_dir: Path, width: int, height: int,
+                      theme: Any = "") -> dict[str, dict[str, Any]]:
+        """jobs = [(key, raw_prompt)]. Returns {key: {path, provider, model, prompt, sha256, ...}} for the ones that worked."""
+        if not self.providers or not jobs:
             return {}
-        jobs = ([("opening", plan.get("opening"))]
-                + [(f"scene-{number}", scene) for number, scene in enumerate(plan.get("scenes", []), start=1)]
-                + [("closing", plan.get("closing"))])
+        clean_theme = sanitize_theme(theme)
         results: dict[str, dict[str, Any]] = {}
         exhausted: set[str] = set()
-        for key, scene in jobs:
-            prompt = sanitize_image_prompt((scene or {}).get("image_prompt"))
+        for key, raw_prompt in jobs:
+            prompt = sanitize_image_prompt(raw_prompt)
             if not prompt:
                 self.notes.append(f"{key}: لا يوجد image_prompt صالح.")
                 continue
-            final_prompt = build_final_prompt(prompt)
+            final_prompt = build_final_prompt(prompt, clean_theme)
             seed = int(hashlib.sha256(f"{key}|{prompt}".encode("utf-8")).hexdigest()[:8], 16)
             for provider in self.providers:
                 if provider.name in exhausted:
@@ -275,6 +292,9 @@ class SceneImageService:
                     continue
                 results[key] = {"path": str(out_dir / f"{key}.jpg"), "provider": provider.name,
                                 "model": getattr(provider, "model", ""), "prompt": prompt, **info}
+                break
+            if len(exhausted) == len(self.providers):
+                self.notes.append("استُنفدت حصص كل المزوّدين؛ ستُستعمل الصور المولّدة سابقًا للقطات المتبقية.")
                 break
             self._sleep(self.pause_seconds)
         return results
@@ -336,10 +356,18 @@ if __name__ == "__main__":
                         "A calm sea at dusk, see https://example.org for details", None, 42):
                 self.assertEqual(sanitize_image_prompt(bad), "", bad)
 
-        def test_final_prompt_appends_the_house_style_in_code(self):
+        def test_final_prompt_appends_the_theme_and_the_house_style_in_code(self):
             final = build_final_prompt("A quiet window with rain on the glass.")
             self.assertTrue(final.endswith(STYLE_SUFFIX))
             self.assertIn("no faces", final)
+            themed = build_final_prompt("A quiet window with rain on the glass.", "warm dusk light, olive trees")
+            self.assertEqual(themed.count("warm dusk light"), 1)
+            self.assertTrue(themed.index("rain on the glass") < themed.index("warm dusk") < themed.index("no faces"))
+
+        def test_theme_sanitiser(self):
+            self.assertEqual(sanitize_theme(" warm dusk light, quiet village road. "), "warm dusk light, quiet village road")
+            for bad in ("", "x", "ألوان دافئة وهادئة", "the prophet at sunset", "https://x.example palette", None, "y" * 300):
+                self.assertEqual(sanitize_theme(bad), "", bad)
 
         def test_cloudflare_request_shape_and_json_image(self):
             provider = cloudflare([Resp(200, OK)])
@@ -410,10 +438,9 @@ if __name__ == "__main__":
                         normalize_image(bad, Path(temp) / "bad.jpg")
 
         @staticmethod
-        def plan():
+        def jobs(count=4, bad_at=None):
             prompt = "A lone traveller walking a winding road toward a glowing sunrise over quiet hills"
-            return {"opening": {"image_prompt": prompt}, "closing": {"image_prompt": prompt},
-                    "scenes": [{"image_prompt": prompt}, {"image_prompt": "الصبر"}, {"image_prompt": prompt}]}
+            return [(f"scene-{i}", "الصبر" if i == bad_at else prompt) for i in range(1, count + 1)]
 
         class Fake:
             def __init__(self, name, behaviour):
@@ -425,19 +452,31 @@ if __name__ == "__main__":
                     raise outcome
                 return outcome
 
-        def run_service(self, providers):
+        def run_service(self, providers, jobs=None, theme=""):
             service = SceneImageService(providers=providers)
             service._sleep = lambda seconds: None
             with tempfile.TemporaryDirectory() as temp:
-                return service, service.generate(self.plan(), Path(temp) / "images", 1080, 1920)
+                return service, service.generate_jobs(self.jobs() if jobs is None else jobs, Path(temp) / "images", 1080, 1920, theme)
 
-        def test_service_generates_one_image_per_valid_scene_and_skips_bad_prompts(self):
+        def test_service_generates_one_image_per_valid_job_and_skips_bad_prompts(self):
             first = self.Fake("cloudflare", lambda n: png_bytes())
-            service, results = self.run_service([first])
-            self.assertEqual(sorted(results), ["closing", "opening", "scene-1", "scene-3"])
-            self.assertEqual(first.calls, 4)
+            service, results = self.run_service([first], self.jobs(4, bad_at=2))
+            self.assertEqual(sorted(results), ["scene-1", "scene-3", "scene-4"])
+            self.assertEqual(first.calls, 3)
             self.assertTrue(any("scene-2" in note for note in service.notes))
-            self.assertEqual(results["opening"]["provider"], "cloudflare")
+            self.assertEqual(results["scene-1"]["provider"], "cloudflare")
+
+        def test_service_sends_the_theme_to_the_provider(self):
+            seen = []
+            def behaviour(n):
+                return png_bytes()
+            class Spy(self.Fake):
+                def generate(self, prompt, width, height, seed):
+                    seen.append(prompt)
+                    return super().generate(prompt, width, height, seed)
+            self.run_service([Spy("cloudflare", behaviour)], self.jobs(2), theme="warm dusk light, olive trees")
+            self.assertTrue(all("warm dusk light" in prompt and prompt.endswith(STYLE_SUFFIX) for prompt in seen))
+            self.assertEqual(len(seen), 2)
 
         def test_service_falls_back_to_the_next_provider_and_stops_using_an_exhausted_one(self):
             first = self.Fake("cloudflare", lambda n: ImageQuotaError("quota"))
@@ -447,11 +486,19 @@ if __name__ == "__main__":
             self.assertEqual(second.calls, 4)
             self.assertTrue(all(item["provider"] == "pollinations" for item in results.values()))
 
+        def test_service_stops_early_when_every_provider_is_exhausted(self):
+            only = self.Fake("cloudflare", lambda n: png_bytes() if n <= 2 else ImageQuotaError("quota"))
+            service, results = self.run_service([only], self.jobs(8))
+            self.assertEqual(sorted(results), ["scene-1", "scene-2"])
+            self.assertEqual(only.calls, 3)                                    # the 3rd call hit the limit; no more requests
+            self.assertTrue(any("استُنفدت" in note for note in service.notes))
+
         def test_service_survives_total_failure_and_bad_image_bytes(self):
             _, results = self.run_service([self.Fake("cloudflare", lambda n: ImageGenerationError("down"))])
             self.assertEqual(results, {})
             _, results = self.run_service([self.Fake("cloudflare", lambda n: b"garbage" * 500)])
             self.assertEqual(results, {})
+            self.assertEqual(self.run_service([self.Fake("cloudflare", lambda n: png_bytes())], [])[1], {})
 
         def test_service_is_disabled_without_license_confirmation_or_credentials(self):
             env = {**ENV, "IMAGE_PROVIDERS": "", "IMAGE_GEN_LICENSE_CONFIRMED": "", "IMAGE_GEN_LICENSE_URL": ""}

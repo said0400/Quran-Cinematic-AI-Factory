@@ -21,7 +21,9 @@ from services import (
     QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     quran_words, validate_word_segments,
 )
-from procedural_background import build_timeline, render_background
+from procedural_background import (
+    apply_images, build_timeline, pick_image_keys, render_background, shot_index, timeline_image_keys,
+)
 from scene_images import SceneImageService
 from video_engine import (
     VideoError, align_speech_words, build_verse_layout, build_video, media_duration, validate_video,
@@ -103,6 +105,7 @@ class Config:
     min_verse_words: int = 10
     max_recitation_seconds: int = 40
     commentary_style: str = "captions"
+    max_scene_images: int = 14
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -170,6 +173,7 @@ class Config:
             min_verse_words=integer("MIN_VERSE_WORDS", 10, 1, 100),
             max_recitation_seconds=integer("MAX_RECITATION_SECONDS", 40, 10, 300),
             commentary_style=commentary_style,
+            max_scene_images=integer("MAX_SCENE_IMAGES", 14, 1, 30),
         )
 
 
@@ -628,12 +632,21 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         message_timings, message_timing_source = align_speech_words(
             ai["message"], tts.word_boundaries.get("message"), durations["message"])
 
-        # One generated picture per scene (free providers); a scene without a picture is drawn procedurally.
+        # A new picture about every 2.5-3 s: cut the shots first, then generate only the pictures that survive the cut.
+        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration)
+        shots = shot_index(ai["visual_plan"])
+        wanted = pick_image_keys(timeline_image_keys(timeline), config.max_scene_images)
         images = SceneImageService()
-        scene_images = images.generate(ai["visual_plan"], work_dir / "images", config.width, config.height)
+        scene_images = images.generate_jobs(
+            [(key, shots[key].get("image_prompt")) for key in wanted], work_dir / "images",
+            config.width, config.height, theme=ai["visual_plan"].get("visual_theme", ""))
+        apply_images(timeline, scene_images)
         row["verification"]["checks"]["scene_images"] = {
-            "requested": len(ai["visual_plan"]["scenes"]) + 2,
+            "shots": len(timeline_image_keys(timeline)),
+            "timeline_entries": len(timeline),
+            "requested": len(wanted),
             "generated": len(scene_images),
+            "entries_reusing_a_neighbour_picture": sum(1 for entry in timeline if entry.get("reused_image")),
             "providers": sorted({item["provider"] for item in scene_images.values()}),
             "notes": images.notes[:12],
         }
@@ -643,7 +656,6 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
                                 "license_url": os.getenv("IMAGE_GEN_LICENSE_URL"),
                                 "license_status": "operator-confirmed current provider terms; AI-generated"})
 
-        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration, images=scene_images)
         background = work_dir / "background.mp4"
         background_info = render_background(
             background, config.width, config.height, config.fps, video_duration, timeline,
@@ -867,6 +879,16 @@ if __name__ == "__main__":
                 with patch.dict(os.environ, {"COMMENTARY_STYLE": "neon"}):
                     with self.assertRaises(FactoryError):
                         Config.from_env(Path("/tmp/project"))
+
+            def test_max_scene_images_defaults_parses_and_rejects_out_of_range(self):
+                with patch.dict(os.environ, {"MAX_SCENE_IMAGES": ""}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).max_scene_images, 14)
+                with patch.dict(os.environ, {"MAX_SCENE_IMAGES": "20"}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).max_scene_images, 20)
+                for bad in ("0", "31", "many"):
+                    with patch.dict(os.environ, {"MAX_SCENE_IMAGES": bad}):
+                        with self.assertRaises(FactoryError):
+                            Config.from_env(Path("/tmp/project"))
 
             def test_background_settings_default_parse_and_reject_out_of_range(self):
                 with patch.dict(os.environ, {}, clear=False):
@@ -1254,7 +1276,8 @@ if __name__ == "__main__":
                     validate_generation_environment()
                     service = SceneImageService()
                     self.assertEqual(service.providers, [])
-                    self.assertEqual(service.generate({"opening": {}, "scenes": [], "closing": {}}, Path("/tmp/none"), 1080, 1920), {})
+                    self.assertEqual(service.generate_jobs([("scene-1", "A quiet road at dawn with mist over the hills")],
+                                                           Path("/tmp/none"), 1080, 1920), {})
 
             def test_unresolved_platform_id_excludes_verse_from_auto_selection(self):
                 chapter, verse = AUTO_VERSE_POOL[1]

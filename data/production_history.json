@@ -13476,6 +13476,1084 @@
         ],
         "visual_theme": "soft morning light, serene natural landscapes, minimalist aesthetic, warm golden tones, calm atmosphere"
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 2,
+      "created_at": "2026-11-01T17:08:25.136105+00:00",
+      "last_error": null,
+      "local_date": "2026-11-01",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/2:186",
+          "verse_key": "2:186"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/2?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:186"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 72.379,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 25,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 2.524,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 5.047,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-2",
+                "start": 2.524
+              },
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 7.571,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-3",
+                "start": 5.047
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.306,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-1",
+                "start": 7.571
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.041,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-2",
+                "start": 11.306
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.776,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-3",
+                "start": 15.041
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 22.512,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-4",
+                "start": 18.776
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 26.247,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-5",
+                "start": 22.512
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 29.982,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-6",
+                "start": 26.247
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 33.717,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-7",
+                "start": 29.982
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 36.76,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-1",
+                "start": 33.717
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 40.038,
+                "image": true,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 36.76
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 41.992,
+                "image": true,
+                "mood": "day",
+                "name": "message-3",
+                "start": 40.038
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 45.334,
+                "image": true,
+                "mood": "storm",
+                "name": "message-4",
+                "start": 41.992
+              },
+              {
+                "elements": [
+                  "house"
+                ],
+                "end": 48.044,
+                "image": true,
+                "mood": "calm",
+                "name": "message-5",
+                "start": 45.334
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 50.251,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-6",
+                "start": 48.044
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 52.394,
+                "image": true,
+                "mood": "day",
+                "name": "message-7",
+                "start": 50.251
+              },
+              {
+                "elements": [
+                  "sitting_person"
+                ],
+                "end": 54.159,
+                "image": true,
+                "mood": "calm",
+                "name": "message-8",
+                "start": 52.394
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 56.366,
+                "image": true,
+                "mood": "warm",
+                "name": "message-9",
+                "start": 54.159
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 58.727,
+                "image": true,
+                "mood": "calm",
+                "name": "message-10",
+                "start": 56.366
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 61.088,
+                "image": true,
+                "mood": "calm",
+                "name": "message-11",
+                "start": 58.727
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 63.911,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 61.088
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 66.733,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.911
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 69.556,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.733
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 72.379,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 69.556
+              }
+            ],
+            "theme_hash": "cb504ac4117434ba",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A silhouette of a person standing alone on a dark balcony looking out at a rainy city skyline at night, dim street lights reflecting on wet pavement.",
+          "provider": "cloudflare",
+          "scene": "opening-1",
+          "sha256": "976c17b656439989c4b3e3a0a98b37314d99edb27036e0924318ca3057cae90f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A wide shot of a vast horizon at dawn, soft golden light breaking through thin clouds over a calm valley, a single tree standing tall in the distance.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "f9d67794810fcccfbb7f7f363f51fd20235a1860333ad0f6607945b8f6be475b"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A serene lake reflecting the clear blue sky, ripples gently moving across the water surface, a symbol of inner peace and presence.",
+          "provider": "cloudflare",
+          "scene": "scene-3",
+          "sha256": "9bf8e9f86119f910f710671731bdf3488962c075de1a48ddac97f13ecbf9efcf"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A small wooden door slightly ajar in an old stone wall, light spilling from inside, suggesting openness and hope.",
+          "provider": "cloudflare",
+          "scene": "scene-5",
+          "sha256": "8a8fe961aaa47f33982393ac9f0be3c7fcc3f456a6857002682a4bbb8e9c44af"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close-up of a single seed resting on fertile soil, ready to sprout, symbolizing potential and growth amidst challenges.",
+          "provider": "cloudflare",
+          "scene": "scene-6",
+          "sha256": "bc76c0cc1cb9c0969d5c8fdb3cb5d0cfcd8bfb77e193f8a61ba0ba14c204d819"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A quiet room with a window overlooking a peaceful garden, soft curtains moving slightly in the breeze, a sense of order and tranquility.",
+          "provider": "cloudflare",
+          "scene": "scene-8",
+          "sha256": "0a46dcf4d361389531fd90bb12e725e6b49d34c2754bf6ff1c798a77050d0661"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A wide shot of a field of flowers opening up to the sun, vibrant colors and a sense of new beginnings.",
+          "provider": "cloudflare",
+          "scene": "scene-11",
+          "sha256": "0def654bcc13fd351cc7f786d1cfd6cee3a33cc528b0541ffe0b00291d4d50c3"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A person sitting peacefully on a bench in a park, looking at the horizon, a sense of clarity and direction.",
+          "provider": "cloudflare",
+          "scene": "scene-12",
+          "sha256": "3f05f239d73bd115ce7ebe536b4b0cd500b6bea8c4d23967cf24b51e6c5a6341"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A scale balancing perfectly, representing harmony and balance in life's affairs, soft lighting.",
+          "provider": "cloudflare",
+          "scene": "scene-13",
+          "sha256": "a8292700282af4316efd320d7b4c003e1e66a3eeb49fd886f97aaeef77481e2d"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A calm ocean at sunset, gentle waves washing onto the shore, a feeling of deep peace and resolution.",
+          "provider": "cloudflare",
+          "scene": "scene-14",
+          "sha256": "0a89527f215d4ef86754135fb08cfc085e9246e082be74555be0e1986032fb7a"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A glowing heart icon floating in the center of a soft, golden-lit space, surrounded by a gentle aura of light.",
+          "provider": "cloudflare",
+          "scene": "closing-1",
+          "sha256": "1bb72794ff49518242832ca7feb1e0a00dc9c5d2ff70455800f66b40d4108e2f"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "9914af88e6267dd1015f3dd4a945cbdc76514de98ddfcbf63f897a7aa7446b76",
+          "status": "published",
+          "video_id": "video-9914af88e6267dd1",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-9914af88e6267dd1/video-9914af88e6267dd1.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "في لحظات التعب والضيق التي نمر بها جميعاً، نبحث عن مخرج أو صوت يطمئن قلوبنا. هذا المقطع يقدم معنى عميقاً للقرب الذي يغمر حياتنا، وكيف يمكن لليقين والطاعة أن يغيرا نظرتنا لمصاعب الدنيا. ستجد هنا تذكيراً بأنك لست وحدك في مواجهة تحدياتك، وأن هناك طريقاً للسكينة والاهتداء لمصالح دينك ودنياك من خلال فهم حقيقة القرب واليقين. شارك هذا المحتوى مع أحبائك ليكون سبباً في نشر الطمأنينة.\n\nالكلمات المفتاحية: طمأنينة القلب، تفريج الهموم، القرب من الله، السكينة النفسية، الاستجابة للدعاء، تجاوز الضيق، اليقين بالله، الهداية في الحياة، راحة البال، تخفيف التوتر، مواجهة الصعاب، الاستعانة بالله\n\n#طمأنينة #راحة_البال #يقين #سكينة #دعاء #هداية #تفاؤل #حياة_أفضل #PeaceOfMind #InnerCalm",
+        "title": "حين تشعر أنك وحيد في مواجهة العالم"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-01-2-186-2a18b2c285-report.json",
+      "run_id": "2026-11-01-2-186-2a18b2c285",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/2:186"
+      },
+      "status": "published",
+      "updated_at": "2026-11-01T17:12:43.099811+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 72.379,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 25,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 2.524,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 5.047,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-2",
+                "start": 2.524
+              },
+              {
+                "elements": [
+                  "cloud"
+                ],
+                "end": 7.571,
+                "image": true,
+                "mood": "storm",
+                "name": "hook-3",
+                "start": 5.047
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.306,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-1",
+                "start": 7.571
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.041,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-2",
+                "start": 11.306
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.776,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-3",
+                "start": 15.041
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 22.512,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-4",
+                "start": 18.776
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 26.247,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-5",
+                "start": 22.512
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 29.982,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-6",
+                "start": 26.247
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 33.717,
+                "image": true,
+                "mood": "storm",
+                "name": "recitation-7",
+                "start": 29.982
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 36.76,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-1",
+                "start": 33.717
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 40.038,
+                "image": true,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 36.76
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 41.992,
+                "image": true,
+                "mood": "day",
+                "name": "message-3",
+                "start": 40.038
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 45.334,
+                "image": true,
+                "mood": "storm",
+                "name": "message-4",
+                "start": 41.992
+              },
+              {
+                "elements": [
+                  "house"
+                ],
+                "end": 48.044,
+                "image": true,
+                "mood": "calm",
+                "name": "message-5",
+                "start": 45.334
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 50.251,
+                "image": true,
+                "mood": "dawn",
+                "name": "message-6",
+                "start": 48.044
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 52.394,
+                "image": true,
+                "mood": "day",
+                "name": "message-7",
+                "start": 50.251
+              },
+              {
+                "elements": [
+                  "sitting_person"
+                ],
+                "end": 54.159,
+                "image": true,
+                "mood": "calm",
+                "name": "message-8",
+                "start": 52.394
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 56.366,
+                "image": true,
+                "mood": "warm",
+                "name": "message-9",
+                "start": 54.159
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 58.727,
+                "image": true,
+                "mood": "calm",
+                "name": "message-10",
+                "start": 56.366
+              },
+              {
+                "elements": [
+                  "wave"
+                ],
+                "end": 61.088,
+                "image": true,
+                "mood": "calm",
+                "name": "message-11",
+                "start": 58.727
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 63.911,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 61.088
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 66.733,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.911
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 69.556,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.733
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 72.379,
+                "image": true,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 69.556
+              }
+            ],
+            "theme_hash": "cb504ac4117434ba",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 14,
+            "keywords": 12,
+            "message_word_budget": [
+              32,
+              47
+            ],
+            "message_words": 47,
+            "topic": "القلق والطمأنينة",
+            "visual_scene_count": 14
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس معاني الآية والتفسير المرفق بدقة، حيث ربط بين القرب الإلهي وإجابة الدعاء وبين الطاعة والإيمان، ولم يضف أحكاماً شرعية أو وعوداً غيبية غير موجودة في المصدر."
+          },
+          "recitation_api_verse_key": "2:186",
+          "recitation_duration_seconds": 23.775,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 1,
+            "generated": 11,
+            "notes": [
+              "scene-10: لا يوجد image_prompt صالح."
+            ],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 12,
+            "shots": 12,
+            "timeline_entries": 25
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 17,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 72.379,
+            "audio_segments": {
+              "cta": {
+                "end": 72.379,
+                "start": 61.088
+              },
+              "hook": {
+                "end": 7.571,
+                "start": 0.0
+              },
+              "message": {
+                "end": 61.088,
+                "start": 33.717
+              },
+              "recitation": {
+                "end": 31.346,
+                "start": 7.571
+              },
+              "seal": {
+                "end": 33.717,
+                "start": 31.346
+              }
+            },
+            "commentary_pages": {
+              "cta": 4,
+              "hook": 3,
+              "message": 10
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 72.4,
+            "file_size_bytes": 31601938,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 23.775,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 17
+        },
+        "status": "validated"
+      },
+      "verse": 186,
+      "verse_key": "2:186",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "9914af88e6267dd1015f3dd4a945cbdc76514de98ddfcbf63f897a7aa7446b76",
+      "visual_plan": {
+        "closing": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "pulse",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "heart"
+                }
+              ],
+              "image_prompt": "A glowing heart icon floating in the center of a soft, golden-lit space, surrounded by a gentle aura of light.",
+              "mood": "warm"
+            }
+          ]
+        },
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "float",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "cloud"
+                }
+              ],
+              "image_prompt": "A silhouette of a person standing alone on a dark balcony looking out at a rainy city skyline at night, dim street lights reflecting on wet pavement.",
+              "mood": "storm"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A wide shot of a vast horizon at dawn, soft golden light breaking through thin clouds over a calm valley, a single tree standing tall in the distance.",
+            "mood": "dawn",
+            "text_span": "هذا القرب يعني",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              }
+            ],
+            "image_prompt": "A close-up of a quiet path winding through a forest, sunlight filtering through leaves, creating a peaceful and safe atmosphere.",
+            "mood": "calm",
+            "text_span": "أنك لست وحدك،",
+            "word_start": 3
+          },
+          {
+            "elements": [
+              {
+                "animation": "pulse",
+                "position": "center",
+                "size": "medium",
+                "type": "wave"
+              }
+            ],
+            "image_prompt": "A serene lake reflecting the clear blue sky, ripples gently moving across the water surface, a symbol of inner peace and presence.",
+            "mood": "warm",
+            "text_span": "فالله قريب منك",
+            "word_start": 6
+          },
+          {
+            "elements": [
+              {
+                "animation": "float",
+                "position": "center",
+                "size": "medium",
+                "type": "hands"
+              }
+            ],
+            "image_prompt": "A pair of hands held together in a gesture of quiet reflection, soft focus background of a garden in the morning light.",
+            "mood": "calm",
+            "text_span": "يسمع نداءك ويجيب",
+            "word_start": 9
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "door"
+              }
+            ],
+            "image_prompt": "A small wooden door slightly ajar in an old stone wall, light spilling from inside, suggesting openness and hope.",
+            "mood": "day",
+            "text_span": "دعاءك. عندما تشعر",
+            "word_start": 12
+          },
+          {
+            "elements": [
+              {
+                "animation": "grow",
+                "position": "center",
+                "size": "medium",
+                "type": "seed"
+              }
+            ],
+            "image_prompt": "A close-up of a single seed resting on fertile soil, ready to sprout, symbolizing potential and growth amidst challenges.",
+            "mood": "storm",
+            "text_span": "بضيق في أمور",
+            "word_start": 15
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "mountain"
+              }
+            ],
+            "image_prompt": "A mountain peak under a clear sky, a steady path leading upwards, representing the journey of life and commitment.",
+            "mood": "day",
+            "text_span": "دنياك، ابدأ بطاعته",
+            "word_start": 18
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "house"
+              }
+            ],
+            "image_prompt": "A quiet room with a window overlooking a peaceful garden, soft curtains moving slightly in the breeze, a sense of order and tranquility.",
+            "mood": "calm",
+            "text_span": "في كل أمر",
+            "word_start": 21
+          },
+          {
+            "elements": [
+              {
+                "animation": "pulse",
+                "position": "center",
+                "size": "medium",
+                "type": "heart"
+              }
+            ],
+            "image_prompt": "A close-up of a heart-shaped leaf on a branch, illuminated by the warm glow of the setting sun.",
+            "mood": "warm",
+            "text_span": "ونهي، واجعل قلبك",
+            "word_start": 24
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "clock"
+              }
+            ],
+            "image_prompt": "",
+            "mood": "dawn",
+            "text_span": "ممتلئاً باليقين. هذه",
+            "word_start": 27
+          },
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "center",
+                "size": "medium",
+                "type": "sun"
+              }
+            ],
+            "image_prompt": "A wide shot of a field of flowers opening up to the sun, vibrant colors and a sense of new beginnings.",
+            "mood": "day",
+            "text_span": "الخطوة العملية تفتح",
+            "word_start": 30
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "sitting_person"
+              }
+            ],
+            "image_prompt": "A person sitting peacefully on a bench in a park, looking at the horizon, a sense of clarity and direction.",
+            "mood": "calm",
+            "text_span": "لك أبواب الهداية",
+            "word_start": 33
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "scale"
+              }
+            ],
+            "image_prompt": "A scale balancing perfectly, representing harmony and balance in life's affairs, soft lighting.",
+            "mood": "warm",
+            "text_span": "لمصالح دينك ودنياك،",
+            "word_start": 36
+          },
+          {
+            "elements": [
+              {
+                "animation": "float",
+                "position": "center",
+                "size": "medium",
+                "type": "wave"
+              }
+            ],
+            "image_prompt": "A calm ocean at sunset, gentle waves washing onto the shore, a feeling of deep peace and resolution.",
+            "mood": "calm",
+            "text_span": "وتمنحك طمأنينة تسكن",
+            "word_start": 39
+          }
+        ],
+        "visual_theme": "soft morning light, serene natural landscapes, gentle atmosphere, warm golden tones, quiet and peaceful environment"
+      }
     }
   ],
   "version": 1

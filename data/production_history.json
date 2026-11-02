@@ -15456,6 +15456,950 @@
         ],
         "visual_theme": "soft morning light, serene natural landscapes, minimalist aesthetic, warm golden tones"
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 41,
+      "created_at": "2026-11-02T20:48:01.803732+00:00",
+      "last_error": null,
+      "local_date": "2026-11-02",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/41:34",
+          "verse_key": "41:34"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/41.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/41?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/41:34"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 72.019,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 3.245,
+                "image": false,
+                "mood": "storm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.491,
+                "image": false,
+                "mood": "dawn",
+                "name": "hook-2",
+                "start": 3.245
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.222,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-1",
+                "start": 6.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 13.953,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-2",
+                "start": 10.222
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 17.684,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-3",
+                "start": 13.953
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 21.415,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-4",
+                "start": 17.684
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.146,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-5",
+                "start": 21.415
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.877,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-6",
+                "start": 25.146
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.155,
+                "image": false,
+                "mood": "calm",
+                "name": "message-1",
+                "start": 28.877
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 33.983,
+                "image": false,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 32.155
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.312,
+                "image": false,
+                "mood": "warm",
+                "name": "message-3",
+                "start": 33.983
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.271,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 37.312
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 41.555,
+                "image": false,
+                "mood": "dawn",
+                "name": "message-5",
+                "start": 39.271
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 43.71,
+                "image": false,
+                "mood": "day",
+                "name": "message-6",
+                "start": 41.555
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.43,
+                "image": false,
+                "mood": "day",
+                "name": "message-7",
+                "start": 43.71
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 51.021,
+                "image": false,
+                "mood": "calm",
+                "name": "message-8",
+                "start": 47.43
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.547,
+                "image": false,
+                "mood": "warm",
+                "name": "message-9",
+                "start": 51.021
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.074,
+                "image": false,
+                "mood": "warm",
+                "name": "message-10",
+                "start": 53.547
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.601,
+                "image": false,
+                "mood": "warm",
+                "name": "message-11",
+                "start": 56.074
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.128,
+                "image": false,
+                "mood": "warm",
+                "name": "message-12",
+                "start": 58.601
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 63.851,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 61.128
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 66.573,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.851
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 69.296,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.573
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 72.019,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 69.296
+              }
+            ],
+            "theme_hash": "f3e5c70eff621dbc",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "cea959c8030e376f40e958baaed89d5560cfabe3b52f74fef97bab3281367c43",
+          "status": "published",
+          "video_id": "video-cea959c8030e376f",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-cea959c8030e376f/video-cea959c8030e376f.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تساءلت يومًا عن السر وراء تحول القلوب القاسية إلى قلوب محبة؟ في هذا الفيديو، نكشف عن منهج أخلاقي عميق يغير نظرتك للتعامل مع الإساءة والعداوة. من خلال فهم دقيق، نوضح كيف يمكن للإحسان أن يذيب الجليد بين الناس ويحول العدو إلى صديق مقرب. اكتشف قيمة الصبر والحلم في مواجهة المكاره، وكيف أن هذا الخلق هو طريق السعادة في الدنيا والآخرة. لا تدع الفرصة تفوتك لتغيير أسلوبك في التعامل مع من حولك. شارك هذا المحتوى مع من تحب لتعم الفائدة.\n\nالكلمات المفتاحية: تحويل العداوة، رد الإساءة، فن التعامل، الأخلاق، العفو والحلم، الإحسان، إنهاء الخصومة، الصبر على الأذى، تغيير القلوب، السعادة في الدنيا، العلاقات الإنسانية، التعامل مع الناس\n\n#أخلاق #علاقات #تطوير_الذات #حكمة #إحسان #تسامح #هدوء #سلام_داخلي #HumanRelations #Wisdom",
+        "title": "الطريقة الذكية لتحويل العداوة إلى صداقة حقيقية"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-02-41-34-d57cfa7ebb-report.json",
+      "run_id": "2026-11-02-41-34-d57cfa7ebb",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/41:34"
+      },
+      "status": "published",
+      "updated_at": "2026-11-02T20:50:30.704427+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 72.019,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 3.245,
+                "image": false,
+                "mood": "storm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.491,
+                "image": false,
+                "mood": "dawn",
+                "name": "hook-2",
+                "start": 3.245
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.222,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-1",
+                "start": 6.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 13.953,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-2",
+                "start": 10.222
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 17.684,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-3",
+                "start": 13.953
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 21.415,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-4",
+                "start": 17.684
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.146,
+                "image": false,
+                "mood": "storm",
+                "name": "recitation-5",
+                "start": 21.415
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.877,
+                "image": false,
+                "mood": "dawn",
+                "name": "recitation-6",
+                "start": 25.146
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.155,
+                "image": false,
+                "mood": "calm",
+                "name": "message-1",
+                "start": 28.877
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 33.983,
+                "image": false,
+                "mood": "warm",
+                "name": "message-2",
+                "start": 32.155
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.312,
+                "image": false,
+                "mood": "warm",
+                "name": "message-3",
+                "start": 33.983
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.271,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 37.312
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 41.555,
+                "image": false,
+                "mood": "dawn",
+                "name": "message-5",
+                "start": 39.271
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 43.71,
+                "image": false,
+                "mood": "day",
+                "name": "message-6",
+                "start": 41.555
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.43,
+                "image": false,
+                "mood": "day",
+                "name": "message-7",
+                "start": 43.71
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 51.021,
+                "image": false,
+                "mood": "calm",
+                "name": "message-8",
+                "start": 47.43
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.547,
+                "image": false,
+                "mood": "warm",
+                "name": "message-9",
+                "start": 51.021
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.074,
+                "image": false,
+                "mood": "warm",
+                "name": "message-10",
+                "start": 53.547
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.601,
+                "image": false,
+                "mood": "warm",
+                "name": "message-11",
+                "start": 56.074
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.128,
+                "image": false,
+                "mood": "warm",
+                "name": "message-12",
+                "start": 58.601
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 63.851,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 61.128
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 66.573,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.851
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 69.296,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.573
+              },
+              {
+                "elements": [
+                  "heart"
+                ],
+                "end": 72.019,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 69.296
+              }
+            ],
+            "theme_hash": "f3e5c70eff621dbc",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 12,
+            "keywords": 12,
+            "message_word_budget": [
+              38,
+              55
+            ],
+            "message_words": 58,
+            "topic": "الأخلاق والعلاقات",
+            "visual_scene_count": 13
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس المعاني الواردة في التفسير بدقة، حيث ربط بين دفع الإساءة بالإحسان وتحول العدو إلى ولي حميم، وأشار إلى أن هذه الخصلة تتطلب الصبر وتؤدي إلى السعادة في الدنيا والآخرة، وهي مطابقة لما ورد في التفسير المرفق."
+          },
+          "recitation_api_verse_key": "41:34",
+          "recitation_duration_seconds": 20.175,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 0,
+            "notes": [
+              "توليد الصور معطل: اضبط IMAGE_GEN_LICENSE_CONFIRMED=true وIMAGE_GEN_LICENSE_URL (HTTPS) بعد مراجعة الشروط."
+            ],
+            "providers": [],
+            "requested": 12,
+            "shots": 12,
+            "timeline_entries": 24
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 17,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 72.019,
+            "audio_segments": {
+              "cta": {
+                "end": 72.019,
+                "start": 61.128
+              },
+              "hook": {
+                "end": 6.491,
+                "start": 0.0
+              },
+              "message": {
+                "end": 61.128,
+                "start": 28.877
+              },
+              "recitation": {
+                "end": 26.666,
+                "start": 6.491
+              },
+              "seal": {
+                "end": 28.877,
+                "start": 26.666
+              }
+            },
+            "commentary_pages": {
+              "cta": 5,
+              "hook": 3,
+              "message": 12
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 72.033,
+            "file_size_bytes": 9317298,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 20.175,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 17
+        },
+        "status": "validated"
+      },
+      "verse": 34,
+      "verse_key": "41:34",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "cea959c8030e376f40e958baaed89d5560cfabe3b52f74fef97bab3281367c43",
+      "visual_plan": {
+        "closing": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "pulse",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "heart"
+                }
+              ],
+              "image_prompt": "A pair of hands holding a small, glowing heart-shaped light, reaching out towards the viewer.",
+              "mood": "warm"
+            }
+          ]
+        },
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A dark, stormy sky over a desolate landscape with a single broken stone wall, symbolizing conflict and distance.",
+              "mood": "storm"
+            },
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A narrow wooden bridge stretching across a quiet, misty stream at dawn, representing a path to reconciliation.",
+              "mood": "dawn"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A person sitting at a wooden table looking out of a window at a cloudy sky, reflecting on thoughts.",
+            "mood": "calm",
+            "text_span": "نحن نظن أن",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "Two closed fists resting on a table, one slightly pulling away, symbolizing the instinct to defend or retaliate.",
+            "mood": "calm",
+            "text_span": "رد الإساءة هو",
+            "word_start": 3
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "An open, ancient-looking book resting on a wooden surface, illuminated by a soft, warm ray of light from above.",
+            "mood": "warm",
+            "text_span": "لكن التفسير يقرر",
+            "word_start": 7
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A pair of hands gently planting a small green seed into rich, dark soil, representing the act of kindness.",
+            "mood": "warm",
+            "text_span": "أن الإحسان هو",
+            "word_start": 10
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A person standing in a garden, looking at a withered flower, choosing to water it instead of walking away.",
+            "mood": "calm",
+            "text_span": "حين تقابل الإساءة",
+            "word_start": 15
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "The sun beginning to rise over a mountain range, casting a golden glow that slowly pushes away the shadows.",
+            "mood": "dawn",
+            "text_span": "بالعفو والحلم، يحدث",
+            "word_start": 18
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A silhouette of two people standing at a distance, one slowly turning towards the other as the light brightens.",
+            "mood": "day",
+            "text_span": "تحول مدهش؛ فالمسيء",
+            "word_start": 21
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A closed gate made of iron, slowly swinging open to reveal a path leading to a peaceful meadow.",
+            "mood": "day",
+            "text_span": "الذي كان عدوًا",
+            "word_start": 24
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "Two chairs placed side by side on a porch, overlooking a calm landscape, symbolizing companionship and closeness.",
+            "mood": "warm",
+            "text_span": "يصبح كأنه قريب",
+            "word_start": 27
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A person walking slowly along a path, looking ahead with a steady and calm expression, showing inner strength.",
+            "mood": "calm",
+            "text_span": "هذا الخلق لا",
+            "word_start": 31
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A tall, sturdy tree standing alone in a field, its roots deeply embedded in the ground, enduring the wind.",
+            "mood": "calm",
+            "text_span": "يملكه إلا الصابرون،",
+            "word_start": 34
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A scale balancing perfectly, with a heart on one side and a light feather on the other, representing harmony.",
+            "mood": "warm",
+            "text_span": "وهو علامة على",
+            "word_start": 37
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A golden light filling a quiet room, reflecting off a glass of water, symbolizing clarity and abundance.",
+            "mood": "dawn",
+            "text_span": "حظ وافر من",
+            "word_start": 40
+          }
+        ],
+        "visual_theme": "soft morning light, minimalist interior, calm garden atmosphere, warm earth tones, gentle transitions"
+      }
     }
   ],
   "version": 1

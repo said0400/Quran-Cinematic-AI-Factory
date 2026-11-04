@@ -17440,6 +17440,1162 @@
         ],
         "visual_theme": "soft morning light, minimalist interior, neutral tones, calm atmosphere, focus on natural textures"
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 17,
+      "created_at": "2026-11-04T18:39:58.403263+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-04",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-04-17-29-988c295bc3-report.json",
+      "run_id": "2026-11-04-17-29-988c295bc3",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+      },
+      "status": "failed",
+      "updated_at": "2026-11-04T18:41:10.856160+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "17:29",
+          "recitation_duration_seconds": 13.435,
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "word_segments_valid": 13
+        },
+        "status": "failed"
+      },
+      "verse": 29,
+      "verse_key": "17:29",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "chapter": 17,
+      "created_at": "2026-11-04T18:41:10.950640+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-04",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-04-17-29-1a18328e8e-report.json",
+      "run_id": "2026-11-04-17-29-1a18328e8e",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+      },
+      "status": "failed",
+      "updated_at": "2026-11-04T18:42:47.488223+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "17:29",
+          "recitation_duration_seconds": 13.435,
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "word_segments_valid": 13
+        },
+        "status": "failed"
+      },
+      "verse": 29,
+      "verse_key": "17:29",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "chapter": 17,
+      "created_at": "2026-11-04T18:42:47.540008+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-04",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-04-17-29-6ba0f2f7a0-report.json",
+      "run_id": "2026-11-04-17-29-6ba0f2f7a0",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+      },
+      "status": "failed",
+      "updated_at": "2026-11-04T18:43:51.408817+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "17:29",
+          "recitation_duration_seconds": 13.435,
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "word_segments_valid": 13
+        },
+        "status": "failed"
+      },
+      "verse": 29,
+      "verse_key": "17:29",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "chapter": 17,
+      "created_at": "2026-11-04T18:43:51.460813+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-04",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-04-17-29-a9d0cd5d26-report.json",
+      "run_id": "2026-11-04-17-29-a9d0cd5d26",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+      },
+      "status": "failed",
+      "updated_at": "2026-11-04T18:45:21.118468+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_api_verse_key": "17:29",
+          "recitation_duration_seconds": 13.435,
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "word_segments_valid": 13
+        },
+        "status": "failed"
+      },
+      "verse": 29,
+      "verse_key": "17:29",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "chapter": 17,
+      "created_at": "2026-11-04T18:45:21.172626+00:00",
+      "last_error": null,
+      "local_date": "2026-11-04",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/17:29",
+          "verse_key": "17:29"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/17.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/17?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 69.319,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.577,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 5.154,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-2",
+                "start": 2.577
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 7.731,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 5.154
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.732,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-1",
+                "start": 7.731
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.734,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-2",
+                "start": 11.732
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 19.735,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-3",
+                "start": 15.734
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 23.737,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-4",
+                "start": 19.735
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.562,
+                "image": false,
+                "mood": "calm",
+                "name": "message-1",
+                "start": 23.737
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 27.776,
+                "image": false,
+                "mood": "calm",
+                "name": "message-2",
+                "start": 25.562
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 29.991,
+                "image": false,
+                "mood": "calm",
+                "name": "message-3",
+                "start": 27.776
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.206,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 29.991
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 35.36,
+                "image": false,
+                "mood": "day",
+                "name": "message-5",
+                "start": 32.206
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.608,
+                "image": false,
+                "mood": "day",
+                "name": "message-6",
+                "start": 35.36
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.856,
+                "image": false,
+                "mood": "day",
+                "name": "message-7",
+                "start": 37.608
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.339,
+                "image": false,
+                "mood": "day",
+                "name": "message-8",
+                "start": 39.856
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 44.722,
+                "image": false,
+                "mood": "day",
+                "name": "message-9",
+                "start": 42.339
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.104,
+                "image": false,
+                "mood": "day",
+                "name": "message-10",
+                "start": 44.722
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 49.587,
+                "image": false,
+                "mood": "day",
+                "name": "message-11",
+                "start": 47.104
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 52.204,
+                "image": false,
+                "mood": "day",
+                "name": "message-12",
+                "start": 49.587
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 54.084,
+                "image": false,
+                "mood": "day",
+                "name": "message-13",
+                "start": 52.204
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.996,
+                "image": false,
+                "mood": "day",
+                "name": "message-14",
+                "start": 54.084
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 59.908,
+                "image": false,
+                "mood": "day",
+                "name": "message-15",
+                "start": 56.996
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 63.045,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 59.908
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 66.182,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.045
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 69.319,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.182
+              }
+            ],
+            "theme_hash": "a2975e8c7f310eff",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "99306d2550ed9b4d79bf8ea52c8315332aaebdc791d4473d199befef6e5b426c",
+          "status": "published",
+          "video_id": "video-99306d2550ed9b4d",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-99306d2550ed9b4d/video-99306d2550ed9b4d.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تساءلت يوماً عن التوازن الصحيح في التعامل مع المال؟ في هذا المقطع نستعرض فهماً عميقاً لكيفية تجنب الوقوع في الندم واللوم عند الإنفاق. نناقش الفرق بين الإمساك المذموم والتبذير الذي ينهك الإنسان، وكيف يؤدي الإسراف إلى نتائج عكسية غير متوقعة. اكتشف الحكمة في الاعتدال وكيف تحمي نفسك من العجز المالي والندم الشخصي. شارك المقطع مع أصدقائك وأحبابك لتعم الفائدة.\n\nالكلمات المفتاحية: الاعتدال في الإنفاق، تجنب التبذير، الحكمة في المال، الإنفاق المتوازن، مفهوم الكرم، تجنب الندم المالي، إدارة الموارد المالية، الاعتدال المالي، الإنفاق في الخير، التوازن في الحياة\n\n#الاعتدال #الإنفاق #الحكمة #تطوير_الذات #المال #نصيحة #وعي #حياة_متوازنة",
+        "title": "الخيط الرفيع بين الكرم والندم في الإنفاق"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-04-17-29-c0fa07ba35-report.json",
+      "run_id": "2026-11-04-17-29-c0fa07ba35",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:29"
+      },
+      "status": "published",
+      "updated_at": "2026-11-04T18:50:12.367308+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 69.319,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.577,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 5.154,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-2",
+                "start": 2.577
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 7.731,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 5.154
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.732,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-1",
+                "start": 7.731
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.734,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-2",
+                "start": 11.732
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 19.735,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-3",
+                "start": 15.734
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 23.737,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-4",
+                "start": 19.735
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.562,
+                "image": false,
+                "mood": "calm",
+                "name": "message-1",
+                "start": 23.737
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 27.776,
+                "image": false,
+                "mood": "calm",
+                "name": "message-2",
+                "start": 25.562
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 29.991,
+                "image": false,
+                "mood": "calm",
+                "name": "message-3",
+                "start": 27.776
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.206,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 29.991
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 35.36,
+                "image": false,
+                "mood": "day",
+                "name": "message-5",
+                "start": 32.206
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.608,
+                "image": false,
+                "mood": "day",
+                "name": "message-6",
+                "start": 35.36
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.856,
+                "image": false,
+                "mood": "day",
+                "name": "message-7",
+                "start": 37.608
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.339,
+                "image": false,
+                "mood": "day",
+                "name": "message-8",
+                "start": 39.856
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 44.722,
+                "image": false,
+                "mood": "day",
+                "name": "message-9",
+                "start": 42.339
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.104,
+                "image": false,
+                "mood": "day",
+                "name": "message-10",
+                "start": 44.722
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 49.587,
+                "image": false,
+                "mood": "day",
+                "name": "message-11",
+                "start": 47.104
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 52.204,
+                "image": false,
+                "mood": "day",
+                "name": "message-12",
+                "start": 49.587
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 54.084,
+                "image": false,
+                "mood": "day",
+                "name": "message-13",
+                "start": 52.204
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.996,
+                "image": false,
+                "mood": "day",
+                "name": "message-14",
+                "start": 54.084
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 59.908,
+                "image": false,
+                "mood": "day",
+                "name": "message-15",
+                "start": 56.996
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 63.045,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 59.908
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 66.182,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 63.045
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 69.319,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 66.182
+              }
+            ],
+            "theme_hash": "a2975e8c7f310eff",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 8,
+            "hook_words": 14,
+            "keywords": 10,
+            "message_word_budget": [
+              49,
+              71
+            ],
+            "message_words": 59,
+            "topic": "المال والإنفاق",
+            "visual_scene_count": 11
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس بدقة المعاني الواردة في التفسير المرفق للآية، حيث يربط بين الإسراف والندم واللوم، ويؤكد على أهمية التوازن في الإنفاق دون إضافة أحكام شرعية أو ادعاءات غيبية خارجة عن سياق التفسير."
+          },
+          "recitation_api_verse_key": "17:29",
+          "recitation_duration_seconds": 13.435,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 0,
+            "notes": [
+              "توليد الصور معطل: اضبط IMAGE_GEN_LICENSE_CONFIRMED=true وIMAGE_GEN_LICENSE_URL (HTTPS) بعد مراجعة الشروط."
+            ],
+            "providers": [],
+            "requested": 12,
+            "shots": 12,
+            "timeline_entries": 25
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 13,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 69.319,
+            "audio_segments": {
+              "cta": {
+                "end": 69.319,
+                "start": 59.908
+              },
+              "hook": {
+                "end": 7.731,
+                "start": 0.0
+              },
+              "message": {
+                "end": 59.908,
+                "start": 23.737
+              },
+              "recitation": {
+                "end": 21.166,
+                "start": 7.731
+              },
+              "seal": {
+                "end": 23.737,
+                "start": 21.166
+              }
+            },
+            "commentary_pages": {
+              "cta": 4,
+              "hook": 3,
+              "message": 13
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 69.333,
+            "file_size_bytes": 9263380,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 13.435,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 13
+        },
+        "status": "validated"
+      },
+      "verse": 29,
+      "verse_key": "17:29",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "99306d2550ed9b4d79bf8ea52c8315332aaebdc791d4473d199befef6e5b426c",
+      "visual_plan": {
+        "closing": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "Two hands reaching out towards each other, soft morning light, symbol of connection and sharing, warm tones.",
+              "mood": "warm"
+            }
+          ]
+        },
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A close up of a person holding a small coin in their palm, soft morning light hitting the metal, blurred background of a quiet room.",
+              "mood": "calm"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A pair of scales sitting on a wooden table, one side slightly heavier than the other, soft focus, morning atmosphere.",
+            "mood": "calm",
+            "text_span": "المفارقة هنا أن",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A hand placing a single seed into fertile soil, close up, natural lighting, symbol of growth and balance.",
+            "mood": "calm",
+            "text_span": "العطاء الذي نظنه",
+            "word_start": 3
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A closed wooden door with a simple latch, soft shadows, minimalist architectural style, morning light.",
+            "mood": "day",
+            "text_span": "الإمساك الشديد يمنع",
+            "word_start": 14
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "Water overflowing from a simple ceramic cup, droplets catching the light, clean background, focus on the overflow.",
+            "mood": "day",
+            "text_span": "لكن التبذير المفرط",
+            "word_start": 18
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "An empty wallet lying on a wooden surface, soft morning light, minimalist composition, sense of emptiness.",
+            "mood": "day",
+            "text_span": "عندما تنفق فوق",
+            "word_start": 24
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A person seen from behind looking out of a large window at a distant horizon, quiet morning, contemplative mood.",
+            "mood": "day",
+            "text_span": "تجد نفسك في",
+            "word_start": 28
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A single leaf falling slowly onto a calm water surface, creating small ripples, soft light, peaceful but melancholic.",
+            "mood": "day",
+            "text_span": "ونادماً على ضياع",
+            "word_start": 36
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A balanced stone stack on a beach, soft morning mist, calm sea in the background, symbol of stability.",
+            "mood": "day",
+            "text_span": "التوازن هو جوهر",
+            "word_start": 40
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A warm cup of tea on a table, steam rising gently, soft morning light, cozy and inviting atmosphere.",
+            "mood": "day",
+            "text_span": "فلا تضيق على",
+            "word_start": 44
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A path leading through a garden, soft morning light, trees on both sides, sense of direction and clarity.",
+            "mood": "day",
+            "text_span": "ولا تسرف حتى",
+            "word_start": 48
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A silhouette of a person standing at a crossroads, soft morning light, choosing a direction, minimalist landscape.",
+            "mood": "day",
+            "text_span": "لا تجد نفسك",
+            "word_start": 51
+          }
+        ],
+        "visual_theme": "soft morning light, minimalist interior, wooden textures, calm atmosphere"
+      }
     }
   ],
   "version": 1

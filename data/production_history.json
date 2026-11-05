@@ -18596,6 +18596,826 @@
         ],
         "visual_theme": "soft morning light, minimalist interior, wooden textures, calm atmosphere"
       }
+    },
+    {
+      "attempt_count": 1,
+      "chapter": 3,
+      "created_at": "2026-11-05T18:45:54.213218+00:00",
+      "last_error": null,
+      "local_date": "2026-11-05",
+      "media_sources": [
+        {
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/3:185",
+          "verse_key": "3:185"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/3.mp3",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/3?segments=true"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:185"
+        },
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 75.839,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.284,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 4.567,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-2",
+                "start": 2.284
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.851,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 4.567
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.764,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-1",
+                "start": 6.851
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 14.676,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-2",
+                "start": 10.764
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.589,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-3",
+                "start": 14.676
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 22.501,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-4",
+                "start": 18.589
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 26.414,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 22.501
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 30.327,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 26.414
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 34.239,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 30.327
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 38.152,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-8",
+                "start": 34.239
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.064,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-9",
+                "start": 38.152
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 45.977,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-10",
+                "start": 42.064
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 49.248,
+                "image": false,
+                "mood": "day",
+                "name": "message-1",
+                "start": 45.977
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 51.623,
+                "image": false,
+                "mood": "day",
+                "name": "message-2",
+                "start": 49.248
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.997,
+                "image": false,
+                "mood": "day",
+                "name": "message-3",
+                "start": 51.623
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.566,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 53.997
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.434,
+                "image": false,
+                "mood": "calm",
+                "name": "message-5",
+                "start": 56.566
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.491,
+                "image": false,
+                "mood": "warm",
+                "name": "message-6",
+                "start": 58.434
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 64.548,
+                "image": false,
+                "mood": "warm",
+                "name": "message-7",
+                "start": 61.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 67.371,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 64.548
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 70.193,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 67.371
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 73.016,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 70.193
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 75.839,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 73.016
+              }
+            ],
+            "theme_hash": "d91471761f9f3de9",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "48d14456930924422fdfa82aaf20b31981db41f78571f24c4a4ea79a50e9d1d0",
+          "status": "published",
+          "video_id": "video-48d1445693092442",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-48d1445693092442/video-48d1445693092442.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "كثيراً ما نغرق في تفاصيل الحياة اليومية وننسى الغاية الحقيقية من وجودنا. في هذا المقطع، نتأمل في طبيعة الدنيا وكيف أنها متاع زائل قد يغتر به الإنسان. نناقش المعنى العميق للرحيل عن هذه الحياة، وكيف أن الحساب والجزاء هما الحقيقة الوحيدة التي تنتظرنا جميعاً. استعد لإعادة ترتيب أولوياتك وفهم الدنيا من منظور أعمق وأكثر وضوحاً. شارك المقطع مع من تحب لتعم الفائدة.\n\nالكلمات المفتاحية: حقيقة الدنيا، زوال الدنيا، معنى الحياة، التفكر في الموت، متاع الغرور، محاسبة النفس، الغاية من الوجود، تأملات إيمانية، نصائح للحياة، الآخرة والدنيا، حقيقة الوجود، الاستعداد للرحيل\n\n#تأملات #حقيقة_الدنيا #محاسبة_النفس #وعي #تذكير #حياة #تطوير_الذات #رسالة_اليوم #Reflection #LifeLessons",
+        "title": "الحقيقة التي نغفل عنها في زحمة الحياة"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-05-3-185-bf87cffa7e-report.json",
+      "run_id": "2026-11-05-3-185-bf87cffa7e",
+      "source_tafsir": {
+        "commercial_license_verified_by_operator": true,
+        "license_url": "https://quran.com/privacy",
+        "resource_id": 16,
+        "source_name": "المیسر",
+        "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/3:185"
+      },
+      "status": "published",
+      "updated_at": "2026-11-05T18:47:42.530680+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 75.839,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 0,
+            "kind": "script_synced_scenes",
+            "message_timing_source": "estimated",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.284,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 4.567,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-2",
+                "start": 2.284
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.851,
+                "image": false,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 4.567
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.764,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-1",
+                "start": 6.851
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 14.676,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-2",
+                "start": 10.764
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.589,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-3",
+                "start": 14.676
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 22.501,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-4",
+                "start": 18.589
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 26.414,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 22.501
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 30.327,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 26.414
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 34.239,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 30.327
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 38.152,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-8",
+                "start": 34.239
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.064,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-9",
+                "start": 38.152
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 45.977,
+                "image": false,
+                "mood": "calm",
+                "name": "recitation-10",
+                "start": 42.064
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 49.248,
+                "image": false,
+                "mood": "day",
+                "name": "message-1",
+                "start": 45.977
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 51.623,
+                "image": false,
+                "mood": "day",
+                "name": "message-2",
+                "start": 49.248
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.997,
+                "image": false,
+                "mood": "day",
+                "name": "message-3",
+                "start": 51.623
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 56.566,
+                "image": false,
+                "mood": "calm",
+                "name": "message-4",
+                "start": 53.997
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.434,
+                "image": false,
+                "mood": "calm",
+                "name": "message-5",
+                "start": 56.566
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.491,
+                "image": false,
+                "mood": "warm",
+                "name": "message-6",
+                "start": 58.434
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 64.548,
+                "image": false,
+                "mood": "warm",
+                "name": "message-7",
+                "start": 61.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 67.371,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-1",
+                "start": 64.548
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 70.193,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-2",
+                "start": 67.371
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 73.016,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-3",
+                "start": 70.193
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 75.839,
+                "image": false,
+                "mood": "warm",
+                "name": "cta-4",
+                "start": 73.016
+              }
+            ],
+            "theme_hash": "d91471761f9f3de9",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 13,
+            "keywords": 12,
+            "message_word_budget": [
+              25,
+              30
+            ],
+            "message_words": 28,
+            "topic": "الدنيا والغفلة ومحاسبة النفس",
+            "visual_scene_count": 5
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص المقترح يعكس المعاني الواردة في الآية والتفسير بشكل دقيق، حيث أشار إلى زوال الدنيا وكونها متاعاً يغتر به الإنسان، وذكر حقيقة الموت والحساب دون إضافة أحكام شرعية أو وعود بأجور محددة غير مذكورة في النص الأصلي."
+          },
+          "recitation_api_verse_key": "3:185",
+          "recitation_duration_seconds": 36.915,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 0,
+            "notes": [
+              "توليد الصور معطل: اضبط IMAGE_GEN_LICENSE_CONFIRMED=true وIMAGE_GEN_LICENSE_URL (HTTPS) بعد مراجعة الشروط."
+            ],
+            "providers": [],
+            "requested": 7,
+            "shots": 7,
+            "timeline_entries": 24
+          },
+          "verse_source_and_key": true,
+          "verse_word_count": 23,
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 75.839,
+            "audio_segments": {
+              "cta": {
+                "end": 75.839,
+                "start": 64.548
+              },
+              "hook": {
+                "end": 6.851,
+                "start": 0.0
+              },
+              "message": {
+                "end": 64.548,
+                "start": 45.977
+              },
+              "recitation": {
+                "end": 43.766,
+                "start": 6.851
+              },
+              "seal": {
+                "end": 45.977,
+                "start": 43.766
+              }
+            },
+            "commentary_pages": {
+              "cta": 4,
+              "hook": 3,
+              "message": 6
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 75.867,
+            "file_size_bytes": 9329251,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_duration_seconds": 36.915,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "cta": "estimated",
+              "hook": "estimated",
+              "message": "estimated"
+            },
+            "valid": true,
+            "video_codec": "h264",
+            "width": 1080
+          },
+          "word_segments_valid": 23
+        },
+        "status": "validated"
+      },
+      "verse": 185,
+      "verse_key": "3:185",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "48d14456930924422fdfa82aaf20b31981db41f78571f24c4a4ea79a50e9d1d0",
+      "visual_plan": {
+        "closing": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "Two hands gently holding a small glowing light, soft focus, warm background, a symbol of sharing and connection, peaceful and inviting.",
+              "mood": "warm"
+            }
+          ]
+        },
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A person standing at the edge of a vast, calm lake at dawn, looking at the horizon, soft mist rising from the water, a single fallen leaf floating near the shore.",
+              "mood": "calm"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A close-up of a golden hourglass on a wooden table, sand slowly trickling down, sunlight hitting the glass, a blurred background of a busy city street.",
+            "mood": "day",
+            "text_span": "نحن ننشغل ببريق",
+            "word_start": 0
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A wide shot of a beautiful flower garden in late afternoon, the colors are vibrant but the shadows are lengthening, a single path leading into the distance.",
+            "mood": "day",
+            "text_span": "لكن الحقيقة أنها",
+            "word_start": 4
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A lone tree standing in an open field, the sky is changing from blue to a soft orange, a gentle breeze blowing through the branches, empty space around.",
+            "mood": "calm",
+            "text_span": "كل نفس ستذوق",
+            "word_start": 11
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "An old wooden door slightly ajar in a stone wall, light streaming through the opening, dust motes dancing in the air, a sense of transition.",
+            "mood": "calm",
+            "text_span": "وحينها ندرك أن",
+            "word_start": 15
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A reflection of a sunset in a still puddle on a stone path, ripples distorting the image, a sense of fleeting beauty, quiet surroundings.",
+            "mood": "warm",
+            "text_span": "ما عشناه كان",
+            "word_start": 18
+          }
+        ],
+        "visual_theme": "soft morning light, quiet garden path, fading shadows, calm atmosphere"
+      }
     }
   ],
   "version": 1

@@ -19821,6 +19821,411 @@
       "verse_key": "topic:cave-309",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-06T16:30:03.577109+00:00",
+      "last_error": "عدد الكلمات المنطوقة (136) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-19369681-report.json",
+      "run_id": "2026-11-06-cave-309-19369681",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T16:30:37.513217+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-06T16:30:37.600173+00:00",
+      "last_error": "عدد الكلمات المنطوقة (136) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-470c4528-report.json",
+      "run_id": "2026-11-06-cave-309-470c4528",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T16:31:00.838193+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "created_at": "2026-11-06T16:31:00.897761+00:00",
+      "last_error": "عدد الكلمات المنطوقة (141) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-39f6ff45-report.json",
+      "run_id": "2026-11-06-cave-309-39f6ff45",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T16:31:24.681107+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "created_at": "2026-11-06T16:31:24.741028+00:00",
+      "last_error": "عدد الكلمات المنطوقة (139) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-1e9057a4-report.json",
+      "run_id": "2026-11-06-cave-309-1e9057a4",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T16:31:48.140819+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "created_at": "2026-11-06T16:31:48.201136+00:00",
+      "last_error": "عدد الكلمات المنطوقة (138) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-8e9a8685-report.json",
+      "run_id": "2026-11-06-cave-309-8e9a8685",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T16:32:11.507998+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

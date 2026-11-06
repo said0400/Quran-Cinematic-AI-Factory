@@ -8,23 +8,19 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'طريقة اختيار الآية'
+        description: 'طريقة اختيار الموضوع'
         type: choice
         required: true
         default: auto
         options:
           - auto
           - manual
-      chapter:
-        description: 'رقم السورة عند اختيار manual'
-        type: number
-        required: false
-      verse:
-        description: 'رقم الآية عند اختيار manual'
-        type: number
+      topic:
+        description: 'معرّف الموضوع من data/topics.json عند اختيار manual'
+        type: string
         required: false
       reprocess:
-        description: 'السماح بإعادة إنشاء فيديو آية سبق إنتاجها (لا يكرر وجهة منشورة)'
+        description: 'السماح بإعادة إنشاء فيديو موضوع سبق إنتاجه (لا يكرر وجهة منشورة)'
         type: boolean
         required: false
         default: false
@@ -55,10 +51,12 @@ jobs:
       TARGET_MAX_DURATION: ${{ vars.TARGET_MAX_DURATION || '60' }}
       MAX_CANDIDATES_PER_RUN: ${{ vars.MAX_CANDIDATES_PER_RUN || '5' }}
       MAX_RETRIES: ${{ vars.MAX_RETRIES || '3' }}
-      # Background is generated locally with Pillow + FFmpeg: no stock footage or downloads.
-      # Automatic runs skip verses shorter than MIN_VERSE_WORDS words or whose recitation exceeds MAX_RECITATION_SECONDS.
-      MIN_VERSE_WORDS: ${{ vars.MIN_VERSE_WORDS || '10' }}
-      MAX_RECITATION_SECONDS: ${{ vars.MAX_RECITATION_SECONDS || '40' }}
+      # The idea comes first: topics (question + vetted facts + the verses used as evidence) live in this file.
+      TOPICS_FILE: ${{ vars.TOPICS_FILE || 'data/topics.json' }}
+      # Automatic runs skip a topic whose recitations together exceed MAX_RECITATION_SECONDS.
+      MAX_RECITATION_SECONDS: ${{ vars.MAX_RECITATION_SECONDS || '45' }}
+      # Subtitle-style captions (4-5 words at a time) or the old big cards: captions | card.
+      COMMENTARY_STYLE: ${{ vars.COMMENTARY_STYLE || 'captions' }}
       # Commentary voice: edge (default) | gemini | auto (Gemini first, edge-tts as fallback).
       TTS_PROVIDER: ${{ vars.TTS_PROVIDER || 'edge' }}
       TTS_VOICE: ${{ vars.TTS_VOICE || 'ar-EG-ShakirNeural' }}
@@ -70,10 +68,7 @@ jobs:
       ARABIC_FONT: ${{ vars.ARABIC_FONT }}
       ARABIC_FONT_LICENSE_URL: ${{ vars.ARABIC_FONT_LICENSE_URL }}
       ARABIC_FONT_LICENSE_CONFIRMED: ${{ vars.ARABIC_FONT_LICENSE_CONFIRMED }}
-      VISUAL_ASSETS_LICENSE_CONFIRMED: ${{ vars.VISUAL_ASSETS_LICENSE_CONFIRMED }}
-      VISUAL_ASSETS_LICENSE_URL: ${{ vars.VISUAL_ASSETS_LICENSE_URL }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
+      # Scene pictures: free generation (Cloudflare Workers AI), a new picture about every 3 seconds.
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       IMAGE_PROVIDERS: ${{ vars.IMAGE_PROVIDERS || 'cloudflare' }}
@@ -81,7 +76,11 @@ jobs:
       IMAGE_GEN_LICENSE_URL: ${{ vars.IMAGE_GEN_LICENSE_URL }}
       CF_IMAGE_MODEL: ${{ vars.CF_IMAGE_MODEL }}
       CF_IMAGE_SIZE_PARAMS: ${{ vars.CF_IMAGE_SIZE_PARAMS }}
-      COMMENTARY_STYLE: ${{ vars.COMMENTARY_STYLE || 'captions' }}
+      MAX_SCENE_IMAGES: ${{ vars.MAX_SCENE_IMAGES || '14' }}
+      VISUAL_ASSETS_LICENSE_CONFIRMED: ${{ vars.VISUAL_ASSETS_LICENSE_CONFIRMED }}
+      VISUAL_ASSETS_LICENSE_URL: ${{ vars.VISUAL_ASSETS_LICENSE_URL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
       QF_CLIENT_ID: ${{ secrets.QF_CLIENT_ID }}
       QF_CLIENT_SECRET: ${{ secrets.QF_CLIENT_SECRET }}
       QF_ENV: ${{ vars.QF_ENV || 'production' }}
@@ -120,8 +119,7 @@ jobs:
       MAKE_PLATFORMS: ${{ vars.MAKE_PLATFORMS || 'facebook,youtube,instagram,tiktok' }}
       GITHUB_TOKEN: ${{ github.token }}
       MODE: ${{ inputs.mode || 'auto' }}
-      MANUAL_CHAPTER: ${{ inputs.chapter }}
-      MANUAL_VERSE: ${{ inputs.verse }}
+      MANUAL_TOPIC: ${{ inputs.topic }}
       REPROCESS: ${{ inputs.reprocess || 'false' }}
       OUTPUT_DIR: output
       HISTORY_FILE: data/production_history.json
@@ -158,18 +156,19 @@ jobs:
 
       - name: Run offline unit tests
         run: |
+          python topics.py
+          python scene_images.py
+          python procedural_background.py
           python services.py
           python video_engine.py
-          python procedural_background.py
-          python scene_images.py
           python main.py --test
 
       - name: Generate, validate, and publish
         run: |
           args=(--mode "$MODE")
           if [[ "$MODE" == "manual" ]]; then
-            [[ -n "$MANUAL_CHAPTER" && -n "$MANUAL_VERSE" ]] || { echo 'manual mode requires chapter and verse' >&2; exit 2; }
-            args+=(--chapter "$MANUAL_CHAPTER" --verse "$MANUAL_VERSE")
+            [[ -n "$MANUAL_TOPIC" ]] || { echo 'manual mode requires a topic id (see data/topics.json)' >&2; exit 2; }
+            args+=(--topic "$MANUAL_TOPIC")
           fi
           if [[ "$REPROCESS" == "true" ]]; then args+=(--reprocess); fi
           python main.py "${args[@]}"

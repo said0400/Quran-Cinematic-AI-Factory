@@ -20226,6 +20226,1467 @@
       "verse_key": "topic:cave-309",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-06T19:13:29.245948+00:00",
+      "last_error": "عدد الكلمات المنطوقة (128) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-6eaaac79-report.json",
+      "run_id": "2026-11-06-cave-309-6eaaac79",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T19:15:52.305658+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-06T19:15:52.387061+00:00",
+      "last_error": "عدد الكلمات المنطوقة (134) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-9d29f70d-report.json",
+      "run_id": "2026-11-06-cave-309-9d29f70d",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T19:16:25.284366+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "created_at": "2026-11-06T19:16:25.337251+00:00",
+      "last_error": "عدد الكلمات المنطوقة (138) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-417acea4-report.json",
+      "run_id": "2026-11-06-cave-309-417acea4",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T19:17:18.115372+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "created_at": "2026-11-06T19:17:18.167447+00:00",
+      "last_error": "عدد الكلمات المنطوقة (134) خارج المجال المسموح (81..108).",
+      "local_date": "2026-11-06",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-c57bde48-report.json",
+      "run_id": "2026-11-06-cave-309-c57bde48",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T19:18:14.191605+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 12.915,
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "created_at": "2026-11-06T19:18:14.241743+00:00",
+      "last_error": null,
+      "local_date": "2026-11-06",
+      "media_sources": [
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 88.69,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 31,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 2.783,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 5.565,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-2",
+                "start": 2.783
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 8.348,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-3",
+                "start": 5.565
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 11.131,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-4",
+                "start": 8.348
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 14.004,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 11.131
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 16.877,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 14.004
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 19.749,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 16.877
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 22.622,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 19.749
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.577,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 22.622
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.532,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 25.577
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 31.487,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 28.532
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 33.88,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-8",
+                "start": 31.487
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 36.273,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-9",
+                "start": 33.88
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 38.666,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-10",
+                "start": 36.273
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 41.591,
+                "image": true,
+                "mood": "day",
+                "name": "scene-11",
+                "start": 38.666
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 44.516,
+                "image": true,
+                "mood": "day",
+                "name": "scene-12",
+                "start": 41.591
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.442,
+                "image": true,
+                "mood": "day",
+                "name": "scene-13",
+                "start": 44.516
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 50.367,
+                "image": true,
+                "mood": "day",
+                "name": "scene-14",
+                "start": 47.442
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.292,
+                "image": true,
+                "mood": "day",
+                "name": "scene-15",
+                "start": 50.367
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 55.822,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 53.292
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 58.351,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.822
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 60.881,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-18",
+                "start": 58.351
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 63.65,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-19",
+                "start": 60.881
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 66.419,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-20",
+                "start": 63.65
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 69.189,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-21",
+                "start": 66.419
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 71.958,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 69.189
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 75.138,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-23",
+                "start": 71.958
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 79.188,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-24",
+                "start": 75.138
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 82.355,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-25",
+                "start": 79.188
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 85.523,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-26",
+                "start": 82.355
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 88.69,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-27",
+                "start": 85.523
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated",
+              "talk-3": "estimated"
+            },
+            "theme_hash": "c16d82ffd98201aa",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "fragment": "18:25",
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/18.mp3",
+          "fragment": "18:25",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/18?segments=true",
+          "verse_key": "18:25"
+        },
+        {
+          "fragment": "18:26#1-5",
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/18:26",
+          "verse_key": "18:26"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/18.mp3",
+          "fragment": "18:26#1-5",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/18?segments=true",
+          "verse_key": "18:26"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close up of an old wooden table with a compass and a blank piece of paper, soft sunlight filtering through a window.",
+          "provider": "cloudflare",
+          "scene": "opening-1",
+          "sha256": "07fe6b89e435b3a76572467d4feda730f6e3fbda9cf22dcafc73419528a414e4"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A wide shot of a golden sun rising over a distant horizon, casting long shadows across a quiet landscape.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "ad682669b434f35e10ad91353ac141fb215ad76468b9e451f3cfa697a310ad58"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A conceptual view of the earth orbiting the sun, represented by a glowing sphere moving in a circular path.",
+          "provider": "cloudflare",
+          "scene": "scene-2",
+          "sha256": "0135e29c8c7456db5972caacf0e17209e6419a810a068a84f9401a6c2fd208de"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A pair of antique brass scales balancing on a wooden surface, one side slightly heavier than the other.",
+          "provider": "cloudflare",
+          "scene": "scene-3",
+          "sha256": "a43e7054927bdb6bfbc5866dcf182d449f8704e73c7c05b41f9ce13fccfeb90a"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A clear night sky with a bright crescent moon shining above a silhouette of a mountain range.",
+          "provider": "cloudflare",
+          "scene": "scene-4",
+          "sha256": "cf2716070ee0ec736c5f6ecf173aeb1b6fe90c0c6cd1090f9378d0b3a493f97f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A quiet, empty stone path leading into a dark cave entrance, illuminated by a faint, soft light from within.",
+          "provider": "cloudflare",
+          "scene": "scene-5",
+          "sha256": "62976934fc495d628a9684c17c14de655613887f5554cde74459ba07e5f6a76c"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "8027b49a899421fecae88a14a287c0c2690d80106875422699b03746927f2865",
+          "status": "published",
+          "video_id": "video-8027b49a899421fe",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-8027b49a899421fe/video-8027b49a899421fe.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تساءلت يوماً عن دقة التعبير القرآني في ذكر المدة الزمنية؟ في هذا الفيديو نكشف كيف يربط القرآن بين الحساب الشمسي والحساب القمري في آية واحدة. نوضح الفرق بين السنة الشمسية والقمرية وكيف يؤثر هذا الفرق على حسابات الزمن، لنصل إلى فهم أعمق لقوله تعالى في سورة الكهف. اكتشف كيف تتطابق الحسابات الفلكية مع النص القرآني في دقة مذهلة. تابعني لنتدبر دقة القرآن بحسبان.\n\nالكلمات المفتاحية: القرآن الكريم، سورة الكهف، السنة الشمسية، السنة القمرية، حساب الزمن، إعجاز القرآن، تدبر القرآن، الفرق بين السنتين، حركة الأرض، حسابات فلكية\n\n#القرآن_الكريم #سورة_الكهف #تدبر #إعجاز_قرآني #فلك #علوم_الكون #تأملات #حقائق #Quran #Science",
+        "title": "لماذا ذكر القرآن ثلاثمائة سنة وتسع سنين؟"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-06-cave-309-2b1c3f0a-report.json",
+      "run_id": "2026-11-06-cave-309-2b1c3f0a",
+      "script": {
+        "call_to_action": "تابعني لنتدبر دقة القرآن بحسبان.",
+        "hook": "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟ الجواب أدق مما تتخيل.",
+        "parts": [
+          {
+            "text": "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟ الجواب أدق مما تتخيل. اسمع، قال تعالى:",
+            "type": "speech"
+          },
+          {
+            "type": "verse",
+            "verse_index": 1
+          },
+          {
+            "text": "ثلاثمائة سنة شمسية، وتسع سنين زيادة قمرية. طيب، لماذا هذا التفصيل؟ السنة الشمسية تدور فيها الأرض حول الشمس في ثلاثمائة وخمسة وستين يوماً، بينما السنة القمرية اثنا عشر هلالاً، أي ثلاثمائة وأربعة وخمسين يوماً فقط. الفرق بينهما أحد عشر يوماً كل سنة، وهذا هو السبب في أن رمضان يأتي أبكر كل عام. الآن، إذا جمعت هذا الفرق على ثلاثمائة سنة، ستجد أن ثلاثمائة سنة شمسية تساوي تماماً ثلاثمائة وتسع سنين قمرية. تأمل هذا التعبير، قال تعالى:",
+            "type": "speech"
+          },
+          {
+            "type": "verse",
+            "verse_index": 2
+          },
+          {
+            "text": "تابعني لنتدبر دقة القرآن بحسبان.",
+            "type": "speech"
+          }
+        ],
+        "spoken_word_budget": [
+          81,
+          108
+        ],
+        "spoken_words": 121
+      },
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:25",
+          "verse_key": "18:25"
+        },
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/18:26",
+          "verse_key": "18:26"
+        }
+      ],
+      "status": "published",
+      "topic_id": "cave-309",
+      "updated_at": "2026-11-06T19:22:35.230287+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 88.69,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 31,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 2.783,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 5.565,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-2",
+                "start": 2.783
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 8.348,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-3",
+                "start": 5.565
+              },
+              {
+                "elements": [
+                  "clock"
+                ],
+                "end": 11.131,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-4",
+                "start": 8.348
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 14.004,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 11.131
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 16.877,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 14.004
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 19.749,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 16.877
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 22.622,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 19.749
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 25.577,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 22.622
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.532,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 25.577
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 31.487,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 28.532
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 33.88,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-8",
+                "start": 31.487
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 36.273,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-9",
+                "start": 33.88
+              },
+              {
+                "elements": [
+                  "sun"
+                ],
+                "end": 38.666,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-10",
+                "start": 36.273
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 41.591,
+                "image": true,
+                "mood": "day",
+                "name": "scene-11",
+                "start": 38.666
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 44.516,
+                "image": true,
+                "mood": "day",
+                "name": "scene-12",
+                "start": 41.591
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 47.442,
+                "image": true,
+                "mood": "day",
+                "name": "scene-13",
+                "start": 44.516
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 50.367,
+                "image": true,
+                "mood": "day",
+                "name": "scene-14",
+                "start": 47.442
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 53.292,
+                "image": true,
+                "mood": "day",
+                "name": "scene-15",
+                "start": 50.367
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 55.822,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 53.292
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 58.351,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.822
+              },
+              {
+                "elements": [
+                  "scale"
+                ],
+                "end": 60.881,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-18",
+                "start": 58.351
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 63.65,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-19",
+                "start": 60.881
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 66.419,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-20",
+                "start": 63.65
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 69.189,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-21",
+                "start": 66.419
+              },
+              {
+                "elements": [
+                  "moon"
+                ],
+                "end": 71.958,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 69.189
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 75.138,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-23",
+                "start": 71.958
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 79.188,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-24",
+                "start": 75.138
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 82.355,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-25",
+                "start": 79.188
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 85.523,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-26",
+                "start": 82.355
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 88.69,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-27",
+                "start": 85.523
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated",
+              "talk-3": "estimated"
+            },
+            "theme_hash": "c16d82ffd98201aa",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 10,
+            "hook_words": 16,
+            "keywords": 10,
+            "parts": [
+              "speech",
+              "verse",
+              "speech",
+              "verse",
+              "speech"
+            ],
+            "spoken_word_budget": [
+              81,
+              108
+            ],
+            "spoken_words": 121,
+            "visual_shots": 6
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "The text accurately reflects the provided facts, verses, and interpretation regarding the difference between solar and lunar years and the explanation of the verse 18:25."
+          },
+          "recitation_total_seconds": 12.915,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 6,
+            "notes": [],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 6,
+            "shots": 6,
+            "timeline_entries": 31
+          },
+          "topic": {
+            "facts": 5,
+            "id": "cave-309",
+            "question": "لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟"
+          },
+          "verses": [
+            {
+              "label": "18:25",
+              "seconds": 8.865,
+              "words": 8
+            },
+            {
+              "label": "18:26#1-5",
+              "seconds": 4.05,
+              "words": 5
+            }
+          ],
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 88.69,
+            "audio_segments": {
+              "closing": {
+                "end": 88.69,
+                "start": 83.879
+              },
+              "hook": {
+                "end": 11.131,
+                "start": 0.0
+              },
+              "talk-1": {
+                "end": 22.622,
+                "start": 11.131
+              },
+              "talk-2": {
+                "end": 75.138,
+                "start": 31.487
+              },
+              "talk-3": {
+                "end": 83.879,
+                "start": 79.188
+              },
+              "verse-1": {
+                "end": 31.487,
+                "start": 22.622
+              },
+              "verse-2": {
+                "end": 79.188,
+                "start": 75.138
+              }
+            },
+            "commentary_pages": {
+              "closing": 1,
+              "hook": 4,
+              "talk-1": 4,
+              "talk-2": 16,
+              "talk-3": 1
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 88.7,
+            "file_size_bytes": 37597203,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_total_seconds": 12.915,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated",
+              "talk-3": "estimated"
+            },
+            "valid": true,
+            "verse_count": 2,
+            "video_codec": "h264",
+            "width": 1080
+          }
+        },
+        "status": "validated"
+      },
+      "verse_key": "topic:cave-309",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "8027b49a899421fecae88a14a287c0c2690d80106875422699b03746927f2865",
+      "visual_plan": {
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "pulse",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "clock"
+                }
+              ],
+              "image_prompt": "A close up of an old wooden table with a compass and a blank piece of paper, soft sunlight filtering through a window.",
+              "mood": "warm"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "rise",
+                "position": "center",
+                "size": "medium",
+                "type": "sun"
+              }
+            ],
+            "image_prompt": "A wide shot of a golden sun rising over a distant horizon, casting long shadows across a quiet landscape.",
+            "mood": "calm",
+            "text_span": "ثلاثمائة سنة شمسية",
+            "word_start": 19
+          },
+          {
+            "elements": [
+              {
+                "animation": "float",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A conceptual view of the earth orbiting the sun, represented by a glowing sphere moving in a circular path.",
+            "mood": "day",
+            "text_span": "السنة الشمسية تدور",
+            "word_start": 30
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "scale"
+              }
+            ],
+            "image_prompt": "A pair of antique brass scales balancing on a wooden surface, one side slightly heavier than the other.",
+            "mood": "calm",
+            "text_span": "الفرق بينهما أحد",
+            "word_start": 54
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "right",
+                "size": "medium",
+                "type": "moon"
+              }
+            ],
+            "image_prompt": "A clear night sky with a bright crescent moon shining above a silhouette of a mountain range.",
+            "mood": "warm",
+            "text_span": "الآن، إذا جمعت",
+            "word_start": 71
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              }
+            ],
+            "image_prompt": "A quiet, empty stone path leading into a dark cave entrance, illuminated by a faint, soft light from within.",
+            "mood": "calm",
+            "text_span": "تأمل هذا التعبير",
+            "word_start": 90
+          },
+          {
+            "elements": [
+              {
+                "animation": "grow",
+                "position": "center",
+                "size": "medium",
+                "type": "seed"
+              }
+            ],
+            "image_prompt": "A single seed resting on a wooden surface, with soft light rays hitting it from above, symbolizing growth and knowledge.",
+            "mood": "warm",
+            "text_span": "تابعني لنتدبر دقة",
+            "word_start": 95
+          }
+        ],
+        "visual_theme": "minimalist warm lighting, ancient parchment textures, soft golden hour glow, clean academic aesthetic"
+      }
     }
   ],
   "version": 1

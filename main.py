@@ -18,58 +18,22 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from services import (
     FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher,
-    QuranFoundationClient, ServiceError, YouTubePublisher, env_bool, make_tts_service,
+    QuranFoundationClient, ScriptVerse, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     quran_words, validate_word_segments,
 )
 from procedural_background import (
-    apply_images, build_timeline, pick_image_keys, render_background, shot_index, timeline_image_keys,
+    apply_images, build_script_timeline, pick_image_keys, render_background, shot_index, timeline_image_keys,
 )
 from scene_images import SceneImageService
+from topics import Topic, TopicError, find_topic, load_topics
 from video_engine import (
-    VideoError, align_speech_words, build_verse_layout, build_video, media_duration, validate_video,
+    VideoError, align_speech_words, build_script_video, build_verse_layout, media_duration, validate_video,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-# Verses grouped by the everyday problem they speak to. Long enough (about 10-35 words) for a
-# 12-30 second recitation; the topic is only an angle hint for the writer, the meaning always
-# comes from the fetched tafsir. A verse that fails a runtime check (too short, layout, timings)
-# is skipped, never retried.
-VERSE_TOPICS: dict[str, tuple[tuple[int, int], ...]] = {
-    "الصبر والابتلاء": ((2, 45), (2, 153), (2, 155), (2, 156), (3, 200), (29, 2), (39, 10), (57, 22), (64, 11), (21, 83)),
-    "الفرج وكشف الكرب": ((21, 87), (10, 107), (35, 2)),
-    "الرزق والتوكل": ((65, 3), (11, 6), (29, 60), (9, 51)),
-    "القلق والطمأنينة": ((13, 28), (2, 186), (3, 139), (16, 97)),
-    "اليأس والأمل ورحمة الله": ((39, 53), (12, 87), (4, 110)),
-    "بر الوالدين": ((17, 23), (17, 24), (31, 14)),
-    "الأخلاق والعلاقات": ((49, 13), (41, 34), (3, 134), (25, 63), (16, 90)),
-    "الأسرة والمودة": ((30, 21),),
-    "وسائل التواصل والشائعات": ((49, 6), (17, 36)),
-    "المال والإنفاق": ((4, 29), (17, 29), (28, 77)),
-    "الدنيا والغفلة ومحاسبة النفس": ((63, 9), (3, 185), (18, 46), (59, 18)),
-    "الشكر وتغيير النفس": ((14, 7), (8, 53)),
-    "الدعاء والثبات": ((2, 201), (3, 8)),
-    "الزمن والحساب": ((18, 25),),
-}
-
-
-def _interleave_topics(topics: dict[str, tuple[tuple[int, int], ...]]) -> list[tuple[int, int]]:
-    """Round-robin over the topics so consecutive days rarely repeat a topic."""
-    queues = [list(verses) for verses in topics.values()]
-    pool: list[tuple[int, int]] = []
-    while any(queues):
-        for queue in queues:
-            if queue:
-                pool.append(queue.pop(0))
-    return pool
-
-
-AUTO_VERSE_POOL = _interleave_topics(VERSE_TOPICS)
-VERSE_TOPIC_BY_KEY = {f"{chapter}:{verse}": topic
-                      for topic, verses in VERSE_TOPICS.items() for chapter, verse in verses}
-# Spoken-length planning: the hook, closing phrase and call to action take roughly this long.
-FIXED_SPEECH_SECONDS = 15.5
+# Spoken-length planning: how many words the narrator can say in the time left after the recited verses.
 SPEECH_WORDS_PER_SECOND = 2.3
-MESSAGE_WORDS_FLOOR, MESSAGE_WORDS_CAP = 30, 80
+SPEECH_WORDS_FLOOR, SPEECH_WORDS_CAP = 45, 120
 DESCRIPTION_LIMIT = 1900     # title (<=95) + blank line + description stays under the 2000-char caption limit
 DEFAULT_TTS_VOICE = "ar-EG-ShakirNeural"
 COMMENTARY_STYLES = ("captions", "card")
@@ -100,12 +64,10 @@ class Config:
     history_file: Path
     final_video_name: str
     dim_strength: float = 0.30
-    background_clips: int = 3
-    background_speed: float = 0.75
-    min_verse_words: int = 10
-    max_recitation_seconds: int = 40
+    max_recitation_seconds: int = 45
     commentary_style: str = "captions"
     max_scene_images: int = 14
+    topics_file: Path = Path("data/topics.json")
 
     @classmethod
     def from_env(cls, root: Path = PROJECT_ROOT) -> "Config":
@@ -153,6 +115,9 @@ class Config:
         commentary_style = os.getenv("COMMENTARY_STYLE", "").strip().lower() or "captions"
         if commentary_style not in COMMENTARY_STYLES:
             raise FactoryError("COMMENTARY_STYLE يجب أن يكون captions أو card.")
+        topics_file = Path(os.getenv("TOPICS_FILE", "data/topics.json").strip() or "data/topics.json")
+        if not topics_file.is_absolute():
+            topics_file = root / topics_file
         return cls(
             timezone_name=timezone_name,
             daily_video_count=integer("DAILY_VIDEO_COUNT", 1, 1, 5),
@@ -168,12 +133,10 @@ class Config:
             history_file=history_file,
             final_video_name=final_name,
             dim_strength=decimal("VIDEO_DIM_STRENGTH", 0.30, 0.0, 0.8),
-            background_clips=integer("BACKGROUND_CLIP_COUNT", 3, 2, 5),
-            background_speed=decimal("BACKGROUND_SPEED", 0.75, 0.25, 1.0),
-            min_verse_words=integer("MIN_VERSE_WORDS", 10, 1, 100),
-            max_recitation_seconds=integer("MAX_RECITATION_SECONDS", 40, 10, 300),
+            max_recitation_seconds=integer("MAX_RECITATION_SECONDS", 45, 10, 300),
             commentary_style=commentary_style,
             max_scene_images=integer("MAX_SCENE_IMAGES", 14, 1, 30),
+            topics_file=topics_file,
         )
 
 
@@ -309,17 +272,16 @@ def row_has_unresolved_submission(row: dict[str, Any]) -> bool:
     return False
 
 
-def choose_auto_candidates(history_rows: list[dict[str, Any]], date_key: str, limit: int) -> list[tuple[int, int]]:
-    # Exclude verses with any confirmed public/posted destination. Pending and failed rows remain
-    # addressable by publish-only recovery instead of silently producing duplicate content.
+def choose_auto_candidates(history_rows: list[dict[str, Any]], date_key: str, topics: list[Topic], limit: int) -> list[Topic]:
+    """Unused topics in a date-rotated order. A topic with any confirmed or unresolved publication is never chosen
+    again: pending and failed rows stay addressable by publish-only recovery instead of producing duplicates."""
     seen = {row.get("verse_key") for row in history_rows
             if row_has_any_publication(row) or row_has_unresolved_submission(row)}
-    if not AUTO_VERSE_POOL:
+    if not topics:
         return []
-    start = sum(ord(ch) for ch in date_key) % len(AUTO_VERSE_POOL)
-    rotated = AUTO_VERSE_POOL[start:] + AUTO_VERSE_POOL[:start]
-    result = [(ch, v) for ch, v in rotated if f"{ch}:{v}" not in seen]
-    return result[:limit]
+    start = sum(ord(ch) for ch in date_key) % len(topics)
+    rotated = topics[start:] + topics[:start]
+    return [topic for topic in rotated if topic.row_key not in seen][:limit]
 
 
 def already_processed_today(history_rows: list[dict[str, Any]], local_date: str, daily_target: int = 1) -> bool:
@@ -333,13 +295,11 @@ def already_processed_today(history_rows: list[dict[str, Any]], local_date: str,
                or row_has_unresolved_submission(row) for row in today)
 
 
-def new_run_record(run_id: str, chapter: int, verse: int, mode: str, local_date: str, attempt: int) -> dict[str, Any]:
-    key = f"{chapter}:{verse}"
+def new_run_record(run_id: str, topic_id: str, mode: str, local_date: str, attempt: int) -> dict[str, Any]:
     return {
         "run_id": run_id,
-        "verse_key": key,
-        "chapter": chapter,
-        "verse": verse,
+        "verse_key": f"topic:{topic_id}",        # the key under which history remembers the topic
+        "topic_id": topic_id,
         "mode": mode,
         "local_date": local_date,
         "created_at": utc_now_iso(),
@@ -465,23 +425,29 @@ def publish_platforms(video: Path, row: dict[str, Any], history: ProductionHisto
     return row
 
 
-def _record_sources(verse: Any, recitation: Any, tafsir: Any, media_items: list[dict[str, Any]], tts_terms: str,
-                    tts_voice: str, tts_provider: str = "edge-tts") -> list[dict[str, Any]]:
-    return [
-        {"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
-         "source_url": f"{QF_BASE}/verses/by_key/{verse.key}", "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
-         "license_status": "operator-confirmed right to reproduce source text in published video"},
-        {"kind": "recitation", "provider": "Quran Foundation Content API v4", "reciter_id": recitation.reciter_id,
-         "reciter_name": recitation.reciter_name, "source_url": recitation.source_url,
-         "audio_url": recitation.audio_url, "license_url": os.getenv("RECITATION_LICENSE_URL"),
-         "license_status": "operator-confirmed commercial reproduction permission"},
-        {"kind": "tafsir", "source_name": tafsir.source_name, "resource_id": tafsir.resource_id,
-         "source_url": tafsir.source_url, "license_url": tafsir.license_url,
-         "license_status": "operator-confirmed commercial reproduction permission"},
-        *media_items,
-        {"kind": "tts", "provider": tts_provider, "voice": tts_voice,
-         "license_url": tts_terms, "license_status": "operator-confirmed current usage terms"},
-    ]
+def _record_sources(items: list[dict[str, Any]], tafsirs: dict[str, Any], media_items: list[dict[str, Any]],
+                    tts_terms: str, tts_voice: str, tts_provider: str = "edge-tts") -> list[dict[str, Any]]:
+    """The licence trail: every verse text and recitation used, the tafsir read, generated pictures, and the voice."""
+    sources: list[dict[str, Any]] = []
+    for item in items:
+        verse, recitation = item["verse"], item["recitation"]
+        sources.append({"kind": "quran_text", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
+                        "fragment": item.get("label"), "source_url": f"{QF_BASE}/verses/by_key/{verse.key}",
+                        "license_url": os.getenv("QURAN_TEXT_LICENSE_URL"),
+                        "license_status": "operator-confirmed right to reproduce source text in published video"})
+        sources.append({"kind": "recitation", "provider": "Quran Foundation Content API v4", "verse_key": verse.key,
+                        "fragment": item.get("label"), "reciter_id": recitation.reciter_id,
+                        "reciter_name": recitation.reciter_name, "source_url": recitation.source_url,
+                        "audio_url": recitation.audio_url, "license_url": os.getenv("RECITATION_LICENSE_URL"),
+                        "license_status": "operator-confirmed commercial reproduction permission"})
+    for key, tafsir in tafsirs.items():
+        sources.append({"kind": "tafsir", "verse_key": key, "source_name": tafsir.source_name,
+                        "resource_id": tafsir.resource_id, "source_url": tafsir.source_url, "license_url": tafsir.license_url,
+                        "license_status": "operator-confirmed commercial reproduction permission"})
+    sources.extend(media_items)
+    sources.append({"kind": "tts", "provider": tts_provider, "voice": tts_voice,
+                    "license_url": tts_terms, "license_status": "operator-confirmed current usage terms"})
+    return sources
 
 # Set immediately below to keep URL constants in reports while avoiding accidental config-dependent values.
 QF_BASE = os.getenv(
@@ -492,11 +458,11 @@ QF_BASE = os.getenv(
 ).rstrip("/")
 
 
-def message_word_budget(target_max: float, recitation_seconds: float) -> tuple[int, int]:
-    """(minimum, maximum) spoken words for the merged message, from the time left after the recitation."""
-    spare = float(target_max) - float(recitation_seconds) - FIXED_SPEECH_SECONDS
-    upper = max(MESSAGE_WORDS_FLOOR, min(MESSAGE_WORDS_CAP, int(spare * SPEECH_WORDS_PER_SECOND)))
-    lower = min(upper, max(25, int(upper * 0.7)))
+def speech_word_budget(target_max: float, recitation_total: float) -> tuple[int, int]:
+    """(minimum, maximum) words the narrator may say, from the time left after the recited verses."""
+    spare = float(target_max) - float(recitation_total)
+    upper = max(SPEECH_WORDS_FLOOR, min(SPEECH_WORDS_CAP, int(spare * SPEECH_WORDS_PER_SECOND)))
+    lower = min(upper, max(40, int(upper * 0.75)))
     return lower, upper
 
 
@@ -524,14 +490,13 @@ def _title_description(ai: dict[str, Any]) -> tuple[str, str]:
     return ai["title"].strip()[:100], compose_description(ai)[:5000]
 
 
-def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str, config: Config,
-                       history: ProductionHistory, local_date: str,
-                       previous_row: dict[str, Any] | None = None) -> tuple[dict[str, Any], bool]:
-    run_id = f"{local_date}-{chapter}-{verse_number}-{uuid.uuid4().hex[:10]}"
-    row = new_run_record(run_id, chapter, verse_number, mode, local_date, attempt)
+def generate_candidate(topic: Topic, attempt: int, mode: str, config: Config, history: ProductionHistory,
+                       local_date: str, previous_row: dict[str, Any] | None = None) -> tuple[dict[str, Any], bool]:
+    run_id = f"{local_date}-{topic.id}-{uuid.uuid4().hex[:8]}"
+    row = new_run_record(run_id, topic.id, mode, local_date, attempt)
     if previous_row:
         # Reprocessing may create a new artifact, but previously confirmed platform posts and IDs
-        # remain confirmed and are never uploaded again for this verse.
+        # remain confirmed and are never uploaded again for this topic.
         row["platforms"] = row["platforms"] | {
             key: dict(value) for key, value in previous_row.get("platforms", {}).items()
             if key in PLATFORM_KEYS and isinstance(value, dict)
@@ -542,98 +507,121 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
     try:
         validate_generation_environment()
         quran = QuranFoundationClient()
-        verse = quran.get_verse(chapter, verse_number)
-        row["verse_key"] = verse.key
-        row["verification"]["checks"]["verse_source_and_key"] = True
-        # Cheap, deterministic checks first: a verse that cannot work is skipped before any paid call.
-        verse_word_count = len(quran_words(verse.text_uthmani))
-        row["verification"]["checks"]["verse_word_count"] = verse_word_count
-        if mode == "auto" and verse_word_count < config.min_verse_words:
-            raise CandidateRejected(f"الآية قصيرة ({verse_word_count} كلمة؛ الحد الأدنى {config.min_verse_words}).")
-        try:
-            build_verse_layout(verse.text_uthmani, verse.chapter_name, verse.verse, config.width, config.height)
-        except VideoError as exc:
-            raise CandidateRejected(f"تعذر عرض الآية على البطاقة: {exc}") from None
-        row["status"] = "started"
-        update_record(history, row, report_dir)
-
+        checks = row["verification"]["checks"]
         work_dir = config.output_dir / f"work-{run_id}"
         work_dir.mkdir(parents=True, exist_ok=True)
-        recitation, recitation_file = quran.get_recitation(chapter, verse_number, work_dir)
-        recitation_duration = media_duration(recitation_file)
-        if mode == "auto" and recitation_duration > config.max_recitation_seconds:
+
+        # 1) The evidence: every verse (or fragment) is fetched, cut and verified before any paid call.
+        items: list[dict[str, Any]] = []
+        tafsirs: dict[str, Any] = {}
+        for ref in topic.verses:
+            verse = quran.get_verse(ref.chapter, ref.verse)
+            all_words = quran_words(verse.text_uthmani)
+            if ref.words is not None:
+                if ref.last_word > len(all_words):
+                    raise CandidateRejected(f"مقطع الآية {ref.label} يتجاوز عدد كلمات الآية ({len(all_words)}).")
+                fragment_text = " ".join(all_words[ref.first_word - 1:ref.last_word])
+            else:
+                fragment_text = verse.text_uthmani
+            try:
+                build_verse_layout(fragment_text, verse.chapter_name, verse.verse, config.width, config.height)
+            except VideoError as exc:
+                raise CandidateRejected(f"تعذر عرض الآية على البطاقة: {exc}") from None
+            recitation, audio_file = quran.get_recitation(ref.chapter, ref.verse, work_dir, ref.words, verse.text_uthmani)
+            seconds = media_duration(audio_file)
+            try:
+                timed_words = validate_word_segments(recitation.segments, fragment_text, int(round(seconds * 1000)))
+            except ServiceError as exc:
+                raise CandidateRejected(str(exc)) from None
+            items.append({"ref": ref, "label": ref.label, "verse": verse, "recitation": recitation, "audio": audio_file,
+                          "text": fragment_text, "seconds": seconds, "timed_words": timed_words})
+            if verse.key not in tafsirs:
+                tafsirs[verse.key] = quran.get_tafsir(verse.key)
+        recitation_total = sum(item["seconds"] for item in items)
+        if mode == "auto" and recitation_total > config.max_recitation_seconds:
             raise CandidateRejected(
-                f"التلاوة أطول من الحد ({recitation_duration:.1f}s > {config.max_recitation_seconds}s).")
-        try:
-            timed_words = validate_word_segments(recitation.segments, verse.text_uthmani,
-                                                 int(round(recitation_duration * 1000)))
-        except ServiceError as exc:
-            raise CandidateRejected(str(exc)) from None
-        row["verification"]["checks"]["recitation_api_verse_key"] = verse.key
-        row["verification"]["checks"]["word_segments_valid"] = len(timed_words)
-        row["verification"]["checks"]["recitation_duration_seconds"] = round(recitation_duration, 3)
-        row["verification"]["checks"]["audio_content_identity"] = {
+                f"زمن التلاوة الكلي أطول من الحد ({recitation_total:.1f}s > {config.max_recitation_seconds}s).")
+        checks["topic"] = {"id": topic.id, "question": topic.question, "facts": len(topic.facts)}
+        checks["verses"] = [{"label": item["label"], "words": len(item["timed_words"]), "seconds": round(item["seconds"], 3)}
+                            for item in items]
+        checks["recitation_total_seconds"] = round(recitation_total, 3)
+        checks["audio_content_identity"] = {
             "status": "not_independently_transcribed",
             "audio_sent_to_gemini": False,
             "basis": "Quran Foundation verse key and word-level timestamps only",
         }
+        row["source_tafsir"] = [{"verse_key": key, "source_name": tafsir.source_name, "resource_id": tafsir.resource_id,
+                                 "source_url": tafsir.source_url, "license_url": tafsir.license_url,
+                                 "commercial_license_verified_by_operator": tafsir.license_verified_by_operator}
+                                for key, tafsir in tafsirs.items()]
         update_record(history, row, report_dir)
 
-        tafsir = quran.get_tafsir(verse.key)
-        row["source_tafsir"] = {
-            "source_name": tafsir.source_name, "resource_id": tafsir.resource_id,
-            "source_url": tafsir.source_url, "license_url": tafsir.license_url,
-            "commercial_license_verified_by_operator": tafsir.license_verified_by_operator,
-        }
-        topic = VERSE_TOPIC_BY_KEY.get(verse.key)
-        message_budget = message_word_budget(config.target_max, recitation_duration)
-        gemini = GeminiContentService()
-        ai = gemini.create_and_review(verse, tafsir, topic=topic, message_words=message_budget)
+        # 2) The script: the idea first, the verses placed inside it as evidence.
+        budget = speech_word_budget(config.target_max, recitation_total)
+        script_verses = [ScriptVerse(index=number, key=item["verse"].key, text=item["text"],
+                                     chapter_name=item["verse"].chapter_name, verse_number=item["verse"].verse,
+                                     seconds=item["seconds"]) for number, item in enumerate(items, start=1)]
+        ai = GeminiContentService().create_and_review(topic, script_verses, tafsirs, budget)
         row["visual_plan"] = ai["visual_plan"]
-        row["verification"]["checks"]["model_content_schema"] = True
-        row["verification"]["checks"]["model_source_review"] = ai["review"]
-        row["verification"]["checks"]["content"] = {
-            "topic": topic,
-            "message_words": len(ai["message"].split()),
-            "message_word_budget": list(message_budget),
+        row["script"] = {"hook": ai["hook"], "parts": ai["parts"], "call_to_action": ai["call_to_action"],
+                         "spoken_words": ai["spoken_words"], "spoken_word_budget": list(budget)}
+        checks["model_content_schema"] = True
+        checks["model_source_review"] = ai["review"]
+        checks["content"] = {
+            "spoken_words": ai["spoken_words"],
+            "spoken_word_budget": list(budget),
             "hook_words": len(ai["hook"].split()),
+            "parts": [part["type"] for part in ai["parts"]],
             "keywords": len(ai["keywords"]),
             "hashtags": len(ai["hashtags"]),
-            "visual_scene_count": len(ai["visual_plan"]["scenes"]),
+            "visual_shots": len(ai["visual_plan"]["scenes"]),
         }
-        generated_texts = (ai["hook"], ai["message"], ai["call_to_action"], ai["title"], ai["description"],
+        generated_texts = (ai["hook"], *(part["text"] for part in ai["parts"] if part["type"] == "speech"),
+                           ai["call_to_action"], ai["title"], ai["description"],
                            " ".join(ai["keywords"]), " ".join(ai["hashtags"]))
-        row["verification"]["checks"]["honorific_occurrences_in_generated_text"] = sum(
-            text.count("صدق الله العظيم") for text in generated_texts
-        )
-        if row["verification"]["checks"]["honorific_occurrences_in_generated_text"]:
+        checks["honorific_occurrences_in_generated_text"] = sum(text.count("صدق الله العظيم") for text in generated_texts)
+        if checks["honorific_occurrences_in_generated_text"]:
             raise FactoryError("ظهرت العبارة المحجوزة ضمن النص المولّد.")
 
-        # The voice comes first: scene changes are derived from the real voice-over timings.
+        # 3) The voice: one clip per stretch of speech; the verses keep the reciter's own audio.
         tts = make_tts_service(config.tts_voice)
-        speech_texts = {
-            "hook": ai["hook"],
-            "seal": "صدق الله العظيم",
-            "message": ai["message"],
-            "cta": ai["call_to_action"],
-        }
+        speech_texts = {"hook": ai["hook"]}
+        order: list[dict[str, Any]] = [{"kind": "speech", "name": "hook", "role": "hook", "text": ai["hook"]}]
+        talk = 0
+        for part in ai["parts"]:
+            if part["type"] == "speech":
+                talk += 1
+                speech_texts[f"talk-{talk}"] = part["text"]
+                order.append({"kind": "speech", "name": f"talk-{talk}", "role": "body", "text": part["text"]})
+            else:
+                item = items[part["verse_index"] - 1]
+                order.append({"kind": "verse", "name": f"verse-{part['verse_index']}", "text": item["text"],
+                              "audio": item["audio"], "segments": item["timed_words"],
+                              "chapter_name": item["verse"].chapter_name, "verse_number": item["verse"].verse})
+        speech_texts["closing"] = ai["call_to_action"]
+        order.append({"kind": "speech", "name": "closing", "role": "closing", "text": ai["call_to_action"]})
         speech_files = tts.synthesize(speech_texts, work_dir / "speech")
-        speech_files["recitation"] = recitation_file
+        for segment in order:
+            if segment["kind"] == "speech":
+                segment["audio"] = speech_files[segment["name"]]
+                segment["boundaries"] = tts.word_boundaries.get(segment["name"])
 
-        media_items: list[dict[str, Any]] = []
-        keys = ("hook", "recitation", "seal", "message", "cta")
-        durations = {key: media_duration(speech_files[key]) for key in keys}
-        intervals: dict[str, tuple[float, float]] = {}
+        # 4) The timeline: where each segment sits, and where the narrator says each new phrase.
+        timeline_segments: list[dict[str, Any]] = []
         cursor = 0.0
-        for key in keys:
-            intervals[key] = (cursor, cursor + durations[key])
-            cursor += durations[key]
+        timing_sources: dict[str, str] = {}
+        for segment in order:
+            length = media_duration(segment["audio"])
+            entry: dict[str, Any] = {"kind": segment["kind"], "role": segment.get("role"), "start": cursor, "end": cursor + length}
+            if segment["kind"] == "speech":
+                entry["timings"], timing_sources[segment["name"]] = align_speech_words(
+                    segment["text"], segment.get("boundaries"), length)
+            timeline_segments.append(entry)
+            cursor += length
         video_duration = max(cursor, float(config.target_min))
-        message_timings, message_timing_source = align_speech_words(
-            ai["message"], tts.word_boundaries.get("message"), durations["message"])
 
-        # A new picture about every 2.5-3 s: cut the shots first, then generate only the pictures that survive the cut.
-        timeline = build_timeline(ai["visual_plan"], message_timings, intervals, video_duration)
+        # 5) Pictures: a new one about every 2.5-3 s. Cut the shots first, then generate only the ones that survive the cut.
+        timeline = build_script_timeline(ai["visual_plan"], timeline_segments, video_duration)
         shots = shot_index(ai["visual_plan"])
         wanted = pick_image_keys(timeline_image_keys(timeline), config.max_scene_images)
         images = SceneImageService()
@@ -641,7 +629,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             [(key, shots[key].get("image_prompt")) for key in wanted], work_dir / "images",
             config.width, config.height, theme=ai["visual_plan"].get("visual_theme", ""))
         apply_images(timeline, scene_images)
-        row["verification"]["checks"]["scene_images"] = {
+        checks["scene_images"] = {
             "shots": len(timeline_image_keys(timeline)),
             "timeline_entries": len(timeline),
             "requested": len(wanted),
@@ -650,39 +638,35 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
             "providers": sorted({item["provider"] for item in scene_images.values()}),
             "notes": images.notes[:12],
         }
+        media_items: list[dict[str, Any]] = []
         for key, item in scene_images.items():
             media_items.append({"kind": "ai_generated_image", "scene": key, "provider": item["provider"],
                                 "model": item["model"], "prompt": item["prompt"], "sha256": item["sha256"],
                                 "license_url": os.getenv("IMAGE_GEN_LICENSE_URL"),
                                 "license_status": "operator-confirmed current provider terms; AI-generated"})
-
         background = work_dir / "background.mp4"
         background_info = render_background(
             background, config.width, config.height, config.fps, video_duration, timeline,
-            theme=f"{verse.key}|{topic or ''}|{ai['title']}")
-        background_info["message_timing_source"] = message_timing_source
-        row["verification"]["checks"]["background"] = background_info
+            theme=f"{topic.id}|{ai['title']}")
+        background_info["speech_timing_sources"] = timing_sources
+        checks["background"] = background_info
         update_record(history, row, report_dir)
 
+        # 6) The video.
         output_path = config.output_dir / config.final_video_name
-        # Quran word highlighting always uses the source timestamps; the commentary highlighting uses
-        # the TTS word boundaries when valid and an estimate otherwise (reported in the video checks).
-        video_validation = build_video(
-            background, speech_files, timed_words, verse.text_uthmani, ai, output_path,
-            width=config.width, height=config.height, fps=config.fps,
+        video_validation = build_script_video(
+            background, order, output_path, width=config.width, height=config.height, fps=config.fps,
             target_min_duration=config.target_min, target_max_duration=config.target_max,
-            tts_word_boundaries=tts.word_boundaries, chapter_name=verse.chapter_name,
-            verse_number=verse.verse, dim_strength=config.dim_strength,
-            commentary_style=config.commentary_style,
-        )
+            dim_strength=config.dim_strength, commentary_style=config.commentary_style)
         row["video_path"] = str(output_path)
         row["video_sha256"] = sha256_file(output_path)
-        row["verification"]["checks"]["video"] = video_validation
+        checks["video"] = video_validation
         row["verification"]["status"] = "validated"
         row["status"] = "validated"
-        row["media_sources"] = _record_sources(verse, recitation, tafsir, media_items, tts.terms_url, tts.voice,
-                                             getattr(tts, "provider", "edge-tts"))
-        row["media_sources"].insert(3, {"kind": "procedural_background", "provider": "Pillow + FFmpeg",
+        row["media_sources"] = _record_sources(
+            [{"verse": item["verse"], "recitation": item["recitation"], "label": item["label"]} for item in items],
+            tafsirs, media_items, tts.terms_url, tts.voice, getattr(tts, "provider", "edge-tts"))
+        row["media_sources"].insert(0, {"kind": "procedural_background", "provider": "Pillow + FFmpeg",
                                         "external_assets": False, "metadata": background_info})
         font_source = video_validation.get("font_source", {})
         row["media_sources"].append({"kind": "font", **font_source})
@@ -702,7 +686,7 @@ def generate_candidate(chapter: int, verse_number: int, attempt: int, mode: str,
         if not row.get("verification", {}).get("status") == "validated":
             row.setdefault("verification", {})["status"] = "failed"
         update_record(history, row, report_dir)
-        print(f"فشل المرشح {chapter}:{verse_number}: {row['last_error']}", file=sys.stderr)
+        print(f"فشل الموضوع {topic.id}: {row['last_error']}", file=sys.stderr)
         return row, validated_video
 
 
@@ -712,14 +696,14 @@ def find_latest_row(history_rows: list[dict[str, Any]], key: str) -> dict[str, A
 
 
 def publish_only(args: argparse.Namespace, config: Config, history: ProductionHistory) -> int:
-    if not args.chapter or not args.verse or not args.input_video:
-        raise FactoryError("--publish-only يتطلب --chapter و--verse و--input-video.")
-    key = f"{args.chapter}:{args.verse}"
+    if not args.topic or not args.input_video:
+        raise FactoryError("--publish-only يتطلب --topic و--input-video.")
+    key = f"topic:{args.topic.strip()}"
     video = Path(args.input_video).expanduser().resolve()
     rows = history.get_runs()
     row = find_latest_row(rows, key)
     if not row:
-        raise FactoryError("لا يوجد سجل فيديو مُتحقق منه لهذه الآية؛ لن يُنشأ منشور جديد.")
+        raise FactoryError("لا يوجد سجل فيديو مُتحقق منه لهذا الموضوع؛ لن يُنشأ منشور جديد.")
     validate_video(video, config.width, config.height, config.fps)
     digest = sha256_file(video)
     if digest != row.get("video_sha256"):
@@ -727,10 +711,10 @@ def publish_only(args: argparse.Namespace, config: Config, history: ProductionHi
     report_dir = config.output_dir / "reports"
     metadata = row.get("publication_metadata") or {}
     row = publish_platforms(video, row, history, report_dir,
-                            metadata.get("title", f"تدبر آية قرآنية | {key}"),
-                            metadata.get("description", f"شرح موجز مستند إلى التفسير الموثق. الآية: {key}."),
+                            metadata.get("title", f"تدبر قرآني | {args.topic}"),
+                            metadata.get("description", f"فيديو تدبر قرآني. الموضوع: {args.topic}."),
                             retries=config.max_retries)
-    print(f"حالة إعادة المحاولة للآية {key}: {row['status']}")
+    print(f"حالة إعادة المحاولة للموضوع {args.topic}: {row['status']}")
     return 0 if row["status"] == "published" else 1
 
 
@@ -743,27 +727,26 @@ def run(args: argparse.Namespace) -> int:
         history_rows = history.load()["runs"]
         if args.publish_only:
             return publish_only(args, config, history)
+        topics = load_topics(config.topics_file)
         if args.mode == "manual":
-            if args.chapter is None or args.verse is None:
-                raise FactoryError("الوضع اليدوي يتطلب --chapter و--verse.")
-            if not 1 <= args.chapter <= 114 or args.verse < 1:
-                raise FactoryError("رقم السورة أو الآية خارج النطاق.")
-            candidates = [(args.chapter, args.verse)]
+            if not args.topic:
+                raise FactoryError("الوضع اليدوي يتطلب --topic.")
+            candidates = [find_topic(topics, args.topic)]
         elif args.mode == "auto":
             if already_processed_today(history_rows, local_date, config.daily_video_count):
                 print(f"يوجد تشغيل تلقائي مسجل لهذا اليوم في {config.timezone_name}؛ لن يُنشأ فيديو إضافي.")
                 return 0
-            candidates = choose_auto_candidates(history_rows, local_date, config.max_candidates)
+            candidates = choose_auto_candidates(history_rows, local_date, topics, config.max_candidates)
         else:
             raise FactoryError("--mode يجب أن يكون auto أو manual.")
         if args.mode == "manual":
-            existing = find_latest_row(history_rows, f"{args.chapter}:{args.verse}")
+            existing = find_latest_row(history_rows, candidates[0].row_key)
             if existing and row_has_unresolved_submission(existing):
-                raise FactoryError("لدى هذه الآية جلسة نشر غير محسومة؛ استخدم --publish-only للتحقق من معرّف المنصة قبل إنشاء أي منشور جديد.")
+                raise FactoryError("لدى هذا الموضوع جلسة نشر غير محسومة؛ استخدم --publish-only للتحقق من معرّف المنصة قبل إنشاء أي منشور جديد.")
             if existing and row_has_any_publication(existing) and not args.reprocess:
-                raise FactoryError("هذه الآية لها منشور مؤكد سابقًا. استخدم --publish-only لإعادة التحقق أو --reprocess لتوليد جديد؛ لن يتكرر النشر تلقائيًا.")
+                raise FactoryError("هذا الموضوع له منشور مؤكد سابقًا. استخدم --publish-only لإعادة التحقق أو --reprocess لتوليد جديد؛ لن يتكرر النشر تلقائيًا.")
         if not candidates:
-            raise FactoryError("لا توجد آيات غير منشورة مرشحة ضمن القائمة؛ لم يُنشأ فيديو.")
+            raise FactoryError("لا توجد مواضيع غير منشورة في ملف المواضيع؛ أضف مواضيع جديدة. لم يُنشأ فيديو.")
         candidate_errors = []
         daily_target = config.daily_video_count if args.mode == "auto" else 1
         completed_today = sum(1 for row in history_rows if row.get("mode") == "auto"
@@ -772,26 +755,24 @@ def run(args: argparse.Namespace) -> int:
             print(f"اكتمل العدد اليومي ({completed_today}/{daily_target}) في {config.timezone_name}.")
             return 0
         successful_this_run = 0
-        for chapter, verse in candidates:
-            if (any(row.get("verse_key") == f"{chapter}:{verse}" and
+        for topic in candidates:
+            if (any(row.get("verse_key") == topic.row_key and
                     (row_has_any_publication(row) or row_has_unresolved_submission(row)) for row in history_rows)
                     and not (args.mode == "manual" and args.reprocess)):
                 continue
             attempts = config.max_retries if args.mode == "auto" else 1
-            previous_row = find_latest_row(history_rows, f"{chapter}:{verse}") if args.reprocess else None
+            previous_row = find_latest_row(history_rows, topic.row_key) if args.reprocess else None
             for attempt in range(1, attempts + 1):
-                row, validated = generate_candidate(
-                    chapter, verse, attempt, args.mode, config, history, local_date, previous_row
-                )
+                row, validated = generate_candidate(topic, attempt, args.mode, config, history, local_date, previous_row)
                 if row.get("status") == "published":
-                    print(f"اكتمل إنشاء الفيديو والتحقق والنشر للآية {chapter}:{verse}.")
+                    print(f"اكتمل إنشاء الفيديو والتحقق والنشر للموضوع {topic.id}.")
                     successful_this_run += 1
                     history_rows = history.get_runs()
                     if completed_today + successful_this_run >= daily_target:
                         return 0
                     break
                 if row.get("status") == "partially_published":
-                    print(f"نُشر الفيديو على منصة واحدة على الأقل؛ لا تعِد إنشاءه. يمكن استعادة الملف نفسه ثم استخدام --publish-only للمنصة غير المؤكدة.", file=sys.stderr)
+                    print("نُشر الفيديو على منصة واحدة على الأقل؛ لا تعِد إنشاءه. يمكن استعادة الملف نفسه ثم استخدام --publish-only للمنصة غير المؤكدة.", file=sys.stderr)
                     return 1
                 if validated:
                     print("الفيديو اجتاز الفحوص لكن النشر لم يتأكد؛ أوقف الإنتاج لتجنب إنشاء منشور مكرر.", file=sys.stderr)
@@ -800,13 +781,13 @@ def run(args: argparse.Namespace) -> int:
                 if args.mode == "manual":
                     return 1
                 if row.get("permanent_failure"):
-                    break          # retrying the same verse cannot help; move to the next candidate
+                    break          # retrying the same topic cannot help; move to the next candidate
             # Automatic mode moves to another candidate only after a pre-publication failure.
         if completed_today + successful_this_run >= daily_target:
             return 0
         print("لم يكتمل العدد اليومي المطلوب. آخر سبب: " + (candidate_errors[-1] if candidate_errors else "لا يوجد مرشح صالح."), file=sys.stderr)
         return 1
-    except (FactoryError, ServiceError, VideoError) as exc:
+    except (FactoryError, ServiceError, VideoError, TopicError) as exc:
         print(f"فشل التشغيل: {str(exc)[:700]}", file=sys.stderr)
         return 1
     except Exception as exc:
@@ -818,9 +799,8 @@ def run(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Quran Cinematic AI Factory")
     parser.add_argument("--mode", choices=("auto", "manual"), default=os.getenv("MODE", "auto").strip() or "auto")
-    parser.add_argument("--chapter", type=int, help="رقم السورة في الوضع اليدوي")
-    parser.add_argument("--verse", type=int, help="رقم الآية في الوضع اليدوي")
-    parser.add_argument("--reprocess", action="store_true", help="السماح بإعادة إنشاء ملف آية سبق نشرها دون تكرار الوجهات المنشورة")
+    parser.add_argument("--topic", help="معرّف الموضوع من ملف المواضيع في الوضع اليدوي")
+    parser.add_argument("--reprocess", action="store_true", help="السماح بإعادة إنشاء فيديو موضوع سبق نشره دون تكرار الوجهات المنشورة")
     parser.add_argument("--publish-only", action="store_true", help="استئناف الوجهات غير المؤكدة باستخدام ملف الفيديو المطابق للبصمة")
     parser.add_argument("--input-video", help="ملف فيديو مطابق لبصمة سجل الإنتاج عند استخدام --publish-only")
     parser.add_argument("--test", action="store_true", help="تشغيل اختبارات الوحدة المضمنة دون اتصال خارجي")
@@ -832,6 +812,8 @@ if __name__ == "__main__":
     if "--test" in sys.argv:
         import unittest
         from unittest.mock import patch
+
+        from services import TafsirSource
 
         THIS = sys.modules[__name__]      # the module under test is __main__, not "main"
 
@@ -890,62 +872,6 @@ if __name__ == "__main__":
                         with self.assertRaises(FactoryError):
                             Config.from_env(Path("/tmp/project"))
 
-            def test_background_settings_default_parse_and_reject_out_of_range(self):
-                with patch.dict(os.environ, {}, clear=False):
-                    os.environ.pop("BACKGROUND_CLIP_COUNT", None)
-                    os.environ.pop("BACKGROUND_SPEED", None)
-                    config = Config.from_env(Path("/tmp/project"))
-                    self.assertEqual((config.background_clips, config.background_speed), (3, 0.75))
-                with patch.dict(os.environ, {"BACKGROUND_CLIP_COUNT": "", "BACKGROUND_SPEED": ""}):
-                    config = Config.from_env(Path("/tmp/project"))
-                    self.assertEqual((config.background_clips, config.background_speed), (3, 0.75))
-                with patch.dict(os.environ, {"BACKGROUND_CLIP_COUNT": "5", "BACKGROUND_SPEED": "0.5"}):
-                    config = Config.from_env(Path("/tmp/project"))
-                    self.assertEqual((config.background_clips, config.background_speed), (5, 0.5))
-                for name, bad in (("BACKGROUND_CLIP_COUNT", "1"), ("BACKGROUND_CLIP_COUNT", "6"),
-                                  ("BACKGROUND_CLIP_COUNT", "x"), ("BACKGROUND_SPEED", "0.1"),
-                                  ("BACKGROUND_SPEED", "1.2"), ("BACKGROUND_SPEED", "slow")):
-                    with patch.dict(os.environ, {name: bad}):
-                        with self.assertRaises(FactoryError):
-                            Config.from_env(Path("/tmp/project"))
-
-            def test_record_sources_logs_the_voice_actually_used(self):
-                class Obj:
-                    def __init__(self, **kwargs):
-                        self.__dict__.update(kwargs)
-                verse = Obj(key="2:3")
-                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
-                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
-                sources = _record_sources(verse, recitation, tafsir, [{"kind": "media"}], "https://terms", "ar-EG-ShakirNeural")
-                self.assertEqual([item for item in sources if item["kind"] == "tts"][0]["voice"], "ar-EG-ShakirNeural")
-
-            def test_record_sources_logs_the_tts_provider_actually_used(self):
-                class Obj:
-                    def __init__(self, **kwargs):
-                        self.__dict__.update(kwargs)
-                verse = Obj(key="2:3")
-                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
-                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
-                default = _record_sources(verse, recitation, tafsir, [], "https://terms", "ar-EG-ShakirNeural")
-                self.assertEqual([i for i in default if i["kind"] == "tts"][0]["provider"], "edge-tts")
-                gemini = _record_sources(verse, recitation, tafsir, [], "https://terms", "Algieba", "gemini-tts (m)")
-                entry = [i for i in gemini if i["kind"] == "tts"][0]
-                self.assertEqual((entry["provider"], entry["voice"]), ("gemini-tts (m)", "Algieba"))
-
-            def test_record_sources_lists_every_generated_image(self):
-                class Obj:
-                    def __init__(self, **kwargs):
-                        self.__dict__.update(kwargs)
-                verse = Obj(key="2:3")
-                recitation = Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")
-                tafsir = Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")
-                images = [{"kind": "ai_generated_image", "scene": "opening"}, {"kind": "ai_generated_image", "scene": "scene-1"},
-                          {"kind": "ai_generated_image", "scene": "closing"}]
-                sources = _record_sources(verse, recitation, tafsir, images, "https://terms", "ar-EG-ShakirNeural")
-                self.assertEqual([item["scene"] for item in sources if item["kind"] == "ai_generated_image"],
-                                 ["opening", "scene-1", "closing"])
-                self.assertEqual(sources[-1]["kind"], "tts")
-
             @staticmethod
             def sample_copy(**overrides):
                 data = {
@@ -992,118 +918,18 @@ if __name__ == "__main__":
                                                                   hashtags=[f"#وسم{i}" for i in range(12)]))
                 self.assertLessEqual(len(title) + 2 + len(full), 2000)       # fits the Instagram/TikTok caption
 
-            def test_message_budget_shrinks_as_the_recitation_grows_and_stays_in_bounds(self):
-                short = message_word_budget(60, 12)
-                long_verse = message_word_budget(60, 30)
-                huge = message_word_budget(60, 55)
-                self.assertGreater(short[1], long_verse[1])
-                self.assertEqual(huge[1], MESSAGE_WORDS_FLOOR)
-                for low, high in (short, long_verse, huge):
-                    self.assertTrue(25 <= low <= high <= MESSAGE_WORDS_CAP)
-
-            def test_verse_pool_covers_many_topics_without_duplicates_and_interleaves_them(self):
-                self.assertGreaterEqual(len(AUTO_VERSE_POOL), 40)
-                self.assertEqual(len(AUTO_VERSE_POOL), len(set(AUTO_VERSE_POOL)))
-                self.assertEqual(len(VERSE_TOPIC_BY_KEY), len(AUTO_VERSE_POOL))
-                self.assertGreaterEqual(len(VERSE_TOPICS), 10)
-                for chapter, verse in AUTO_VERSE_POOL:
-                    self.assertTrue(1 <= chapter <= 114 and verse >= 1)
-                first_topics = [VERSE_TOPIC_BY_KEY[f"{c}:{v}"] for c, v in AUTO_VERSE_POOL[:len(VERSE_TOPICS)]]
-                self.assertEqual(len(set(first_topics)), len(VERSE_TOPICS))   # one verse per topic before any repeats
-
             def test_quran_words_helpers_in_services_and_video_engine_agree(self):
                 import video_engine
                 samples = ["بسم الله الرحمن", "فَٱتَّقُوا۟ ٱللَّهَ ۗ وَمَن يُوقَ ۚ فَأُو۟لَٰٓئِكَ", "۞ بسم الله", "", "  \n "]
                 for sample in samples:
                     self.assertEqual(quran_words(sample), video_engine.quran_words(sample), sample)
 
-            def test_min_verse_and_recitation_limits_default_parse_and_validate(self):
-                with patch.dict(os.environ, {"MIN_VERSE_WORDS": "", "MAX_RECITATION_SECONDS": ""}):
-                    config = Config.from_env(Path("/tmp/project"))
-                    self.assertEqual((config.min_verse_words, config.max_recitation_seconds), (10, 40))
-                with patch.dict(os.environ, {"MIN_VERSE_WORDS": "14", "MAX_RECITATION_SECONDS": "30"}):
-                    config = Config.from_env(Path("/tmp/project"))
-                    self.assertEqual((config.min_verse_words, config.max_recitation_seconds), (14, 30))
-                for name, bad in (("MIN_VERSE_WORDS", "0"), ("MIN_VERSE_WORDS", "x"),
-                                  ("MAX_RECITATION_SECONDS", "5"), ("MAX_RECITATION_SECONDS", "999")):
-                    with patch.dict(os.environ, {name: bad}):
-                        with self.assertRaises(FactoryError):
-                            Config.from_env(Path("/tmp/project"))
-
-            @staticmethod
-            def _candidate_env(temp, **fake):
-                class Verse:
-                    key, chapter_name, verse = "94:5", "الشرح", 5
-                    text_uthmani = fake.get("text", "فإن مع العسر يسرا")
-                class Recitation:
-                    segments = fake.get("segments", [[1, 0, 500]])
-                class FakeQuran:
-                    def get_verse(self, chapter, verse):
-                        return Verse()
-                    def get_recitation(self, chapter, verse, directory):
-                        if fake.get("recitation_error"):
-                            raise ServiceError(fake["recitation_error"])
-                        return Recitation(), Path(directory) / "recitation.mp3"
-                return FakeQuran
-
-            def _run_candidate(self, mode, **fake):
-                import tempfile
-                with tempfile.TemporaryDirectory() as temp:
-                    fake_quran = self._candidate_env(temp, **fake)
-                    with patch.dict(os.environ, {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json"}), \
-                            patch.object(THIS, "validate_generation_environment"), \
-                            patch.object(THIS, "QuranFoundationClient", fake_quran), \
-                            patch.object(THIS, "media_duration", return_value=fake.get("duration", 10.0)), \
-                            patch.object(THIS, "GeminiContentService", side_effect=AssertionError("paid call must not happen")):
-                        config = Config.from_env(Path(temp))
-                        history = ProductionHistory(config.history_file)
-                        return generate_candidate(94, 5, 1, mode, config, history, "2026-10-24")
-
-            def test_short_verse_is_rejected_before_any_paid_call_in_auto_mode_only(self):
-                row, validated = self._run_candidate("auto", recitation_error="reached recitation")
-                self.assertEqual((row["status"], row["permanent_failure"], validated), ("failed", True, False))
-                self.assertIn("قصيرة", row["last_error"])
-                row, _ = self._run_candidate("manual", recitation_error="reached recitation")
-                self.assertIn("reached recitation", row["last_error"])       # the manual run went past the length check
-                self.assertFalse(row["permanent_failure"])
-
-            def test_recitation_longer_than_the_limit_and_timing_mismatch_are_permanent_rejections(self):
-                long_text = " ".join(["كلمة"] * 12)
-                row, _ = self._run_candidate("auto", text=long_text, duration=55.0)
-                self.assertTrue(row["permanent_failure"])
-                self.assertIn("أطول", row["last_error"])
-                row, _ = self._run_candidate("auto", text=long_text, duration=15.0, segments=[[1, 0, 500]])
-                self.assertTrue(row["permanent_failure"])
-                self.assertIn("التوقيتات", row["last_error"])
-
-            def test_deterministic_rejection_moves_to_the_next_verse_without_retrying(self):
-                import tempfile
-                from argparse import Namespace
-                calls = []
-                def fake_generate(chapter, verse, attempt, mode, config, history, local_date, previous_row=None):
-                    calls.append((chapter, verse, attempt))
-                    if len(calls) == 1:
-                        return {"status": "failed", "permanent_failure": True, "last_error": "short"}, False
-                    row = new_run_record("ok", chapter, verse, mode, local_date, attempt)
-                    row["status"] = "published"
-                    return row, True
-                with tempfile.TemporaryDirectory() as temp, \
-                        patch.dict(os.environ, {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json",
-                                                "MAX_RETRIES": "5"}), \
-                        patch.object(THIS, "generate_candidate", fake_generate):
-                    code = run(Namespace(mode="auto", chapter=None, verse=None, reprocess=False,
-                                         publish_only=False, input_video=None, test=False))
-                self.assertEqual(code, 0)
-                self.assertEqual(len(calls), 2)                    # the rejected verse was tried once, not five times
-                self.assertNotEqual(calls[0][:2], calls[1][:2])
-                self.assertEqual((calls[0][2], calls[1][2]), (1, 1))
-
             def test_daily_guard_only_counts_auto_and_allows_retry_after_known_failure(self):
-                published = new_run_record("auto-ok", 2, 152, "auto", "2026-10-21", 1)
+                published = new_run_record("auto-ok", "topic-x", "auto", "2026-10-21", 1)
                 published["status"] = "published"
-                failed = new_run_record("auto-failed", 2, 153, "auto", "2026-10-21", 1)
+                failed = new_run_record("auto-failed", "topic-x", "auto", "2026-10-21", 1)
                 failed["status"] = "failed"
-                manual = new_run_record("manual-ok", 3, 139, "manual", "2026-10-21", 1)
+                manual = new_run_record("manual-ok", "topic-x", "manual", "2026-10-21", 1)
                 manual["status"] = "published"
                 self.assertTrue(already_processed_today([published], "2026-10-21", 1))
                 self.assertFalse(already_processed_today([published], "2026-10-21", 2))
@@ -1112,27 +938,12 @@ if __name__ == "__main__":
                 failed["platforms"]["youtube"] = {"status": "upload_uncertain", "video_id": None}
                 self.assertTrue(already_processed_today([failed], "2026-10-21", 1))
 
-            def test_history_creates_valid_json_and_prevents_duplicate_publication(self):
-                import tempfile
-                with tempfile.TemporaryDirectory() as temp:
-                    history = ProductionHistory(Path(temp) / "data/history.json")
-                    history.load()
-                    chapter, verse = AUTO_VERSE_POOL[0]
-                    self.assertIn((chapter, verse), choose_auto_candidates([], "2026-01-02", 100))
-                    row = new_run_record("test-1", chapter, verse, "manual", "2026-01-01", 1)
-                    row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
-                    history.upsert(row)
-                    reread = history.get_runs()
-                    self.assertEqual(len(reread), 1)
-                    self.assertTrue(row_has_any_publication(reread[0]))
-                    self.assertNotIn((chapter, verse), choose_auto_candidates(reread, "2026-01-02", 100))
-
             def test_partial_failure_never_repeats_successful_platform(self):
                 import tempfile
                 with tempfile.TemporaryDirectory() as temp:
                     h = ProductionHistory(Path(temp) / "history.json")
                     h.load()
-                    row = new_run_record("run-1", 2, 152, "manual", "2026-01-01", 1)
+                    row = new_run_record("run-1", "topic-x", "manual", "2026-01-01", 1)
                     row["video_sha256"] = "abc"
                     row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-existing", "attempts": 1}
                     calls = []
@@ -1153,7 +964,7 @@ if __name__ == "__main__":
                 with tempfile.TemporaryDirectory() as temp:
                     h = ProductionHistory(Path(temp) / "history.json")
                     h.load()
-                    row = new_run_record("run-2", 2, 153, "manual", "2026-01-01", 1)
+                    row = new_run_record("run-2", "topic-x", "manual", "2026-01-01", 1)
                     row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
                     row["platforms"]["facebook"] = {"status": "pending", "video_id": "fb-1", "attempts": 1}
                     calls = []
@@ -1172,7 +983,7 @@ if __name__ == "__main__":
                 with tempfile.TemporaryDirectory() as temp:
                     history = ProductionHistory(Path(temp) / "history.json")
                     history.load()
-                    row = new_run_record("safe-default", 2, 152, "manual", "2026-10-21", 1)
+                    row = new_run_record("safe-default", "topic-x", "manual", "2026-10-21", 1)
                     calls = []
                     class FakePublisher:
                         def publish_or_verify(self, *args, **kwargs):
@@ -1190,7 +1001,7 @@ if __name__ == "__main__":
                 with tempfile.TemporaryDirectory() as temp:
                     history = ProductionHistory(Path(temp) / "history.json")
                     history.load()
-                    row = new_run_record("make-1", 2, 152, "manual", "2026-10-21", 1)
+                    row = new_run_record("make-1", "topic-x", "manual", "2026-10-21", 1)
                     created = []
                     class FakeMake:
                         def publish_or_verify(self, video, title, description, previous=None):
@@ -1213,7 +1024,7 @@ if __name__ == "__main__":
                 with tempfile.TemporaryDirectory() as temp:
                     history = ProductionHistory(Path(temp) / "history.json")
                     history.load()
-                    row = new_run_record("make-2", 2, 153, "manual", "2026-10-21", 1)
+                    row = new_run_record("make-2", "topic-x", "manual", "2026-10-21", 1)
                     previous_seen = []
                     class FakeMake:
                         def __init__(self, fail):
@@ -1279,21 +1090,366 @@ if __name__ == "__main__":
                     self.assertEqual(service.generate_jobs([("scene-1", "A quiet road at dawn with mist over the hills")],
                                                            Path("/tmp/none"), 1080, 1920), {})
 
-            def test_unresolved_platform_id_excludes_verse_from_auto_selection(self):
-                chapter, verse = AUTO_VERSE_POOL[1]
-                row = new_run_record("run-3", chapter, verse, "auto", "2026-01-01", 1)
-                row["platforms"]["facebook"] = {"status": "uploading_unknown", "video_id": "fb-session"}
-                self.assertIn((chapter, verse), choose_auto_candidates([], "2026-01-02", 100))
-                self.assertNotIn((chapter, verse), choose_auto_candidates([row], "2026-01-02", 100))
+            def test_recitation_limit_defaults_parses_and_validates(self):
+                with patch.dict(os.environ, {"MAX_RECITATION_SECONDS": ""}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).max_recitation_seconds, 45)
+                with patch.dict(os.environ, {"MAX_RECITATION_SECONDS": "30"}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).max_recitation_seconds, 30)
+                for bad in ("5", "999", "x"):
+                    with patch.dict(os.environ, {"MAX_RECITATION_SECONDS": bad}):
+                        with self.assertRaises(FactoryError):
+                            Config.from_env(Path("/tmp/project"))
+
+            def test_topics_file_defaults_next_to_the_project_and_can_be_overridden(self):
+                with patch.dict(os.environ, {"TOPICS_FILE": ""}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).topics_file, Path("/tmp/project/data/topics.json"))
+                with patch.dict(os.environ, {"TOPICS_FILE": "other/t.json"}):
+                    self.assertEqual(Config.from_env(Path("/tmp/project")).topics_file, Path("/tmp/project/other/t.json"))
+
+            def test_speech_budget_shrinks_as_the_recitation_grows_and_stays_in_bounds(self):
+                short = speech_word_budget(60, 12)
+                long_recitation = speech_word_budget(60, 35)
+                huge = speech_word_budget(60, 58)
+                self.assertGreater(short[1], long_recitation[1])
+                self.assertEqual(huge[1], SPEECH_WORDS_FLOOR)
+                self.assertEqual(speech_word_budget(200, 5)[1], SPEECH_WORDS_CAP)
+                for low, high in (short, long_recitation, huge):
+                    self.assertTrue(40 <= low <= high <= SPEECH_WORDS_CAP)
+
+            @staticmethod
+            def sample_topics():
+                from topics import VerseRef
+                return [Topic(f"topic-{n}", f"سؤال رقم {n} طويل بما يكفي؟", (VerseRef(18, 25),), ()) for n in range(1, 5)]
+
+            def test_auto_selection_rotates_by_date_and_skips_published_and_unresolved_topics(self):
+                topics = self.sample_topics()
+                first = choose_auto_candidates([], "2026-01-02", topics, 10)
+                self.assertEqual(sorted(t.id for t in first), sorted(t.id for t in topics))
+                self.assertNotEqual([t.id for t in choose_auto_candidates([], "2026-01-02", topics, 10)],
+                                    [t.id for t in choose_auto_candidates([], "2026-01-03", topics, 10)])
+                self.assertEqual(len(choose_auto_candidates([], "2026-01-02", topics, 2)), 2)
+                self.assertEqual(choose_auto_candidates([], "2026-01-02", [], 5), [])
+                done = new_run_record("r1", "topic-1", "auto", "2026-01-01", 1)
+                done["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
+                stuck = new_run_record("r2", "topic-2", "auto", "2026-01-01", 1)
+                stuck["platforms"]["facebook"] = {"status": "uploading_unknown", "video_id": "fb-session"}
+                failed = new_run_record("r3", "topic-3", "auto", "2026-01-01", 1)
+                failed["status"] = "failed"
+                left = [t.id for t in choose_auto_candidates([done, stuck, failed], "2026-01-02", topics, 10)]
+                self.assertEqual(sorted(left), ["topic-3", "topic-4"])                      # a known failure stays eligible
+
+            def test_run_record_remembers_the_topic_under_a_topic_key(self):
+                row = new_run_record("run-9", "cave-309", "manual", "2026-01-01", 2)
+                self.assertEqual((row["verse_key"], row["topic_id"], row["attempt_count"]), ("topic:cave-309", "cave-309", 2))
+                self.assertEqual(Topic("cave-309", "سؤال طويل بما يكفي؟", self.sample_topics()[0].verses).row_key, row["verse_key"])
+
+            def test_record_sources_lists_every_verse_recitation_tafsir_picture_and_the_voice(self):
+                class Obj:
+                    def __init__(self, **kwargs):
+                        self.__dict__.update(kwargs)
+                items = [{"verse": Obj(key="18:25"), "label": "18:25",
+                          "recitation": Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")},
+                         {"verse": Obj(key="18:26"), "label": "18:26#1-5",
+                          "recitation": Obj(reciter_id=7, reciter_name="Mishari", source_url="https://x", audio_url="https://y")}]
+                tafsirs = {"18:25": Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l"),
+                           "18:26": Obj(source_name="t", resource_id=16, source_url="https://z", license_url="https://l")}
+                images = [{"kind": "ai_generated_image", "scene": "opening-1"}, {"kind": "ai_generated_image", "scene": "scene-1"}]
+                sources = _record_sources(items, tafsirs, images, "https://terms", "ar-EG-ShakirNeural")
+                kinds = [s["kind"] for s in sources]
+                self.assertEqual((kinds.count("quran_text"), kinds.count("recitation"), kinds.count("tafsir"),
+                                  kinds.count("ai_generated_image")), (2, 2, 2, 2))
+                self.assertEqual([s["fragment"] for s in sources if s["kind"] == "recitation"], ["18:25", "18:26#1-5"])
+                self.assertEqual(sources[-1]["kind"], "tts")
+                self.assertEqual((sources[-1]["voice"], sources[-1]["provider"]), ("ar-EG-ShakirNeural", "edge-tts"))
+                other = _record_sources(items, tafsirs, [], "https://terms", "Algieba", "gemini-tts (m)")
+                self.assertEqual((other[-1]["provider"], other[-1]["voice"]), ("gemini-tts (m)", "Algieba"))
+
+            # ----- A whole candidate with stand-ins for every network service (real FFmpeg audio and video) -----
+            WORDS = "واحد اثنان ثلاثة أربعة خمسة ستة"
+
+            @classmethod
+            def _stand_ins(cls, temp, **fake):
+                import subprocess
+                captured = {"tafsir": [], "calls": {}}
+
+                def sine(path, seconds):
+                    Path(path).parent.mkdir(parents=True, exist_ok=True)
+                    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                                    "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(path)], check=True)
+
+                class Verse:
+                    def __init__(self, chapter, verse):
+                        self.key, self.chapter, self.verse = f"{chapter}:{verse}", chapter, verse
+                        self.text_uthmani, self.chapter_name = fake.get("text", cls.WORDS), "الكهف"
+
+                class Recitation:
+                    reciter_id, reciter_name = 7, "Mishari Rashid al-`Afasy"
+                    source_url, audio_url = "https://x.example/s", "https://x.example/a.mp3"
+
+                class FakeQuran:
+                    def get_verse(self, chapter, verse):
+                        return Verse(chapter, verse)
+                    def get_recitation(self, chapter, verse, directory, words=None, verse_text=None):
+                        if fake.get("recitation_error"):
+                            raise ServiceError(fake["recitation_error"])
+                        count = (words[1] - words[0] + 1) if words else len(quran_words(verse_text))
+                        seconds = fake.get("seconds", 3.0)
+                        path = Path(directory) / f"rec-{chapter}-{verse}-{words[0] if words else 0}.wav"
+                        sine(path, seconds)
+                        step = (seconds * 1000 - 200) / count
+                        recitation = Recitation()
+                        recitation.segments = fake.get("segments") or [[i + 1, int(100 + i * step), int(100 + (i + 1) * step - 20)]
+                                                                       for i in range(count)]
+                        return recitation, path
+                    def get_tafsir(self, key):
+                        captured["tafsir"].append(key)
+                        return TafsirSource("هذا تفسير عربي موثق يشرح معنى الآية ضمن سياقها بما يكفي للاختبار.", "مصدر", 16,
+                                            "https://x.example/t", "https://x.example/l", True)
+
+                class FakeTTS:
+                    provider, voice, terms_url = "fake-tts", "ar-EG-ShakirNeural", "https://example.org/tts"
+                    word_boundaries: dict = {}
+                    def synthesize(self, texts, directory):
+                        captured["tts_texts"] = dict(texts)
+                        files = {}
+                        for name, text in texts.items():
+                            files[name] = Path(directory) / f"{name}.wav"
+                            sine(files[name], max(1.0, 0.3 * len(text.split())))
+                        return files
+
+                shot = lambda mood, start=None, prompt="": ({"mood": mood, "elements": [{"type": "light_rays", "position": "center",
+                                                             "animation": "fade_in", "size": "medium"}], "image_prompt": prompt}
+                                                            | ({} if start is None else {"word_start": start}))
+                prompt = "A lone traveller walking a winding road toward a glowing sunrise over quiet hills"
+                ai = {
+                    "hook": "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة مع أن المجموع نفسه؟ الجواب أدق مما تتخيل.",
+                    "hook_candidates": [], "parts": [
+                        {"type": "speech", "text": "اسمع، قال تعالى:"}, {"type": "verse", "verse_index": 1},
+                        {"type": "speech", "text": " ".join(f"فكرة{i}" for i in range(20))},
+                        {"type": "verse", "verse_index": 2},
+                        {"type": "speech", "text": " ".join(f"ختام{i}" for i in range(6))}],
+                    "call_to_action": "تابعني لنتدبر دقة القرآن بحسبان",
+                    "title": "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة", "description": "وصف طويل. " * 40,
+                    "keywords": ["آيات الكهف", "تدبر القرآن"], "hashtags": ["#الكهف", "#تدبر_القرآن"],
+                    "visual_plan": {"visual_theme": "warm dusk light", "opening": {"shots": [shot("night", prompt=prompt), shot("storm", prompt=prompt)]},
+                                    "scenes": [shot("dawn", 0, prompt), shot("day", 3, prompt), shot("storm", 13, prompt),
+                                               shot("warm", 23, prompt), shot("warm", 29, prompt)]},
+                    "body_text": "", "spoken_words": 60, "review": {"reason": "ok"}, "model": "fake-model",
+                }
+                if fake.get("ai_update"):
+                    ai.update(fake["ai_update"])
+
+                class FakeGemini:
+                    def create_and_review(self, topic, verses, tafsirs, budget):
+                        if fake.get("paid_call_fails"):
+                            raise AssertionError("paid call must not happen")
+                        captured.update(topic=topic, verses=verses, tafsirs=tafsirs, budget=budget)
+                        return ai
+
+                def fake_publish(video, row, history, report_dir, title, description, make_publisher=None, retries=3):
+                    captured["published"] = (Path(video).name, title)
+                    row["status"] = "published"
+                    row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-fake", "attempts": 1}
+                    update_record(history, row, report_dir)
+                    return row
+
+                patches = [patch.object(THIS, "validate_generation_environment"),
+                           patch.object(THIS, "QuranFoundationClient", FakeQuran),
+                           patch.object(THIS, "GeminiContentService", FakeGemini),
+                           patch.object(THIS, "make_tts_service", lambda voice=None: FakeTTS()),
+                           patch.object(THIS, "publish_platforms", fake_publish)]
+                return patches, captured
+
+            def _generate(self, topic, mode="auto", env=None, **fake):
+                import tempfile
+                from contextlib import ExitStack
+                with tempfile.TemporaryDirectory() as temp:
+                    patches, captured = self._stand_ins(temp, **fake)
+                    environment = {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json", "VIDEO_WIDTH": "360",
+                                   "VIDEO_HEIGHT": "640", "TARGET_MIN_DURATION": "10", "TARGET_MAX_DURATION": "60",
+                                   "IMAGE_GEN_LICENSE_CONFIRMED": "", **(env or {})}
+                    with patch.dict(os.environ, environment), ExitStack() as stack:
+                        for item in patches:
+                            stack.enter_context(item)
+                        config = Config.from_env(Path(temp))
+                        history = ProductionHistory(config.history_file)
+                        row, validated = generate_candidate(topic, 1, mode, config, history, "2026-10-24")
+                        captured["video_exists"] = (config.output_dir / config.final_video_name).is_file()
+                        captured["history_rows"] = history.get_runs()
+                    return row, validated, captured
+
+            def test_a_complete_candidate_is_built_from_the_idea_the_verses_and_a_script_that_places_them(self):
+                from topics import VerseRef
+                topic = Topic("cave-309", "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة؟",
+                              (VerseRef(18, 25), VerseRef(18, 26, 1, 3)), ("السنة الشمسية نحو ثلاثمائة وخمسة وستين يومًا.",))
+                row, validated, seen = self._generate(topic)
+                self.assertEqual((row["status"], validated, seen["video_exists"]), ("published", True, True))
+                self.assertEqual(row["verse_key"], "topic:cave-309")
+                checks = row["verification"]["checks"]
+                self.assertEqual([v["label"] for v in checks["verses"]], ["18:25", "18:26#1-3"])
+                self.assertAlmostEqual(checks["recitation_total_seconds"], 6.0, delta=0.3)
+                self.assertEqual([v.text for v in seen["verses"]], [self.WORDS, "واحد اثنان ثلاثة"])   # the fragment, exactly as recited
+                self.assertEqual([v.index for v in seen["verses"]], [1, 2])
+                self.assertEqual(seen["budget"], speech_word_budget(60, checks["recitation_total_seconds"]))
+                self.assertEqual(seen["topic"].id, "cave-309")
+                self.assertEqual(sorted(seen["tafsirs"]), ["18:25", "18:26"])
+                self.assertEqual(list(seen["tts_texts"]), ["hook", "talk-1", "talk-2", "talk-3", "closing"])
+                video = checks["video"]
+                self.assertEqual(list(video["audio_segments"]),
+                                 ["hook", "talk-1", "verse-1", "talk-2", "verse-2", "talk-3", "closing"])
+                self.assertEqual(video["verse_count"], 2)
+                self.assertEqual(video["commentary_style"], "captions")
+                self.assertEqual(checks["content"]["parts"], ["speech", "verse", "speech", "verse", "speech"])
+                kinds = [s["kind"] for s in row["media_sources"]]
+                self.assertEqual((kinds.count("quran_text"), kinds.count("recitation"), kinds.count("tafsir"),
+                                  kinds.count("tts"), kinds.count("font"), kinds.count("procedural_background")), (2, 2, 2, 1, 1, 1))
+                self.assertEqual(seen["published"][0], "final_output.mp4")
+                self.assertTrue(row["video_sha256"])
+                self.assertEqual(checks["scene_images"]["generated"], 0)             # no image provider configured: procedural scenes
+                self.assertTrue(checks["scene_images"]["notes"])
+                self.assertEqual(len(seen["history_rows"]), 1)
+
+            def test_generated_pictures_are_requested_only_for_the_shots_that_survive_the_cut_and_recorded(self):
+                import io as _io
+                from PIL import Image as _Image, ImageChops as _ImageChops
+                from topics import VerseRef
+                requested = []
+
+                class Provider:
+                    name, model = "cloudflare", "fake-model"
+                    def generate(self, prompt, width, height, seed):
+                        requested.append(prompt)
+                        gradient = _Image.linear_gradient("L").resize((512, 512))
+                        noise = _Image.effect_noise((512, 512), 40)
+                        buffer = _io.BytesIO()
+                        _Image.merge("RGB", (_ImageChops.add(gradient, noise, scale=2), gradient, noise)).save(buffer, "PNG")
+                        return buffer.getvalue()
+
+                real_service = SceneImageService
+
+                def service():
+                    result = real_service(providers=[Provider()])
+                    result._sleep = lambda seconds: None
+                    return result
+                topic = Topic("cave-309", "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة؟", (VerseRef(18, 25), VerseRef(18, 26, 1, 3)), ())
+                with patch.object(THIS, "SceneImageService", service):
+                    row, validated, _ = self._generate(topic, env={"MAX_SCENE_IMAGES": "4"})
+                self.assertTrue(validated)
+                info = row["verification"]["checks"]["scene_images"]
+                self.assertEqual((info["requested"], info["generated"]), (4, 4))
+                self.assertEqual(len(requested), 4)
+                self.assertTrue(all("warm dusk light" in prompt for prompt in requested))     # the shared theme travels with every prompt
+                self.assertEqual(len([s for s in row["media_sources"] if s["kind"] == "ai_generated_image"]), 4)
+                self.assertGreaterEqual(info["entries_reusing_a_neighbour_picture"], 1)      # shots beyond the budget reuse a neighbour
+
+            def test_a_fragment_beyond_the_verse_a_timing_mismatch_and_an_overlong_recitation_are_permanent_rejections(self):
+                from topics import VerseRef
+                beyond = Topic("t-beyond", "سؤال طويل بما يكفي هنا؟", (VerseRef(18, 25, 1, 50),))
+                row, validated, _ = self._generate(beyond, paid_call_fails=True)
+                self.assertEqual((row["status"], row["permanent_failure"], validated), ("failed", True, False))
+                self.assertIn("يتجاوز", row["last_error"])
+                plain = Topic("t-plain", "سؤال طويل بما يكفي هنا؟", (VerseRef(18, 25),))
+                row, _, _ = self._generate(plain, paid_call_fails=True, segments=[[1, 0, 500]])
+                self.assertTrue(row["permanent_failure"])
+                self.assertIn("التوقيتات", row["last_error"])
+                two = Topic("t-two", "سؤال طويل بما يكفي هنا؟", (VerseRef(18, 25), VerseRef(18, 26)))
+                row, _, _ = self._generate(two, paid_call_fails=True, seconds=30.0)
+                self.assertTrue(row["permanent_failure"])
+                self.assertIn("أطول", row["last_error"])
+                manual, _, _ = self._generate(two, mode="manual", paid_call_fails=True, seconds=30.0)      # the cap is for automatic runs only
+                self.assertFalse(manual["permanent_failure"])
+                self.assertIn("paid call", manual["last_error"])
+
+            def test_a_failing_recitation_source_is_a_normal_retryable_failure(self):
+                from topics import VerseRef
+                row, validated, _ = self._generate(Topic("t-err", "سؤال طويل بما يكفي هنا؟", (VerseRef(18, 25),)),
+                                                   recitation_error="reached recitation")
+                self.assertEqual((row["status"], validated), ("failed", False))
+                self.assertFalse(row["permanent_failure"])
+                self.assertIn("reached recitation", row["last_error"])
+
+            def test_deterministic_rejection_moves_to_the_next_topic_without_retrying(self):
+                import json as _json
+                import tempfile
+                from argparse import Namespace
+                calls = []
+                def fake_generate(topic, attempt, mode, config, history, local_date, previous_row=None):
+                    calls.append((topic.id, attempt))
+                    if len(calls) == 1:
+                        return {"status": "failed", "permanent_failure": True, "last_error": "short"}, False
+                    row = new_run_record("ok", topic.id, mode, local_date, attempt)
+                    row["status"] = "published"
+                    return row, True
+                with tempfile.TemporaryDirectory() as temp:
+                    topics_path = Path(temp) / "topics.json"
+                    topics_path.write_text(_json.dumps({"version": 1, "topics": [
+                        {"id": f"topic-{n}", "question": f"سؤال رقم {n} طويل بما يكفي؟", "verses": [{"key": "18:25"}]} for n in (1, 2, 3)]},
+                        ensure_ascii=False), encoding="utf-8")
+                    with patch.dict(os.environ, {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json", "MAX_RETRIES": "5",
+                                                 "TOPICS_FILE": str(topics_path)}), \
+                            patch.object(THIS, "generate_candidate", fake_generate):
+                        code = run(Namespace(mode="auto", topic=None, reprocess=False, publish_only=False, input_video=None, test=False))
+                self.assertEqual(code, 0)
+                self.assertEqual(len(calls), 2)                              # the rejected topic was tried once, not five times
+                self.assertNotEqual(calls[0][0], calls[1][0])
+                self.assertEqual((calls[0][1], calls[1][1]), (1, 1))
+
+            def test_manual_mode_needs_a_known_topic_and_refuses_a_published_or_unresolved_one(self):
+                import json as _json
+                import tempfile
+                from argparse import Namespace
+                with tempfile.TemporaryDirectory() as temp:
+                    topics_path = Path(temp) / "topics.json"
+                    topics_path.write_text(_json.dumps({"version": 1, "topics": [
+                        {"id": "topic-1", "question": "سؤال رقم واحد طويل بما يكفي؟", "verses": [{"key": "18:25"}]}]},
+                        ensure_ascii=False), encoding="utf-8")
+                    env = {"OUTPUT_DIR": temp, "HISTORY_FILE": temp + "/history.json", "TOPICS_FILE": str(topics_path)}
+                    args = lambda **kw: Namespace(**{"mode": "manual", "topic": None, "reprocess": False, "publish_only": False,
+                                                     "input_video": None, "test": False, **kw})
+                    with patch.dict(os.environ, env):
+                        self.assertEqual(run(args()), 1)                              # no --topic
+                        self.assertEqual(run(args(topic="nope")), 1)                  # unknown topic
+                        history = ProductionHistory(Path(temp) / "history.json")
+                        done = new_run_record("r1", "topic-1", "manual", "2026-01-01", 1)
+                        done["video_sha256"] = "abc"
+                        done["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
+                        history.upsert(done)
+                        with patch.object(THIS, "generate_candidate", side_effect=AssertionError("must not generate")):
+                            self.assertEqual(run(args(topic="topic-1")), 1)           # already published, no --reprocess
+                        done["platforms"]["youtube"] = {"status": "upload_uncertain", "video_id": None, "attempts": 1}
+                        history.upsert(done)
+                        with patch.object(THIS, "generate_candidate", side_effect=AssertionError("must not generate")):
+                            self.assertEqual(run(args(topic="topic-1")), 1)           # unresolved submission
+
+            def test_the_parser_takes_a_topic_instead_of_a_chapter_and_verse(self):
+                args = build_parser().parse_args(["--mode", "manual", "--topic", "cave-309"])
+                self.assertEqual((args.mode, args.topic), ("manual", "cave-309"))
+                with self.assertRaises(SystemExit):
+                    build_parser().parse_args(["--chapter", "2"])
+
+            def test_history_creates_valid_json_and_prevents_duplicate_publication(self):
+                import tempfile
+                with tempfile.TemporaryDirectory() as temp:
+                    history = ProductionHistory(Path(temp) / "data/history.json")
+                    history.load()
+                    topics = self.sample_topics()
+                    self.assertEqual(len(choose_auto_candidates([], "2026-01-02", topics, 100)), 4)
+                    row = new_run_record("test-1", topics[0].id, "manual", "2026-01-01", 1)
+                    row["platforms"]["youtube"] = {"status": "published", "video_id": "yt-1", "attempts": 1}
+                    history.upsert(row)
+                    reread = history.get_runs()
+                    self.assertEqual(len(reread), 1)
+                    self.assertTrue(row_has_any_publication(reread[0]))
+                    self.assertNotIn(topics[0].id, [t.id for t in choose_auto_candidates(reread, "2026-01-02", topics, 100)])
 
             def test_publish_only_fingerprint_requires_exact_artifact(self):
                 import tempfile
                 with tempfile.TemporaryDirectory() as temp:
                     h = ProductionHistory(Path(temp) / "history.json")
-                    row = new_run_record("run-1", 2, 152, "manual", "2026-01-01", 1)
+                    row = new_run_record("run-1", "cave-309", "manual", "2026-01-01", 1)
                     row["video_sha256"] = "expected"
                     h.upsert(row)
-                    self.assertEqual(find_latest_row(h.get_runs(), "2:152")["video_sha256"], "expected")
+                    self.assertEqual(find_latest_row(h.get_runs(), "topic:cave-309")["video_sha256"], "expected")
 
         unittest.main(argv=[sys.argv[0]])
     else:

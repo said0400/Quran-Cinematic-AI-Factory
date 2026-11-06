@@ -666,8 +666,8 @@ def _encode_with_overlay_pipe(command: list[str], frames: Iterator[bytes], timeo
 
 
 def _audio_concat(audio_files: list[Path], destination: Path) -> float:
-    if len(audio_files) != 5:
-        raise VideoError("يجب تمرير خمسة مقاطع صوتية منفصلة: هوك، تلاوة، العبارة، رسالة، دعوة المشاركة.")
+    if len(audio_files) < 2:
+        raise VideoError("يجب تمرير مقطعين صوتيين على الأقل.")
     for file in audio_files:
         if not file.is_file() or file.stat().st_size < 512:
             raise VideoError(f"مقطع صوت غير صالح: {file.name}")
@@ -932,6 +932,142 @@ def build_video(background: Path, audio_files: dict[str, Path], recitation_segme
                        "tts_word_timing": dict(timing_sources),
                        "commentary_pages": commentary_pages,
                        "font_source": {"path": font_path, **_font_license_metadata(font_path)}})
+    return validation
+
+
+def build_script_video(background: Path, segments: list[dict[str, Any]], output_path: Path,
+                       width: int = 1080, height: int = 1920, fps: int = 30,
+                       target_min_duration: float = 45, target_max_duration: float = 60,
+                       dim_strength: float = 0.30, commentary_style: str = "captions") -> dict[str, Any]:
+    """Build a video from an ordered script: spoken parts and recited verses, in any alternation.
+
+    Each segment is a dict:
+      {"kind": "speech", "name", "role": "hook"|"body"|"closing", "text", "audio": Path, "boundaries": [...] or None}
+      {"kind": "verse", "name", "text" (exactly what is recited), "audio": Path, "segments": [{word_index,start_ms,end_ms}],
+       "chapter_name", "verse_number"}
+    The first segment must be the spoken hook and the last one spoken too. Spoken text is shown as subtitle-style
+    captions (or cards); a verse appears on the ornamental card with the words lit by the source timestamps.
+    No recitation is cut or sped up; the video is padded at the tail only to reach the minimum duration.
+    """
+    if commentary_style not in COMMENTARY_STYLES:
+        raise VideoError("commentary_style يجب أن يكون card أو captions.")
+    if not isinstance(segments, list) or len(segments) < 3:
+        raise VideoError("السكريبت يحتاج هوكًا وآية وكلامًا ختاميًا على الأقل.")
+    for segment in segments:
+        kind = segment.get("kind")
+        if kind not in ("speech", "verse"):
+            raise VideoError("نوع مقطع غير معروف في السكريبت.")
+        if not isinstance(segment.get("text"), str) or not segment["text"].strip() or not isinstance(segment.get("name"), str):
+            raise VideoError("نص أو اسم مقطع فارغ في السكريبت.")
+        if kind == "speech" and "صدق الله العظيم" in segment["text"]:
+            raise VideoError("عبارة «صدق الله العظيم» غير مسموحة داخل الكلام المنطوق.")
+        if kind == "verse" and not segment.get("segments"):
+            raise VideoError("توقيتات الكلمات الحقيقية غير متاحة لإحدى الآيات.")
+    if segments[0]["kind"] != "speech" or segments[-1]["kind"] != "speech":
+        raise VideoError("يجب أن يبدأ السكريبت وينتهي بكلام منطوق.")
+    if not any(segment["kind"] == "verse" for segment in segments):
+        raise VideoError("السكريبت لا يحتوي أي آية.")
+    if len({segment["name"] for segment in segments}) != len(segments):
+        raise VideoError("أسماء مقاطع السكريبت يجب أن تكون فريدة.")
+    dim_layer = build_dim_layer(width, height, float(dim_strength))  # validates the strength early
+    bg_probe = probe(background)
+    if not any(s.get("codec_type") == "video" for s in bg_probe.get("streams", [])):
+        raise VideoError("ملف الخلفية لا يحتوي مسار فيديو.")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    work = output_path.parent / ".video_work"
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
+    font_path = discover_font()
+    combined_audio = work / "combined.wav"
+    total_audio = _audio_concat([Path(segment["audio"]) for segment in segments], combined_audio)
+    durations = [_probe_audio_seconds(Path(segment["audio"])) for segment in segments]
+    intervals: list[tuple[float, float]] = []
+    cursor = 0.0
+    for duration in durations:
+        intervals.append((cursor, cursor + duration))
+        cursor += duration
+    if cursor > total_audio + 0.35:
+        raise VideoError("مدة المقاطع لا تتفق مع الصوت المركب.")
+    video_duration = max(total_audio, float(target_min_duration))
+    if total_audio > float(target_max_duration):
+        video_duration = total_audio       # a complete recitation is never truncated
+    scenes: list[Scene] = []
+    commentary_pages: dict[str, int] = {}
+    timing_sources: dict[str, str] = {}
+    for index, segment in enumerate(segments):
+        start, end = intervals[index]
+        last = index == len(segments) - 1
+        if segment["kind"] == "speech":
+            if last and video_duration > total_audio:
+                end = video_duration      # keep the closing line on screen over any deliberate padding
+            timings, timing_sources[segment["name"]] = align_speech_words(segment["text"], segment.get("boundaries"), durations[index])
+            hook = segment.get("role") == "hook"
+            built = commentary_scenes(
+                segment["name"], "", segment["text"], start, end, [(start + a, start + b, i) for a, b, i in timings],
+                width, height, font_path, first_fade_in=0.0 if index == 0 else FADE_SECONDS,
+                last_fade_out=0.0 if (last and video_duration > total_audio) else FADE_SECONDS,
+                mode=commentary_style, caption_y=0.50 if hook else 0.80, caption_size=76 if hook else 60)
+            commentary_pages[segment["name"]] = len(built)
+            scenes.extend(built)
+        else:
+            words = quran_words(segment["text"])
+            verse_timings: list[tuple[float, float, int]] = []
+            for row in segment["segments"]:
+                word_index = int(row["word_index"])
+                if not 0 <= word_index < len(words):
+                    raise VideoError("فهرس توقيت كلمة خارج نص الآية.")
+                word_start = start + int(row["start_ms"]) / 1000.0
+                word_end = start + int(row["end_ms"]) / 1000.0
+                if word_start < start or word_end > end + 0.3 or word_end <= word_start:
+                    raise VideoError("توقيت الكلمة لا يقع داخل مقطع التلاوة.")
+                verse_timings.append((word_start, word_end, word_index))
+            verse_timings.sort(key=lambda row: row[0])
+            scenes.append(Scene(segment["name"], start, end,
+                                build_verse_layout(segment["text"], segment.get("chapter_name", ""), segment.get("verse_number"),
+                                                   width, height, font_path), verse_timings))
+    total_frames = int(math.ceil(video_duration * fps))
+    zoom = f"(1+0.08*min(t/{max(video_duration, 1.0):.3f},1))"
+    dim_path = work / "dim.png"
+    use_dim = float(dim_strength) > 0
+    if use_dim:
+        dim_layer.save(dim_path, "PNG")
+    command = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+               "-stream_loop", "-1", "-i", str(background), "-i", str(combined_audio),
+               "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}", "-framerate", str(fps), "-i", "pipe:0"]
+    if use_dim:
+        command.extend(["-loop", "1", "-framerate", str(fps), "-i", str(dim_path)])
+    filters = [
+        f"[0:v]scale=w='trunc({width}*{zoom}/2)*2':h='trunc({height}*{zoom}/2)*2':eval=frame:"
+        f"force_original_aspect_ratio=increase,crop={width}:{height},setsar=1,"
+        "eq=contrast=1.03:saturation=1.06,format=yuv420p[bg]"
+    ]
+    current = "bg"
+    if use_dim:
+        filters.append(f"[{current}][3:v]overlay=0:0[dimmed]")
+        current = "dimmed"
+    filters.append(f"[{current}][2:v]overlay=0:0:eof_action=pass,format=yuv420p[vout]")
+    filters.append(f"[1:a]apad=whole_dur={video_duration:.6f},atrim=duration={video_duration:.6f},asetpts=PTS-STARTPTS[aout]")
+    command.extend(["-filter_complex", ";".join(filters), "-map", "[vout]", "-map", "[aout]",
+                    "-t", f"{video_duration:.6f}", "-r", str(fps), "-c:v", "libx264", "-preset", "medium",
+                    "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+                    "-ar", "48000", "-movflags", "+faststart", str(output_path)])
+    _encode_with_overlay_pipe(command, render_frames(scenes, total_frames, fps, width, height), timeout=3000)
+    if not output_path.is_file():
+        raise VideoError("لم ينتج FFmpeg ملف الفيديو النهائي.")
+    validation = validate_video(output_path, width, height, fps, expected_duration=video_duration)
+    validation.update({
+        "audio_segments": {segment["name"]: {"start": round(a, 3), "end": round(b, 3)}
+                           for segment, (a, b) in zip(segments, intervals)},
+        "recitation_total_seconds": round(sum(durations[i] for i, s in enumerate(segments) if s["kind"] == "verse"), 3),
+        "verse_count": sum(1 for s in segments if s["kind"] == "verse"),
+        "target_duration_met": video_duration >= target_min_duration,
+        "padding_seconds": round(max(0, video_duration - total_audio), 3),
+        "dim_strength": float(dim_strength),
+        "commentary_style": commentary_style,
+        "tts_word_timing": dict(timing_sources),
+        "commentary_pages": commentary_pages,
+        "font_source": {"path": font_path, **_font_license_metadata(font_path)}})
     return validation
 
 
@@ -1429,6 +1565,95 @@ if __name__ == "__main__":
                                      temp_path / "final_output.mp4", width=270, height=480, fps=10,
                                      target_min_duration=8, target_max_duration=60)
                 self.assertTrue(result["valid"])
+
+        # ----- Script video: spoken parts and verses in any alternation -----
+        @staticmethod
+        def _script_inputs(temp_path: Path, background_color: str = "0x2060a0"):
+            run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                         "-i", f"color=c={background_color}:s=360x640:r=10:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                         str(temp_path / "bg.mp4")])
+            plan = [("hook", 2.0), ("talk-1", 2.0), ("verse-1", 3.0), ("talk-2", 3.0), ("verse-2", 2.0), ("closing", 2.0)]
+            audio = {}
+            for name, seconds in plan:
+                audio[name] = temp_path / f"{name}.wav"
+                run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi",
+                             "-i", f"sine=frequency=330:duration={seconds}", "-ar", "48000", str(audio[name])])
+            def speech(name, role, text):
+                return {"kind": "speech", "name": name, "role": role, "text": text, "audio": audio[name], "boundaries": None}
+            return [
+                speech("hook", "hook", "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة؟ الجواب أدق مما تتخيل."),
+                speech("talk-1", "body", "اسمع، قال تعالى:"),
+                {"kind": "verse", "name": "verse-1", "text": "بسم الله الرحمن", "audio": audio["verse-1"], "chapter_name": "الفاتحة",
+                 "verse_number": 1, "segments": [{"word_index": i, "start_ms": 100 + i * 800, "end_ms": 800 + i * 800} for i in range(3)]},
+                speech("talk-2", "body", "ثلاثمائة وازدادوا تسعا. طيب، لماذا لم يجمعهما برقم واحد؟ لأن السنة الشمسية غير القمرية."),
+                {"kind": "verse", "name": "verse-2", "text": "الحمد لله", "audio": audio["verse-2"], "chapter_name": "الفاتحة",
+                 "verse_number": 2, "segments": [{"word_index": i, "start_ms": 100 + i * 900, "end_ms": 900 + i * 900} for i in range(2)]},
+                speech("closing", "closing", "تابعني لنتدبر دقة القرآن بحسبان."),
+            ]
+
+        def test_script_video_alternates_speech_and_verses_with_captions(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                segments = self._script_inputs(temp_path)
+                output = temp_path / "final_output.mp4"
+                result = build_script_video(temp_path / "bg.mp4", segments, output, width=270, height=480, fps=10,
+                                            target_min_duration=16, target_max_duration=60, dim_strength=0.0)
+                self.assertTrue(result["valid"])
+                self.assertEqual((result["verse_count"], result["commentary_style"]), (2, "captions"))
+                self.assertAlmostEqual(result["recitation_total_seconds"], 5.0, delta=0.1)
+                names = list(result["audio_segments"])
+                self.assertEqual(names, ["hook", "talk-1", "verse-1", "talk-2", "verse-2", "closing"])
+                spans = [result["audio_segments"][n] for n in names]
+                for left, right in zip(spans, spans[1:]):
+                    self.assertAlmostEqual(left["end"], right["start"], places=2)
+                self.assertGreaterEqual(result["commentary_pages"]["hook"], 2)
+                self.assertGreaterEqual(result["commentary_pages"]["talk-2"], 2)
+                self.assertAlmostEqual(result["padding_seconds"], 2.0, delta=0.3)          # 14 s of audio, 16 s minimum
+                self.assertEqual(set(result["tts_word_timing"]), {"hook", "talk-1", "talk-2", "closing"})
+                def gold_pixels(second: float) -> int:
+                    frame = temp_path / f"f-{second}.png"
+                    run_checked(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", str(second),
+                                 "-i", str(output), "-frames:v", "1", str(frame)])
+                    with Image.open(frame) as image:
+                        data = image.convert("RGB").tobytes()
+                    return sum(1 for i in range(0, len(data), 3) if data[i] > 150 and 110 < data[i + 1] < 210 and data[i + 2] < 130)
+                verse_start = result["audio_segments"]["verse-1"]["start"]
+                self.assertGreater(gold_pixels(verse_start + 1.2), 40)                    # the ornamental verse card is on screen
+                self.assertLess(gold_pixels(0.8), gold_pixels(verse_start + 1.2) / 2)     # a spoken part shows no gold card
+
+        def test_script_video_accepts_the_card_style_and_pads_the_tail_with_the_closing_line(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                segments = self._script_inputs(temp_path)
+                result = build_script_video(temp_path / "bg.mp4", segments, temp_path / "final_output.mp4", width=270, height=480,
+                                            fps=10, target_min_duration=20, target_max_duration=60, commentary_style="card")
+                self.assertTrue(result["valid"])
+                self.assertEqual(result["commentary_style"], "card")
+                self.assertGreater(result["padding_seconds"], 4)
+                self.assertAlmostEqual(result["duration_seconds"], 20.0, delta=0.4)
+
+        def test_script_video_rejects_malformed_sequences(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                segments = self._script_inputs(temp_path)
+                out = temp_path / "final_output.mp4"
+                bg = temp_path / "bg.mp4"
+                def rejects(message, **kw):
+                    with self.assertRaises(VideoError, msg=message):
+                        build_script_video(bg, kw.pop("segments", segments), out, width=270, height=480, fps=10, **kw)
+                rejects("unknown style", commentary_style="neon")
+                rejects("too short", segments=segments[:2])
+                rejects("starts with a verse", segments=segments[2:])
+                rejects("ends with a verse", segments=segments[:5])
+                rejects("no verse", segments=[segments[0], segments[1], segments[3], segments[5]])
+                rejects("unknown kind", segments=[segments[0], {**segments[1], "kind": "music"}, segments[2], segments[5]])
+                rejects("reserved phrase", segments=[dict(segments[0], text="صدق الله العظيم"), *segments[1:]])
+                rejects("no word timings", segments=[segments[0], dict(segments[2], segments=[]), segments[3], segments[5]])
+                rejects("duplicate names", segments=[segments[0], segments[1], segments[2], dict(segments[3], name="hook"), segments[4], segments[5]])
+                rejects("word timing outside the recitation", segments=[segments[0], segments[1],
+                        dict(segments[2], segments=[{"word_index": 0, "start_ms": 100, "end_ms": 9000}]), segments[3], segments[5]])
+                rejects("word index outside the verse", segments=[segments[0], segments[1],
+                        dict(segments[2], segments=[{"word_index": 9, "start_ms": 100, "end_ms": 800}]), segments[3], segments[5]])
 
         def test_encoder_failure_is_reported_as_video_error(self):
             frames = iter([bytes(16)] * 3)

@@ -26,6 +26,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 from procedural_background import ANIMATIONS, ELEMENT_TYPES, MOODS, POSITIONS, SIZES, SKY_TYPES
 from scene_images import sanitize_image_prompt, sanitize_theme
+from topics import Topic
 
 QF_API = "https://apis.quran.foundation/content/api/v4"
 QF_PRELIVE_API = "https://apis-prelive.quran.foundation/content/api/v4"
@@ -356,7 +357,13 @@ class QuranFoundationClient:
                           int(verse_id) if verse_id is not None else None,
                           SURAH_NAMES_AR[int(chapter) - 1])
 
-    def get_recitation(self, chapter: int, verse: int, audio_dir: Path) -> tuple[QuranRecitation, Path]:
+    def get_recitation(self, chapter: int, verse: int, audio_dir: Path, words: tuple[int, int] | None = None,
+                       verse_text: str | None = None) -> tuple[QuranRecitation, Path]:
+        """Source recitation of one verse, or of a fragment of it (`words` = 1-based inclusive [first, last]).
+
+        A fragment needs `verse_text` so the number of timed words can be checked against the verse before
+        cutting. The chapter audio is kept in `audio_dir` and reused by the next verse of the same chapter.
+        """
         key = verse_key(chapter, verse)
         reciter_id = int(_required_env("CHAPTER_RECITER_ID"))
         if not env_bool("RECITATION_LICENSE_CONFIRMED"):
@@ -416,6 +423,19 @@ class QuranFoundationClient:
             absolute_segments.append([word_index, start_ms, end_ms])
         if not absolute_segments:
             raise ServiceError(f"قائمة توقيتات الكلمات للآية {key} فارغة.")
+        if words is not None:
+            if not verse_text:
+                raise ServiceError("مقطع الآية يتطلب نص الآية للتحقق من عدد الكلمات.")
+            expected = len(quran_words(verse_text))
+            first, last = words
+            if len(absolute_segments) != expected:
+                raise ServiceError(f"عدد توقيتات الآية {key} ({len(absolute_segments)}) لا يطابق عدد كلمات نصها ({expected}).")
+            if not 1 <= first <= last <= expected:
+                raise ServiceError(f"نطاق كلمات المقطع {first}-{last} خارج الآية {key} ({expected} كلمة).")
+            absolute_segments = [[position + 1, row[1], row[2]]
+                                 for position, row in enumerate(absolute_segments[first - 1:last])]
+            verse_start = min(row[1] for row in absolute_segments)
+            verse_end = max(row[2] for row in absolute_segments)
         clip_start_ms = max(0, min(verse_start, min(row[1] for row in absolute_segments)) - 200)
         clip_end_ms = max(verse_end, max(row[2] for row in absolute_segments)) + 200
         segments = [[index, start_ms - clip_start_ms, end_ms - clip_start_ms]
@@ -428,30 +448,32 @@ class QuranFoundationClient:
             raise ServiceError("رابط صوت السورة ليس HTTPS على مضيف موثق ومسموح.")
         audio_dir.mkdir(parents=True, exist_ok=True)
         chapter_audio = audio_dir / f"chapter-recitation-{reciter_id}-{chapter}.mp3"
-        destination = audio_dir / f"recitation-{chapter}-{verse}.mp3"
-        try:
-            response = self.session.get(full_url, headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}, timeout=(20, 120), stream=True)
-            response.raise_for_status()
-            final_host = urlparse(getattr(response, "url", full_url)).hostname
-            content_type = (response.headers.get("Content-Type", "") or "").split(";", 1)[0].lower()
-            if final_host not in allowed_hosts:
-                raise ServiceError("تنزيل التلاوة أعاد تحويلًا إلى مضيف غير مصرح.")
-            if content_type and not (content_type.startswith("audio/") or content_type == "application/octet-stream"):
-                raise ServiceError("استجابة CDN ليست نوع ملف صوتيًا.")
-            total = 0
-            with chapter_audio.open("wb") as out:
-                for chunk in response.iter_content(1024 * 1024):
-                    if chunk:
-                        total += len(chunk)
-                        if total > 160 * 1024 * 1024:
-                            raise ServiceError("ملف السورة يتجاوز حد التنزيل الآمن البالغ 160 MiB.")
-                        out.write(chunk)
-        except ServiceError:
-            chapter_audio.unlink(missing_ok=True)
-            raise
-        except requests.RequestException as exc:
-            chapter_audio.unlink(missing_ok=True)
-            raise ServiceError(f"تعذر تنزيل التلاوة ({type(exc).__name__}).") from None
+        suffix = "" if words is None else f"-{words[0]}-{words[1]}"
+        destination = audio_dir / f"recitation-{chapter}-{verse}{suffix}.mp3"
+        if not (chapter_audio.is_file() and chapter_audio.stat().st_size >= 4096):      # reuse the chapter file
+            try:
+                response = self.session.get(full_url, headers={"User-Agent": "Quran-Cinematic-AI-Factory/1.0"}, timeout=(20, 120), stream=True)
+                response.raise_for_status()
+                final_host = urlparse(getattr(response, "url", full_url)).hostname
+                content_type = (response.headers.get("Content-Type", "") or "").split(";", 1)[0].lower()
+                if final_host not in allowed_hosts:
+                    raise ServiceError("تنزيل التلاوة أعاد تحويلًا إلى مضيف غير مصرح.")
+                if content_type and not (content_type.startswith("audio/") or content_type == "application/octet-stream"):
+                    raise ServiceError("استجابة CDN ليست نوع ملف صوتيًا.")
+                total = 0
+                with chapter_audio.open("wb") as out:
+                    for chunk in response.iter_content(1024 * 1024):
+                        if chunk:
+                            total += len(chunk)
+                            if total > 160 * 1024 * 1024:
+                                raise ServiceError("ملف السورة يتجاوز حد التنزيل الآمن البالغ 160 MiB.")
+                            out.write(chunk)
+            except ServiceError:
+                chapter_audio.unlink(missing_ok=True)
+                raise
+            except requests.RequestException as exc:
+                chapter_audio.unlink(missing_ok=True)
+                raise ServiceError(f"تعذر تنزيل التلاوة ({type(exc).__name__}).") from None
         if not chapter_audio.is_file() or chapter_audio.stat().st_size < 4096:
             chapter_audio.unlink(missing_ok=True)
             raise ServiceError("ملف صوت السورة فارغ أو غير مكتمل.")
@@ -469,7 +491,6 @@ class QuranFoundationClient:
         if not destination.is_file() or destination.stat().st_size < 4096:
             destination.unlink(missing_ok=True)
             raise ServiceError("ملف التلاوة المقتطع فارغ أو غير مكتمل.")
-        chapter_audio.unlink(missing_ok=True)
         return QuranRecitation(reciter_id, reciter_name, full_url, segments, source_url,
                                clip_end_ms - clip_start_ms), destination
 
@@ -518,15 +539,18 @@ HOOK_SCORE_KEYS = (
     "start_strength", "curiosity", "emotional_impact", "relevance", "clarity",
     "brevity", "uniqueness", "non_misleading", "general_audience",
 )
-HOOK_MIN_WORDS, HOOK_MAX_WORDS = 3, 18
-MESSAGE_MIN_WORDS_FLOOR = 20            # hard floor; the prompt asks for a longer text
-CTA_MIN_WORDS, CTA_MAX_WORDS = 6, 34
+HOOK_MIN_WORDS, HOOK_MAX_WORDS = 3, 22
+CTA_MIN_WORDS, CTA_MAX_WORDS = 3, 30
 TITLE_MAX_WORDS, TITLE_MAX_CHARS = 16, 95
 DESCRIPTION_MIN_CHARS, DESCRIPTION_MAX_CHARS = 300, 1400
 KEYWORDS_MIN, KEYWORDS_MAX = 6, 15
 HASHTAGS_MIN, HASHTAGS_MAX = 6, 12
 CONTENT_ATTEMPTS = 3                    # regenerations when the content fails validation or review
-SHARE_VERB_PATTERN = re.compile(r"شارك|انشر|أرسل|ارسل|مرّر|مرر")
+FOLLOW_VERB_PATTERN = re.compile(r"تابع|شارك|انشر|أرسل|ارسل|اشترك|مرّر|مرر")
+PARTS_BOUNDS = (3, 14)                  # speech and verse parts of one script
+SPEECH_PART_WORDS = (2, 120)
+SPEECH_SLACK_WORDS = 15                 # tolerated distance from the spoken-word budget
+VERSE_RUN_WORDS = 4                     # this many consecutive verse words inside speech = the verse was quoted
 # The published text must not name sources (reciter, tafsir, stock site, AI vendors).
 FORBIDDEN_SOURCE_PATTERN = re.compile(
     r"pexels|quran\.foundation|gemini|جيميناي|الميسر|مشاري|العفاسي|ابن كثير|الطبري|السعدي|القرطبي|البغوي",
@@ -560,7 +584,12 @@ GENERATION_SCHEMA = {
                 "required": ["text", *HOOK_SCORE_KEYS]
             }
         },
-        "message": {"type": "STRING"},
+        "parts": {
+            "type": "ARRAY",
+            "items": {"type": "OBJECT", "properties": {
+                "type": {"type": "STRING"}, "text": {"type": "STRING"}, "verse_index": {"type": "INTEGER"},
+            }, "required": ["type"]},
+        },
         "call_to_action": {"type": "STRING"},
         "title": {"type": "STRING"},
         "description": {"type": "STRING"},
@@ -573,14 +602,12 @@ GENERATION_SCHEMA = {
                 "opening": {"type": "OBJECT", "properties": {"shots": {"type": "ARRAY", "items": _SHOT_SCHEMA}},
                             "required": ["shots"]},
                 "scenes": {"type": "ARRAY", "items": _SHOT_SCHEMA},
-                "closing": {"type": "OBJECT", "properties": {"shots": {"type": "ARRAY", "items": _SHOT_SCHEMA}},
-                            "required": ["shots"]},
             },
-            "required": ["visual_theme", "opening", "scenes", "closing"]
+            "required": ["visual_theme", "opening", "scenes"]
         },
     },
     "required": [
-        "hook_candidates", "message", "call_to_action",
+        "hook_candidates", "parts", "call_to_action",
         "title", "description", "keywords", "hashtags", "visual_plan"
     ],
 }
@@ -656,8 +683,7 @@ def _norm_tokens(text: str) -> list[tuple[int, str]]:
 
 DEFAULT_SHOT_ELEMENT = {"type": "light_rays", "position": "center", "animation": "fade_in", "size": "medium"}
 OPENING_SHOTS = (1, 3)
-MESSAGE_SHOTS = (4, 16)
-CLOSING_SHOTS = (1, 2)
+MESSAGE_SHOTS = (4, 18)
 
 
 def _clean_scene(raw: Any, label: str) -> dict[str, Any]:
@@ -730,21 +756,31 @@ def _bind_shots(value: Any, text: str, label: str, bounds: tuple[int, int]) -> l
     return shots
 
 
-def validate_visual_plan(raw: Any, message: str) -> dict[str, Any]:
-    """Validate Gemini's shot list: 1-3 hook shots, 4-16 message shots bound to words, 1-2 closing shots."""
+def validate_visual_plan(raw: Any, body_text: str) -> dict[str, Any]:
+    """Validate Gemini's shot list: 1-3 hook shots (spread over the hook) and 4-18 shots bound to words of `body_text`
+    (everything spoken after the hook: the speech parts and the closing line, joined by single spaces)."""
     if not isinstance(raw, dict):
         raise ContentValidationError("الخطة البصرية ليست كائنًا.")
     return {"visual_theme": sanitize_theme(raw.get("visual_theme")),
             "opening": {"shots": _clean_shots(raw.get("opening"), "opening", OPENING_SHOTS)},
-            "scenes": _bind_shots(raw.get("scenes"), message, "scenes", MESSAGE_SHOTS),
-            "closing": {"shots": _clean_shots(raw.get("closing"), "closing", CLOSING_SHOTS)}}
+            "scenes": _bind_shots(raw.get("scenes"), body_text, "scenes", MESSAGE_SHOTS)}
 
 
-def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[str, Any]:
-    """Validate the model output and return the normalized copy.
+def _verse_quoted_in(speech_tokens: list[str], verse_tokens: list[str]) -> bool:
+    """True when VERSE_RUN_WORDS consecutive words of the verse appear in a row inside the speech."""
+    size = min(VERSE_RUN_WORDS, len(verse_tokens))
+    if size < 3:
+        return False
+    runs = {tuple(verse_tokens[i:i + size]) for i in range(len(verse_tokens) - size + 1)}
+    return any(tuple(speech_tokens[i:i + size]) in runs for i in range(len(speech_tokens) - size + 1))
 
-    Every rule failure raises `ContentValidationError`, which `GeminiContentService` answers by
-    regenerating (a few times) instead of failing the whole candidate.
+
+def validate_generated_script(data: Any, verse_texts: list[str], speech_words: tuple[int, int]) -> dict[str, Any]:
+    """Validate the model output for the "idea first, verse as evidence" template and return the normalised script.
+
+    `verse_texts` are the recited texts (one per verse/fragment, in the order they must appear) and
+    `speech_words` the (low, high) budget for everything the narrator says. Every rule failure raises
+    `ContentValidationError`, which `GeminiContentService` answers by regenerating a few times.
     """
     if not isinstance(data, dict):
         raise ContentValidationError("مخرجات النموذج ليست كائن JSON.")
@@ -778,8 +814,7 @@ def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[
             raise ContentValidationError("أحد مرشحي الهوك لا يحقق الحد الأدنى للارتباط وعدم التضليل.")
         normalized.append({"text": text, "scores": scores, "total_score": sum(scores.values())})
 
-    def text_field(name: str, min_words: int, max_words: int, max_chars: int) -> str:
-        value = data.get(name)
+    def text_field(value: Any, name: str, min_words: int, max_words: int, max_chars: int) -> str:
         if not isinstance(value, str) or not value.strip():
             raise ContentValidationError(f"حقل {name} فارغ أو غير صالح.")
         value = value.strip()
@@ -794,26 +829,69 @@ def validate_generated_content(data: Any, max_message_words: int = 100) -> dict[
             raise ContentValidationError(f"حقل {name} يحوي عبارة مستهلكة أو ترحيبًا.")
         return value
 
-    message = text_field("message", MESSAGE_MIN_WORDS_FLOOR, int(max_message_words), 1600)
-    cta = text_field("call_to_action", CTA_MIN_WORDS, CTA_MAX_WORDS, 400)
-    if not SHARE_VERB_PATTERN.search(cta):
-        raise ContentValidationError("دعوة المشاركة لا تحتوي فعل مشاركة واضحًا.")
-    title = text_field("title", 3, TITLE_MAX_WORDS, TITLE_MAX_CHARS)
+    raw_parts = data.get("parts")
+    if not isinstance(raw_parts, list) or not PARTS_BOUNDS[0] <= len(raw_parts) <= PARTS_BOUNDS[1]:
+        raise ContentValidationError(f"أجزاء السكريبت يجب أن تكون من {PARTS_BOUNDS[0]} إلى {PARTS_BOUNDS[1]}.")
+    parts: list[dict[str, Any]] = []
+    speech_texts: list[str] = []
+    next_verse, previous = 1, None
+    for item in raw_parts:
+        kind = item.get("type") if isinstance(item, dict) else None
+        if kind == "speech":
+            text = text_field(item.get("text"), "جزء الكلام", SPEECH_PART_WORDS[0], SPEECH_PART_WORDS[1], 1200)
+            parts.append({"type": "speech", "text": text})
+            speech_texts.append(text)
+        elif kind == "verse":
+            index = item.get("verse_index")
+            if isinstance(index, bool) or index != next_verse:
+                raise ContentValidationError("الآيات يجب أن تُذكر بترتيبها المطلوب وكل واحدة مرة واحدة.")
+            if previous != "speech":
+                raise ContentValidationError("يجب أن تسبق كل آية جملة تمهيدية من الكلام.")
+            parts.append({"type": "verse", "verse_index": index})
+            next_verse += 1
+        else:
+            raise ContentValidationError("نوع جزء غير معروف (المسموح speech أو verse).")
+        previous = kind
+    merged: list[dict[str, Any]] = []
+    for part in parts:                       # two spoken parts in a row are one stretch of narration
+        if part["type"] == "speech" and merged and merged[-1]["type"] == "speech":
+            merged[-1] = {"type": "speech", "text": merged[-1]["text"] + " " + part["text"]}
+        else:
+            merged.append(part)
+    parts = merged
+    speech_texts = [part["text"] for part in parts if part["type"] == "speech"]
+    if next_verse != len(verse_texts) + 1:
+        raise ContentValidationError("لم تُستعمل كل الآيات المطلوبة في السكريبت.")
+    if parts[-1]["type"] != "speech":
+        raise ContentValidationError("يجب أن ينتهي السكريبت بكلام لا بآية.")
+    speech_tokens = [token for text in speech_texts for _, token in _norm_tokens(text)]
+    for number, verse_text in enumerate(verse_texts, start=1):
+        if _verse_quoted_in(speech_tokens, [token for _, token in _norm_tokens(verse_text)]):
+            raise ContentValidationError(f"نص الآية {number} مكتوب داخل الكلام؛ يجب أن يُترك للتلاوة.")
+    cta = text_field(data.get("call_to_action"), "call_to_action", CTA_MIN_WORDS, CTA_MAX_WORDS, 400)
+    if not FOLLOW_VERB_PATTERN.search(cta):
+        raise ContentValidationError("الجملة الختامية لا تحتوي فعل متابعة أو مشاركة واضحًا.")
+    title = text_field(data.get("title"), "title", 3, TITLE_MAX_WORDS, TITLE_MAX_CHARS)
     if "#" in title:
         raise ContentValidationError("العنوان يجب ألا يحتوي هاشتاجات.")
-    description = text_field("description", 30, 400, DESCRIPTION_MAX_CHARS)
+    description = text_field(data.get("description"), "description", 30, 400, DESCRIPTION_MAX_CHARS)
     if len(description) < DESCRIPTION_MIN_CHARS:
         raise ContentValidationError("الوصف أقصر من الحد الأدنى.")
+    best = max(normalized, key=lambda item: (item["total_score"], item["scores"]["non_misleading"], item["scores"]["relevance"]))
+    spoken_words = len(best["text"].split()) + sum(len(text.split()) for text in speech_texts) + len(cta.split())
+    low, high = speech_words
+    if spoken_words > high + SPEECH_SLACK_WORDS or spoken_words < max(30, low - SPEECH_SLACK_WORDS):
+        raise ContentValidationError(f"عدد الكلمات المنطوقة ({spoken_words}) خارج المجال المسموح ({low}..{high}).")
     keywords = _normalize_keywords(data.get("keywords"))
     hashtags = _normalize_hashtags(data.get("hashtags"))
-    visual_plan = validate_visual_plan(data.get("visual_plan"), message)
+    body_text = " ".join([*speech_texts, cta])
+    visual_plan = validate_visual_plan(data.get("visual_plan"), body_text)
     published_text = " ".join([title, description, *keywords, *hashtags])
     if FORBIDDEN_SOURCE_PATTERN.search(published_text):
         raise ContentValidationError("النص المنشور يذكر مصدرًا أو اسمًا ممنوعًا.")
-    best = max(normalized, key=lambda item: (item["total_score"], item["scores"]["non_misleading"], item["scores"]["relevance"]))
-    return {"hook": best["text"], "hook_candidates": normalized, "message": message,
-            "call_to_action": cta, "title": title, "description": description,
-            "keywords": keywords, "hashtags": hashtags, "visual_plan": visual_plan}
+    return {"hook": best["text"], "hook_candidates": normalized, "parts": parts, "call_to_action": cta,
+            "title": title, "description": description, "keywords": keywords, "hashtags": hashtags,
+            "visual_plan": visual_plan, "body_text": body_text, "spoken_words": spoken_words}
 
 
 def _gemini_exception_info(exc: BaseException) -> tuple[bool, int | None, str]:
@@ -859,6 +937,32 @@ def _gemini_finish_reason(response: Any) -> str:
         return str(getattr(reason, "name", reason))
     except Exception:
         return "unknown"
+
+
+@dataclass(frozen=True)
+class ScriptVerse:
+    """A verse (or fragment) that the script uses as evidence and the reciter says between two spoken parts."""
+    index: int                # 1-based; the number the model uses in {"type": "verse", "verse_index": n}
+    key: str                  # "18:25"
+    text: str                 # exactly what is recited: the whole verse or the chosen words of it
+    chapter_name: str
+    verse_number: int
+    seconds: float            # length of the recitation clip
+
+
+# The operator's own example of the style and structure wanted (idea first, the verse as evidence).
+EXAMPLE_SCRIPT = (
+    "الهوك: لماذا لم يقل القرآن: ثلاثمائة وتسع سنين مباشرة، مع أن المجموع نفسه؟ الجواب أدق مما تتخيّل.\n"
+    "[كلام] اسمع، قال تعالى:\n"
+    "[آية] ﴿وَلَبِثُوا فِي كَهْفِهِمْ ثَلَاثَ مِائَةٍ سِنِينَ وَازْدَادُوا تِسْعًا﴾\n"
+    "[كلام] ثلاثمائة وازدادوا تسعًا. طيب، لماذا لم يجمعهما برقم واحد؟ السنة الشمسية تدور فيها الأرض حول الشمس في ثلاثمائة وخمسة وستين يومًا، "
+    "أما السنة القمرية فهي اثنا عشر هلالًا، أي ثلاثمائة وأربعة وخمسون يومًا فقط. الفرق بينهما تقريبًا أحد عشر يومًا كل سنة، "
+    "وهذا هو السبب في أن رمضان يأتي أبكر كل عام. الآن اجمع هذا الفرق على ثلاثمائة سنة: ثلاثمائة سنة شمسية تساوي ثلاثمائة وتسع سنين قمرية. "
+    "وهذا من أجمل ما ذكره المفسرون: ثلاثمائة بالشمس، وتسع زيادة بالقمر.\n"
+    "[كلام] في نفس الآية، وبعدها مباشرة، قال تعالى:\n"
+    "[آية] ﴿قُلِ اللَّهُ أَعْلَمُ بِمَا لَبِثُوا﴾\n"
+    "[ختام] تابعني لنتدبّر دقة القرآن بحُسبان."
+)
 
 
 class GeminiContentService:
@@ -931,95 +1035,98 @@ class GeminiContentService:
         raise ServiceError("فشل استدعاء Gemini.")  # pragma: no cover - loop always returns or raises
 
     @staticmethod
-    def _generation_prompt(verse: QuranVerse, tafsir: TafsirSource, topic: str | None,
-                           message_words: tuple[int, int]) -> str:
+    def _generation_prompt(topic: Topic, verses: list["ScriptVerse"], tafsirs: dict[str, TafsirSource],
+                           speech_words: tuple[int, int]) -> str:
         moods = ", ".join(sorted(MOODS))
         kinds = ", ".join(sorted(ELEMENT_TYPES))
         places = ", ".join(POSITIONS)
         moves = ", ".join(sorted(ANIMATIONS))
-        low, high = message_words
-        topic_line = f"الموضوع المقترح لزاوية الطرح: {topic}\n" if topic else ""
+        low, high = speech_words
+        facts = "\n".join(f"- {fact}" for fact in topic.facts) or "(لا توجد حقائق إضافية: اعتمد على الآيات والتفسير المرفقين فقط.)"
+        verse_lines = "\n".join(
+            f"{v.index}) ﴿{v.text}﴾ — {v.chapter_name}، الآية {v.verse_number}، وتُتلى في نحو {v.seconds:.0f} ثانية" for v in verses)
+        tafsir_lines = "\n".join(f"تفسير {key}: {item.text[:1800]}" for key, item in tafsirs.items()) or "(لا يوجد.)"
+        angle_line = f"زاوية مقترحة: {topic.angle}\n" if topic.angle else ""
         return (
             "أنت كاتب سيناريو محترف متخصص في فيديوهات Reels وYouTube Shorts، أسلوبك يقوم على إثارة الفضول وطرح الأسئلة العميقة "
-            "وكشف المعلومة المدهشة بطريقة ذكية ومبسطة، ولست مصدرًا شرعيًا. المعنى الديني يؤخذ حصرًا من نص التفسير الموثق المرفق، "
-            "ولا يمكنك البحث ولا الرجوع لمصدر آخر: لا تضف أحكامًا ولا أسباب نزول ولا أحاديث ولا قصصًا ولا أرقامًا ولا دلالات لغوية "
-            "ولا معلومات غير موجودة فيه، ولا تنسب للآية وعدًا شخصيًا غيبيًا ولا تضمن للمشاهد حل مشكلته أو أجرًا معينًا. "
-            "لا تخترع شيئًا لإثارة المشاهدات. وميّز بين ما يقرره التفسير وما يختلف فيه: فما اختُلف فيه قل فيه «من العلماء من فسّرها بأن…» "
-            "ولا تعرضه كحقيقة قطعية.\n\n"
-            "أسلوب الكتابة: عربية فصحى سهلة وطبيعية، جمل قصيرة وقوية مناسبة للتعليق الصوتي، أسلوب محادثة ذكي لا محاضرة، "
-            "وكل جملة تفتح الباب للجملة التي بعدها وتضيف معلومة جديدة. بلا حشو ولا تكرار ولا ترحيب ولا مقدمات تقليدية، "
-            "ولا عبارات مستهلكة مثل «هل تعلم» و«عزيزي المشاهد» و«لن تصدق»، ولا تصف المعلومة بأنها سر أو معجزة دون دليل في التفسير، "
-            "ولا تكشف الجواب مبكرًا فتقتل الفضول. خاطب المشاهد بضمير المخاطب.\n\n"
-            "بنية الفيديو: سؤالك الافتتاحي (hook) يُقال أولًا، ثم تُتلى الآية بصوت القارئ، ثم يأتي الكشف (message)، ثم دعوة المشاركة. "
-            "فالآية والتفسير هما الجواب الذي ينتظره المشاهد. ابحث أولًا في نص التفسير عن أكثر سؤال مثير للفضول يمكن استخراجه منه "
-            "(مفارقة، أو معنى يخالف التوقع، أو معنى كلمة يشرحه التفسير فيغيّر الفهم المعتاد)، ولا تبدأ بشرح الموضوع مباشرة.\n\n"
+            "وكشف المعلومة المدهشة بطريقة ذكية ومبسطة.\n\n"
+            "فكرة الفيديو هي الأساس، والآية دليل وبرهان يدخل في وسط الكلام وليست موضوع الفيديو: تبدأ بسؤال يشدّ المشاهد، "
+            "ثم تقول «اسمع، قال تعالى:» فتُتلى الآية بصوت القارئ، ثم تُكمل الشرح مبيّنًا كيف تدل الآية على الفكرة. "
+            "وقد تُستعمل آية ثانية أو جزء منها بالطريقة نفسها، ثم تختم بدعوة قصيرة للمتابعة.\n\n"
+            "مصادرك الوحيدة: (1) الحقائق الموثّقة المرفقة وقد تحقق منها صاحب القناة، (2) نص الآيات، (3) التفسير المرفق. "
+            "لا تضف أي معلومة أو رقم أو اسم، ولا تنسب قولًا إلى «المفسرين» أو غيرهم، ما لم يرد في هذه المصادر، "
+            "ولا تحسب أرقامًا جديدة بل استعمل الأرقام كما وردت. لا أحاديث ولا قصص ولا أحكام ولا أسباب نزول من خارجها، "
+            "ولا وعدًا شخصيًا غيبيًا ولا ضمان أجر. وميّز بين الحقيقة والتفسير والرأي: فما اختُلف فيه لا تعرضه كحقيقة قطعية، "
+            "ولا تصف المعلومة بأنها سر أو معجزة إلا إن قالت المصادر ذلك.\n\n"
+            "أسلوب الكتابة: عربية فصحى سهلة وطبيعية، جمل قصيرة وقوية مناسبة للتعليق الصوتي، أسلوب محادثة ذكي لا محاضرة "
+            "(مثل «طيب، لماذا؟» و«تابعني»)، وكل جملة تفتح الباب للجملة التي بعدها وتضيف معلومة جديدة، والمعلومات تُكشف تدريجيًا "
+            "فلا يُكشف الجواب مبكرًا. بلا حشو ولا تكرار ولا ترحيب ولا مقدمات تقليدية، ولا «هل تعلم» ولا «عزيزي المشاهد» ولا «لن تصدق». "
+            "اكتب الأرقام كلها بالحروف لأنها تُنطق صوتيًا.\n\n"
+            "مثال على البنية والنبرة المطلوبتين (قلّد البنية والنبرة لا المحتوى):\n"
+            f"{EXAMPLE_SCRIPT}\n\n"
+            "الموضوع المطلوب الآن:\n"
+            f"السؤال المقترح نقطةَ انطلاق: {topic.question}\n{angle_line}"
+            f"الحقائق الموثّقة:\n{facts}\n"
+            f"الآيات التي تُتلى (بهذا الترتيب، ولكل واحدة رقمها):\n{verse_lines}\n"
+            f"التفسير المرفق:\n{tafsir_lines}\n\n"
             "المطلوب (وفق المخطط حصرًا):\n"
-            "1) hook_candidates: خمس صيغ مختلفة تمامًا لسؤال افتتاحي صادم أو محيّر يُقال قبل الآية، كل واحدة سؤال حقيقي ينتهي بعلامة استفهام، "
-            f"من {HOOK_MIN_WORDS + 3} إلى 16 كلمة، وكل واحدة تنطلق من زاوية مختلفة. يجب أن يكون جوابه موجودًا في التفسير، "
-            "وأن يخلق مفارقة تجعل المشاهد يريد سماع الآية ثم الجواب، دون أن يكشف الجواب. ويمكن أن يخرج السؤال من إحساس يعيشه الناس "
-            "(التعب الصامت، ضيق الرزق، الخوف من المستقبل، ظلم الناس، انتظار الفرج، الوحدة، فقد الأحبة، الإرهاق من الدنيا). "
-            "تجنب الأسئلة العامة الباردة، ولا تقتبس نص الآية، ولا توهم بأن الآية رسالة شخصية له. "
+            "1) hook_candidates: خمس صيغ مختلفة تمامًا للافتتاح، كل واحدة سؤال حقيقي ينتهي بعلامة استفهام يجوز أن تتبعه جملة تشويق قصيرة "
+            f"(مثل «الجواب أدق مما تتخيّل»)، من {HOOK_MIN_WORDS + 3} إلى 20 كلمة، من زوايا مختلفة تنطلق من السؤال المقترح أو من سؤال أفضل منه "
+            "تجده في الحقائق. يخلق السؤال مفارقة لا يكشف جوابها، ولا يقتبس الآية. "
             "قيّم كل صيغة بأعداد صحيحة من 1 إلى 5 للمعايير: " + ", ".join(HOOK_SCORE_KEYS) + ".\n"
-            f"2) message: نص واحد متماسك يُقال بعد الآية ({low} إلى {high} كلمة) يكشف الجواب تدريجيًا بهذا الترتيب ودون قوائم: "
-            "وضّح المفارقة التي جعلت السؤال مثيرًا، ثم معلومة تمهيدية قصيرة من التفسير، ثم انتقل إلى التفسير بالتدريج، "
-            "ثم الجواب الأساسي بلغة بسيطة يفهمها من لا يعرف الموضوع، ثم تفصيلة مدهشة أو زاوية لا ينتبه إليها معظم الناس بشرط أن تكون "
-            "واردة في التفسير نفسه، ثم جملة ختام قوية تجعله يعيد التفكير في السؤال الأول (ويمكن أن تحمل خطوة عملية قصيرة جدًا). "
-            "لا تكرر الهوك، ولا تقتبس الآية، ولا تكتب «صدق الله العظيم»، ولا تذكر اسم أي مصدر.\n"
-            f"3) call_to_action: دعوة مشاركة عاطفية قوية ومحترمة من {CTA_MIN_WORDS + 2} إلى 28 كلمة تدفع المشاهد لمشاركة المقطع الآن، "
-            "وتربط المشاركة بالصدقة الجارية والخير الذي يصل لمن يحب، كوالديه أو أحبّته أو من فقدهم أو من يحتاج هذه الكلمات "
-            "(مثال على الروح فقط، لا تنسخه: «شاركه الآن، فلعله يكون صدقة جارية لك ولوالديك»). استخدم فعل «شارك» أو «انشر» أو «أرسل». "
-            "نوّع الصياغة، ولا تجزم بأجر معين ولا تذكر حديثًا ولا حكمًا شرعيًا.\n"
+            "2) parts: قائمة أجزاء مرتبة، كل جزء إما {type: speech, text} وإما {type: verse, verse_index} (رقم الآية من القائمة أعلاه). "
+            "ابدأ بكلام يمهّد للآية الأولى بجملة قصيرة مثل «اسمع، قال تعالى:» (ونوّع الصياغة)، ثم جزء الآية، ثم كلام يعلّق عليها ويشرح ويربطها بالفكرة، وهكذا. "
+            "استعمل كل آية مرة واحدة بالترتيب المعطى، ولا تضع آيتين متتاليتين دون كلام بينهما، وانتهِ بجزء كلام. "
+            "لا تكتب نص الآية داخل الكلام فالقارئ سيتلوه. "
+            f"مجموع الكلمات التي ينطقها المعلّق (الهوك وكل أجزاء الكلام والجملة الختامية) من {low} إلى {high} كلمة، "
+            "وزمن تلاوة الآيات محسوب خارج هذا العدد.\n"
+            f"3) call_to_action: جملة ختامية قصيرة من {CTA_MIN_WORDS} إلى 30 كلمة تدعو للمتابعة على غرار «تابعني لنتدبّر دقة القرآن بحُسبان»، "
+            "تستعمل فعل «تابع» أو «شارك» أو «انشر»، دون ترحيب ولا ضمان أجر.\n"
             f"4) title: عنوان واحد قصير يثير الفضول ويحفز النقر في جملة واحدة (3 إلى {TITLE_MAX_WORDS} كلمة، وأقل من {TITLE_MAX_CHARS} حرفًا)، "
             "ويعد بما يقدمه الفيديو فعلًا دون مبالغة ولا تضليل، بلا رقم آية ولا هاشتاجات ولا علامات اقتباس.\n"
             f"5) description: وصف طويل بلا حشو ولا تحيات ({DESCRIPTION_MIN_CHARS + 200} إلى 1100 حرف) في فقرات قصيرة، "
-            "يبدأ بسؤال أو جملة تثير الفضول، ويوضح ما سيجده المشاهد من معنى وفائدة، ويضمّن الكلمات المفتاحية طبيعيًا، وينتهي بدعوة للمشاركة. "
+            "يبدأ بسؤال أو جملة تثير الفضول، ويوضح ما سيجده المشاهد من معنى وفائدة، ويضمّن الكلمات المفتاحية طبيعيًا، وينتهي بدعوة للمتابعة. "
             "لا روابط، ولا تذكر أي مصدر أو قارئ أو موقع أو تفسير أو أداة أو ذكاءً اصطناعيًا.\n"
             f"6) keywords: من {KEYWORDS_MIN + 4} إلى {KEYWORDS_MAX} كلمة أو عبارة بحث عربية (كلمتان إلى أربع) يبحث بها الناس فعلًا عن هذا الموضوع.\n"
             f"7) hashtags: من {HASHTAGS_MIN + 2} إلى {HASHTAGS_MAX} هاشتاجًا عربيًا (ويجوز اثنان بالإنجليزية) يبدأ كل منها بعلامة # دون مسافات (استخدم _ بين الكلمات).\n\n"
-            "8) visual_plan: قائمة لقطات تتبع الكلام لقطةً بلقطة، بصورة جديدة كل 2.5 إلى 3 ثوانٍ تقريبًا ليبقى المشاهد منتبهًا، "
-            "وأسرع في البداية:\n"
+            "8) visual_plan: قائمة لقطات تتبع الكلام لقطةً بلقطة، بصورة جديدة كل 2.5 إلى 3 ثوانٍ تقريبًا ليبقى المشاهد منتبهًا، وأسرع في البداية:\n"
             "- visual_theme: وصف بالإنجليزية (من 3 إلى 25 كلمة) لهوية بصرية واحدة للفيديو كله، أي الألوان والإضاءة والبيئة العامة، "
-            "مرتبطة بموضوع الآية (مثال: warm dusk light, quiet village road, olive trees).\n"
-            "- opening.shots: من لقطة إلى 3 لقطات تظهر بالتتابع أثناء الهوك (تتوزع على مدته تلقائيًا): أولاها تصوّر الشعور أو "
-            "الموقف الذي يضربه الهوك مباشرة، والبقية تتصاعد منه.\n"
-            "- scenes: لقطة لكل جملة أو عبارة قصيرة من message بالترتيب، أي لقطة كل 6 إلى 8 كلمات تقريبًا (من 6 إلى 14 لقطة)، "
-            "وتُقسَّم الجملة الطويلة عند الفاصلة. لكل لقطة text_span = أول 3 كلمات من عبارتها منسوخة حرفيًا من message كما كُتبت.\n"
-            "- closing.shots: لقطة أو لقطتان ترافقان دعوة المشاركة (خير، دعاء، نور، قلب، باب).\n"
+            "مرتبطة بفكرة الفيديو (مثال: warm dusk light, quiet village road, olive trees).\n"
+            "- opening.shots: من لقطة إلى 3 لقطات تظهر بالتتابع أثناء الهوك (تتوزع على مدته تلقائيًا): أولاها تصوّر الشعور أو الموقف الذي يضربه السؤال مباشرة.\n"
+            "- scenes: لقطة لكل جملة أو عبارة قصيرة من كلامك بعد الهوك (أجزاء الكلام والجملة الختامية) بالترتيب، أي لقطة كل 6 إلى 8 كلمات تقريبًا "
+            "(من 6 إلى 16 لقطة)، وتُقسَّم الجملة الطويلة عند الفاصلة. لكل لقطة text_span = أول 3 كلمات من عبارتها منسوخة حرفيًا من كلامك كما كُتب "
+            "(لا من نص الآية). وأثناء تلاوة الآية تبقى اللقطة الحالية تحت طبقة داكنة فلا تحتاج لقطة خاصة بها.\n"
             f"لكل لقطة: text_span، وmood من [{moods}]، وimage_prompt، وعناصر elements اختيارية (حتى 3) تُستعمل رسمًا احتياطيًا فقط: "
             f"type من [{kinds}]، position من [{places}]، animation من [{moves}].\n"
             "قواعد image_prompt (بالإنجليزية فقط، من 20 إلى 60 كلمة، وأقل من 400 حرف): صوّر المعنى الحرفي لتلك العبارة بالذات، "
             "أي ما الذي سيراه المشاهد لو تحولت هذه الجملة إلى مشهد؟ اذكر موضوعًا محددًا (شخص من الخلف أو ظل بعيد، طريق، نافذة، بيت، "
-            "شجرة، بحر، سماء، مائدة، يدان) مع المكان والوقت من اليوم وحالة أو حركة، وشيئًا رمزيًا واحدًا. فكرة واحدة فقط في كل صورة. "
+            "شجرة، بحر، سماء، مائدة، يدان، كهف، شمس، قمر) مع المكان والوقت من اليوم وحالة أو حركة، وشيئًا رمزيًا واحدًا. فكرة واحدة فقط في كل صورة. "
             "لا تكتب كلمات مجردة وحدها مثل hope أو patience، بل حوّلها إلى مشهد ملموس. "
             "مثال جيد: A lone traveller seen from behind walking a winding dirt road at dawn, small lantern in hand, mist over the hills. "
             "مثال سيئ: The feeling of patience and hope. نوّع الزاوية بين اللقطات المتتالية (واسعة، قريبة على شيء، من الأعلى)، ولا تكرر الصورة نفسها. "
             "ممنوع ذكر الأنبياء والملائكة والصحابة والكعبة والمصحف والوجوه والأشخاص القريبين والكتابة والشعارات والأعلام والروابط، "
-            "ولا تذكر الأسلوب الفني فهو يُضاف تلقائيًا، ولا تضف حقائق ليست في التفسير.\n\n"
+            "ولا تذكر الأسلوب الفني فهو يُضاف تلقائيًا، ولا تضف حقائق ليست في المصادر.\n\n"
             "قبل الإخراج راجع بصمت: هل السؤال الأول يثير الفضول فعلًا؟ هل توجد مفارقة تجعل المشاهد يريد الجواب؟ هل تُكشف المعلومات تدريجيًا؟ "
-            "هل في الرسالة لحظة مدهشة مصدرها التفسير؟ هل كل جملة تضيف معلومة جديدة؟ هل يفهم الموضوع من لا يعرفه؟ "
-            "هل كل ادعاء موجود في التفسير؟ هل النهاية تستحق أن يُكمل المشاهد حتى آخر ثانية؟ وإن كان الجواب لا عن أيٍّ منها فأعد صياغة ما يلزم قبل الإخراج.\n\n"
-            "أعد JSON وفق المخطط فقط.\n\n"
-            f"{topic_line}"
-            f"الآية الأصلية بالرسم العثماني (للسياق فقط، لا تعِد كتابتها أو تعديلها): {verse.text_uthmani}\n"
-            f"نص التفسير الموثق (المصدر الوحيد للمعنى الديني): {tafsir.text}"
+            "هل في الكلام لحظة مدهشة مصدرها الحقائق أو التفسير؟ هل كل جملة تضيف معلومة جديدة؟ هل يفهم الموضوع من لا يعرفه؟ "
+            "هل تدل الآية فعلًا على الفكرة وتبدو برهانًا لها؟ هل كل ادعاء موجود في المصادر؟ هل النهاية تستحق أن يُكمل المشاهد حتى آخر ثانية؟ "
+            "وإن كان الجواب لا عن أيٍّ منها فأعد صياغة ما يلزم قبل الإخراج.\n\n"
+            "أعد JSON وفق المخطط فقط."
         )
 
-    def create_and_review(self, verse: QuranVerse, tafsir: TafsirSource, topic: str | None = None,
-                          message_words: tuple[int, int] = (40, 70)) -> dict[str, Any]:
-        """Generate the video copy, validate it and have it reviewed against the tafsir.
+    def create_and_review(self, topic: Topic, verses: list["ScriptVerse"], tafsirs: dict[str, TafsirSource],
+                          speech_words: tuple[int, int] = (60, 100)) -> dict[str, Any]:
+        """Generate the script, validate it and have it reviewed against the facts, verses and tafsir.
 
-        A copy that breaks a rule or is rejected by the review is regenerated up to CONTENT_ATTEMPTS
-        times; API failures are not retried here (`_generate_json` handles transient ones).
+        A script that breaks a rule or is rejected by the review is regenerated up to CONTENT_ATTEMPTS times;
+        API failures are not retried here (`_generate_json` handles transient ones).
         """
-        prompt = self._generation_prompt(verse, tafsir, topic, message_words)
-        # Output budgets are generous because "thinking" models may spend part of the budget
-        # on reasoning tokens, which would otherwise truncate the JSON.
+        prompt = self._generation_prompt(topic, verses, tafsirs, speech_words)
+        verse_texts = [verse.text for verse in verses]
         for attempt in range(1, CONTENT_ATTEMPTS + 1):
             try:
-                generated = validate_generated_content(
-                    self._generate_json(prompt, GENERATION_SCHEMA, 8192),
-                    max_message_words=message_words[1] + 20)
-                review = self._review(verse, tafsir, generated)
+                generated = validate_generated_script(
+                    self._generate_json(prompt, GENERATION_SCHEMA, 8192), verse_texts, speech_words)
+                review = self._review(topic, verses, tafsirs, generated)
                 generated["review"] = review
                 generated["model"] = self.model
                 return generated
@@ -1029,16 +1136,24 @@ class GeminiContentService:
                     raise
         raise ServiceError("فشل إنشاء المحتوى.")  # pragma: no cover - loop always returns or raises
 
-    def _review(self, verse: QuranVerse, tafsir: TafsirSource, generated: dict[str, Any]) -> dict[str, Any]:
-        reviewed = {key: generated[key] for key in ("hook", "message", "call_to_action", "title", "description")}
+    def _review(self, topic: Topic, verses: list["ScriptVerse"], tafsirs: dict[str, TafsirSource],
+                generated: dict[str, Any]) -> dict[str, Any]:
+        reviewed = {"hook": generated["hook"],
+                    "speech": [part["text"] for part in generated["parts"] if part["type"] == "speech"],
+                    "call_to_action": generated["call_to_action"], "title": generated["title"],
+                    "description": generated["description"]}
+        facts = "\n".join(f"- {fact}" for fact in topic.facts) or "(لا توجد)"
         review_prompt = (
-            "راجع النص المقترح بمقارنة ادعاءاته الدينية حصريًا بالنص التفسيري المرفق وبالآية الأصلية. أنت لست مفتيًا. "
-            "اللغة العاطفية والتشويقية في الهوك والعنوان ودعوة المشاركة أسلوبٌ مقبول، فلا ترفض النص بسببه. "
-            "ارفض النص أو اجعل needs_review=true فقط إذا: ورد ادعاء ديني أو تفسيري غير موجود بوضوح في المصدر، "
-            "أو يناقضه، أو ضُمن أجر أو نتيجة معينة، أو نُسبت للآية رسالة شخصية غيبية، أو ذُكر حديث أو حكم شرعي. "
-            "ويجب أن يكون جواب سؤال الهوك موجودًا في التفسير، وأن تكون التفصيلة المدهشة في الرسالة واردة فيه فعلًا، وإلا فاجعل needs_review=true. "
+            "راجع النص المقترح بمقارنة ادعاءاته حصريًا بثلاثة مصادر: الحقائق الموثّقة، ونص الآيات، والتفسير المرفق. أنت لست مفتيًا. "
+            "اللغة العاطفية والتشويقية في الهوك والعنوان والجملة الختامية أسلوبٌ مقبول، فلا ترفض النص بسببه. "
+            "ارفض النص أو اجعل needs_review=true فقط إذا: ورد ادعاء ديني أو علمي أو رقم أو اسم غير موجود بوضوح في المصادر، "
+            "أو نُسب قول إلى «المفسرين» أو غيرهم ولم يرد في المصادر، أو يناقض المصادر، أو ضُمن أجر أو نتيجة معينة، "
+            "أو نُسبت للآية رسالة شخصية غيبية، أو ذُكر حديث أو حكم شرعي من خارجها. "
+            "ويجب أن يكون جواب سؤال الهوك موجودًا في المصادر، وأن تكون الآية دليلًا حقيقيًا على الفكرة لا مجرد زينة. "
             "أعد JSON فقط حسب المخطط.\n"
-            f"الآية العثمانية: {verse.text_uthmani}\nالتفسير الأصلي: {tafsir.text}\n"
+            f"الحقائق الموثّقة:\n{facts}\n"
+            "الآيات:\n" + "\n".join(f"{v.index}) {v.text}" for v in verses) + "\n"
+            "التفسير:\n" + "\n".join(f"{key}: {item.text}" for key, item in tafsirs.items()) + "\n"
             f"النص المراد مراجعته: {json.dumps(reviewed, ensure_ascii=False)}"
         )
         review = self._generate_json(review_prompt, REVIEW_SCHEMA, 2048)
@@ -1053,13 +1168,14 @@ class GeminiContentService:
 
 
 def _validate_tts_texts(texts: dict[str, str]) -> None:
-    """Shared by every TTS provider: the closing phrase is its own segment and appears exactly once."""
-    forbidden = "صدق الله العظيم"
-    if texts.get("seal") != forbidden or sum(value.count(forbidden) for value in texts.values() if isinstance(value, str)) != 1:
-        raise ServiceError("يجب إنشاء «صدق الله العظيم» مرة واحدة بالضبط في المقطع المستقل seal.")
+    """Shared by every TTS provider: every segment has text, and the closing phrase is never narrated."""
+    if not texts:
+        raise ServiceError("لا توجد نصوص لتوليد الصوت.")
     for key, value in texts.items():
-        if not isinstance(value, str) or not value.strip() or (key != "seal" and forbidden in value):
-            raise ServiceError(f"نص TTS {key} فارغ أو يكرر العبارة المحجوزة.")
+        if not isinstance(value, str) or not value.strip():
+            raise ServiceError(f"نص TTS {key} فارغ.")
+        if SEAL_PHRASE in value:
+            raise ServiceError(f"نص TTS {key} يحوي العبارة المحجوزة «صدق الله العظيم».")
 
 
 class TTSService:
@@ -1864,6 +1980,51 @@ if __name__ == "__main__":
                 self.assertTrue(path.is_file())
                 self.assertIn("9.700", ffmpeg.call_args.args[0])
 
+        def test_recitation_fragment_cuts_only_the_requested_words_and_reuses_the_chapter_audio(self):
+            import tempfile
+            downloads = []
+            class DownloadResponse:
+                url = "https://download.quranicaudio.com/test/chapter.mp3"
+                headers = {"Content-Type": "audio/mpeg"}
+                def raise_for_status(self):
+                    return None
+                def iter_content(self, _size):
+                    downloads.append(1)
+                    return [b"x" * 6000]
+            class DownloadSession:
+                def get(self, *args, **kwargs):
+                    return DownloadResponse()
+            client = self.ready_qf_client(self.FakeResponse(200, {}))
+            client.session = DownloadSession()
+            catalog = {"reciters": [{"id": 7, "name": "Mishari Rashid al-`Afasy"}]}
+            chapter_data = {"audio_file": {
+                "audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
+                "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000, "timestamp_to": 14000,
+                                "segments": [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000], [4, 13000, 14000]]}],
+            }}
+            env = {"CHAPTER_RECITER_ID": "7", "RECITATION_LICENSE_URL": "https://example.org/license",
+                   "RECITATION_LICENSE_CONFIRMED": "true", "RECITATION_ALLOWLIST": "7|https://example.org/license",
+                   "RECITATION_REQUIRE_MISHARY": "true"}
+            with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, env):
+                def fake_ffmpeg(command, **kwargs):
+                    Path(command[-1]).write_bytes(b"y" * 5000)
+                with patch.object(client, "_get_json", side_effect=[catalog, chapter_data, catalog, chapter_data]):
+                    with patch("services.subprocess.run", side_effect=fake_ffmpeg) as ffmpeg:
+                        recitation, path = client.get_recitation(2, 3, Path(temp), words=(2, 3), verse_text="واحد اثنان ثلاثة أربعة")
+                        again, path2 = client.get_recitation(2, 3, Path(temp), words=(1, 1), verse_text="واحد اثنان ثلاثة أربعة")
+                self.assertEqual(recitation.segments, [[1, 200, 1200], [2, 1200, 2200]])      # renumbered, relative to the cut
+                self.assertEqual(recitation.duration_hint, 2400)
+                self.assertEqual(len(validate_word_segments(recitation.segments, "اثنان ثلاثة", 2400)), 2)
+                self.assertIn("10.800", ffmpeg.call_args_list[0].args[0])                       # starts at word 2 minus 200 ms
+                self.assertTrue(path.name.endswith("-2-3.mp3") and path2.name.endswith("-1-1.mp3") and path != path2)
+                self.assertEqual(len(downloads), 1)                                              # the chapter file was downloaded once
+                self.assertEqual(again.segments, [[1, 200, 1200]])
+                for bad_words, text in (((3, 9), "واحد اثنان ثلاثة أربعة"), ((0, 2), "واحد اثنان ثلاثة أربعة"),
+                                        ((1, 2), "واحد اثنان ثلاثة"), ((1, 2), None)):
+                    with patch.object(client, "_get_json", side_effect=[catalog, chapter_data]):
+                        with self.assertRaises(ServiceError, msg=str(bad_words)):
+                            client.get_recitation(2, 3, Path(temp), words=bad_words, verse_text=text)
+
         def test_word_timings_accept_contiguous_one_based_and_map_to_zero_based(self):
             got = validate_word_segments([[1, 0, 250], [2, 250, 700]], "بسم الله", 800)
             self.assertEqual([x["word_index"] for x in got], [0, 1])
@@ -1874,171 +2035,275 @@ if __name__ == "__main__":
             with self.assertRaises(ServiceError):
                 validate_word_segments([[0, 0, 300], [1, 200, 100]], "بسم الله", 800)
 
-        # ----- Generated video copy -----
+        # ----- The script: idea first, the verse as evidence -----
+        V1 = "وَلَبِثُوا فِي كَهْفِهِمْ ثَلَاثَ مِائَةٍ سِنِينَ وَازْدَادُوا تِسْعًا"
+        V2 = "قُلِ ٱللَّهُ أَعْلَمُ بِمَا لَبِثُوا"
+        BUDGET = (60, 100)
+        IMAGE_PROMPT = "A lone traveller walking a winding road toward a glowing sunrise over quiet hills"
+
         @staticmethod
-        def valid_content(**overrides):
-            hooks = [{"text": f"لماذا تعبك الذي لا يراه أحد يراه الله رقم {i}؟", **{key: 4 for key in HOOK_SCORE_KEYS}}
-                     for i in range(5)]
-            prompt = "A lone traveller walking a winding road toward a glowing sunrise over quiet hills"
+        def sample_topic():
+            from topics import Topic, VerseRef
+            return Topic("cave-309", "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة؟",
+                         (VerseRef(18, 25), VerseRef(18, 26, 1, 5)), ("السنة الشمسية نحو ثلاثمائة وخمسة وستين يومًا.",), "")
+
+        @classmethod
+        def sample_verses(cls):
+            return [ScriptVerse(1, "18:25", cls.V1, "الكهف", 25, 8.0), ScriptVerse(2, "18:26", cls.V2, "الكهف", 26, 4.0)]
+
+        @staticmethod
+        def sample_tafsirs():
+            return {key: TafsirSource("هذا تفسير عربي موثق يشرح معنى الآية ضمن سياقها بما يكفي للاختبار.", "مصدر", 16,
+                                      "https://x", "https://l", True) for key in ("18:25", "18:26")}
+
+        @classmethod
+        def valid_content(cls, **overrides):
+            hooks = [{"text": f"لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة مع أن المجموع نفسه رقم {i}؟",
+                      **{key: 4 for key in HOOK_SCORE_KEYS}} for i in range(5)]
+            prompt = cls.IMAGE_PROMPT
+            middle = " ".join(f"فكرة{i}" for i in range(45))
+            closing = " ".join(f"ختام{i}" for i in range(12))
             data = {
                 "hook_candidates": hooks,
-                "message": " ".join(f"كلمة{i}" for i in range(45)),
-                "call_to_action": "شارك هذا المقطع الآن واجعله صدقة جارية عن والديك ومن تحب",
-                "title": "تعبك الذي لا يراه أحد يراه الله وحده",
-                "description": "هذه الآية تخاطب قلب كل من أنهكه الصبر. " * 12,
-                "keywords": [f"آيات عن الصبر {i}" for i in range(8)],
-                "hashtags": ["#الصبر", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
+                "parts": [
+                    {"type": "speech", "text": "اسمع، قال تعالى:"},
+                    {"type": "verse", "verse_index": 1},
+                    {"type": "speech", "text": middle},
+                    {"type": "speech", "text": "في نفس الآية، وبعدها مباشرة، قال تعالى:"},
+                    {"type": "verse", "verse_index": 2},
+                    {"type": "speech", "text": closing},
+                ],
+                "call_to_action": "تابعني لنتدبر دقة القرآن بحسبان",
+                "title": "لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة",
+                "description": "هذه الآية تفتح بابًا عجيبًا في الحساب بين الشمس والقمر. " * 8,
+                "keywords": [f"آيات عن الكهف {i}" for i in range(8)],
+                "hashtags": ["#الكهف", "#تدبر_القرآن", "#آيات", "#طمأنينة", "#دعاء", "#القرآن_الكريم", "#راحة_نفسية", "#ذكر"],
                 "visual_plan": {
                     "visual_theme": "warm dusk light, quiet village road, olive trees",
                     "opening": {"shots": [
-                        {"text_span": "تعبك الذي لا", "mood": "night", "image_prompt": prompt, "elements": [
+                        {"text_span": "x", "mood": "night", "image_prompt": prompt, "elements": [
                             {"type": "sitting_person", "position": "center", "animation": "fade_in"},
                             {"type": "moon", "position": "right", "animation": "float"}]},
-                        {"text_span": "أحد يراه الله", "mood": "storm", "image_prompt": prompt}]},
+                        {"text_span": "y", "mood": "storm", "image_prompt": prompt}]},
                     "scenes": [
-                        {"text_span": "كلمة0 كلمة1 كلمة2", "mood": "storm", "image_prompt": prompt, "elements": [
+                        {"text_span": "اسمع قال تعالى", "mood": "dawn", "image_prompt": prompt, "elements": [
+                            {"type": "sun", "position": "right", "animation": "grow"}]},
+                        {"text_span": "فكرة0 فكرة1 فكرة2", "mood": "storm", "image_prompt": prompt, "elements": [
                             {"type": "cloud", "position": "left", "animation": "float"},
                             {"type": "rain", "position": "center", "animation": "none"}]},
-                        {"text_span": "كلمة7 كلمة8 كلمة9", "mood": "dawn", "image_prompt": prompt},
-                        {"text_span": "كلمة14 كلمة15 كلمة16", "mood": "dawn", "image_prompt": prompt, "elements": [
-                            {"type": "sun", "position": "right", "animation": "grow"}]},
-                        {"text_span": "كلمة21 كلمة22 كلمة23", "mood": "day", "image_prompt": prompt},
-                        {"text_span": "كلمة28 كلمة29 كلمة30", "mood": "day", "image_prompt": prompt, "elements": [
+                        {"text_span": "فكرة15 فكرة16 فكرة17", "mood": "dawn", "image_prompt": prompt},
+                        {"text_span": "فكرة30 فكرة31 فكرة32", "mood": "day", "image_prompt": prompt, "elements": [
                             {"type": "seed", "position": "center", "animation": "grow"}]},
-                        {"text_span": "كلمة35 كلمة36 كلمة37", "mood": "warm", "image_prompt": prompt}],
-                    "closing": {"shots": [
-                        {"text_span": "شارك هذا المقطع", "mood": "warm", "image_prompt": prompt, "elements": [
-                            {"type": "heart", "position": "center", "animation": "pulse"}]}]}
-                }
+                        {"text_span": "في نفس الآية", "mood": "day", "image_prompt": prompt},
+                        {"text_span": "ختام0 ختام1 ختام2", "mood": "warm", "image_prompt": prompt},
+                        {"text_span": "تابعني لنتدبر دقة", "mood": "warm", "image_prompt": prompt}],
+                },
             }
             data.update(overrides)
             return data
 
-        def test_generated_content_accepts_a_complete_valid_copy(self):
-            result = validate_generated_content(self.valid_content())
-            self.assertTrue(result["hook"])
-            self.assertEqual(len(result["hook_candidates"]), 5)
-            self.assertEqual(len(result["hashtags"]), 8)
-            self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
-            self.assertEqual(set(result), {"hook", "hook_candidates", "message", "call_to_action", "title",
-                                           "description", "keywords", "hashtags", "visual_plan"})
+        def validate(self, **overrides):
+            return validate_generated_script(self.valid_content(**overrides), [self.V1, self.V2], self.BUDGET)
 
-        def test_visual_plan_binds_message_shots_to_words_in_order(self):
-            plan = validate_generated_content(self.valid_content())["visual_plan"]
-            self.assertEqual([s["word_start"] for s in plan["scenes"]], [0, 7, 14, 21, 28, 35])
-            self.assertEqual((len(plan["opening"]["shots"]), len(plan["closing"]["shots"])), (2, 1))
+        def test_a_complete_script_is_accepted_and_adjacent_speech_parts_are_merged(self):
+            result = self.validate()
+            self.assertEqual([part["type"] for part in result["parts"]], ["speech", "verse", "speech", "verse", "speech"])
+            self.assertTrue(result["parts"][2]["text"].endswith("قال تعالى:"))            # the lead-in joined the speech before it
+            self.assertEqual([p["verse_index"] for p in result["parts"] if p["type"] == "verse"], [1, 2])
+            self.assertEqual(len(result["hook_candidates"]), 5)
+            self.assertEqual(result["spoken_words"], 14 + 3 + 52 + 12 + 5)
+            self.assertEqual(result["body_text"].split()[0], "اسمع،")
+            self.assertTrue(all(tag.startswith("#") and " " not in tag for tag in result["hashtags"]))
+            self.assertEqual(set(result), {"hook", "hook_candidates", "parts", "call_to_action", "title", "description",
+                                           "keywords", "hashtags", "visual_plan", "body_text", "spoken_words"})
+
+        def test_parts_must_use_every_verse_once_in_order_between_spoken_parts(self):
+            good = self.valid_content()["parts"]
+            def mutated(name, parts):
+                with self.assertRaises(ContentValidationError, msg=name):
+                    self.validate(parts=parts)
+            speech = lambda text: {"type": "speech", "text": text}
+            verse = lambda n: {"type": "verse", "verse_index": n}
+            mutated("verse order swapped", [speech("اسمع قال تعالى"), verse(2), speech("كلام كثير هنا"), verse(1), speech("ختام الكلام هنا")])
+            mutated("a verse is missing", [speech("اسمع قال تعالى"), verse(1), speech("ختام الكلام هنا كله")])
+            mutated("a verse is repeated", good[:2] + [speech("كلام ثم آية ثانية")] + [verse(1)] + [speech("ختام الكلام هنا")])
+            mutated("starts with a verse", [verse(1), speech("كلام كثير هنا"), verse(2), speech("ختام الكلام هنا")])
+            mutated("ends with a verse", good[:-1])
+            mutated("two verses in a row", [speech("اسمع قال تعالى"), verse(1), verse(2), speech("ختام الكلام هنا")])
+            mutated("unknown part type", [speech("اسمع قال تعالى"), {"type": "music"}, speech("ختام الكلام هنا")])
+            mutated("too few parts", good[:2])
+            mutated("not a list", "كلام")
+            mutated("a boolean index", [speech("اسمع قال تعالى"), {"type": "verse", "verse_index": True}, speech("كلام كثير هنا"),
+                                        verse(2), speech("ختام الكلام هنا")])
+
+        def test_the_text_of_a_verse_must_not_be_written_inside_the_speech(self):
+            quoted = self.valid_content()["parts"]
+            quoted[2] = {"type": "speech", "text": "ثم تأمل: فِي كَهْفِهِمْ ثَلَاثَ مِائَةٍ سِنِينَ وَازْدَادُوا " + " ".join(f"فكرة{i}" for i in range(45))}
+            with self.assertRaisesRegex(ContentValidationError, "الآية 1"):
+                self.validate(parts=quoted)
+            echo = self.valid_content()["parts"]
+            echo[2] = {"type": "speech", "text": "ثلاثمائة وازدادوا تسعًا. طيب، لماذا؟ " + " ".join(f"فكرة{i}" for i in range(45))}
+            self.validate(parts=echo)                                                    # echoing two or three words is fine
+
+        def test_the_spoken_word_budget_is_enforced_with_a_little_slack(self):
+            def parts(count):
+                data = self.valid_content()["parts"]
+                data[2] = {"type": "speech", "text": " ".join(f"فكرة{i}" for i in range(count))}
+                return data
+            self.validate(parts=parts(45))
+            for count, message in ((120, "المجال"), (2, "المجال")):
+                with self.assertRaisesRegex(ContentValidationError, message):
+                    self.validate(parts=parts(count))
+
+        def test_the_hook_must_be_a_question_and_cliches_and_greetings_are_rejected_everywhere(self):
+            good = self.valid_content()
+            statement = [dict(h) for h in good["hook_candidates"]]
+            statement[0]["text"] = "تعبك الذي لا يراه أحد يراه الله وحده"
+            with self.assertRaisesRegex(ContentValidationError, "سؤالًا"):
+                self.validate(hook_candidates=statement)
+            latin_mark = [dict(h) for h in good["hook_candidates"]]
+            latin_mark[0]["text"] = "لماذا تعبك الذي لا يراه أحد يراه الله وحده?"
+            self.validate(hook_candidates=latin_mark)
+            for text in ("هل تعلم لماذا تعبك الذي لا يراه أحد يراه الله؟", "لن تصدق لماذا يرى الله تعبك الذي لا يراه أحد؟"):
+                clichéd = [dict(h) for h in good["hook_candidates"]]
+                clichéd[1]["text"] = text
+                with self.assertRaisesRegex(ContentValidationError, "مستهلكة"):
+                    self.validate(hook_candidates=clichéd)
+            speech_with_greeting = self.valid_content()["parts"]
+            speech_with_greeting[2] = {"type": "speech", "text": "السلام عليكم " + speech_with_greeting[2]["text"]}
+            for field, bad in (("parts", speech_with_greeting),
+                               ("call_to_action", "تابعنا يا أصدقاء لنتدبر دقة القرآن"),
+                               ("title", "لن تصدق ما يفعله الله بتعبك الصامت")):
+                with self.assertRaisesRegex(ContentValidationError, "مستهلكة", msg=field):
+                    self.validate(**{field: bad})
+
+        def test_other_field_rules(self):
+            good = self.valid_content()
+            def broken(**overrides):
+                with self.assertRaises(ContentValidationError, msg=str(list(overrides))):
+                    self.validate(**overrides)
+            broken(hook_candidates=good["hook_candidates"][:4])
+            broken(call_to_action="هذه عبارة جميلة جدا عن الصبر")                          # no follow/share verb
+            broken(call_to_action="تابع")                                                  # too short
+            broken(title="عنوان #وسم هنا قوي جدا")
+            broken(title="كلمة " * 30)
+            broken(description="وصف قصير")
+            broken(description="نص " + "رابط https://example.org " * 40)
+            broken(description=good["description"] + " المصدر ابن كثير")
+            broken(keywords=["واحدة", "اثنتان"])
+            broken(hashtags=["#واحد"])
+            broken(call_to_action="تابعني لنتدبر صدق الله العظيم")
+            seal = self.valid_content()["parts"]
+            seal[2] = {"type": "speech", "text": seal[2]["text"] + " صدق الله العظيم"}
+            broken(parts=seal)
+            same = [dict(good["hook_candidates"][0]) for _ in range(5)]
+            broken(hook_candidates=same)
+            broken(hook_candidates=[dict(hook, relevance=2) for hook in good["hook_candidates"]])
+
+        def test_generated_content_normalizes_hashtags_and_keywords(self):
+            result = self.validate(
+                hashtags=["الصبر", "# تدبر القرآن", "#آيات!", "#آيات", "#راحة_نفسية", "#ذكر", "#دعاء", "#أمل", "#"],
+                keywords=["# آيات عن الصبر", "آيات عن الصبر", "تفسير الآية", "تدبر القرآن", "دعاء الفرج", "راحة القلب", "كلمات مؤثرة", "x"])
+            self.assertIn("#الصبر", result["hashtags"])
+            self.assertIn("#تدبر_القرآن", result["hashtags"])
+            self.assertEqual(result["hashtags"].count("#آيات"), 1)
+            self.assertEqual(result["keywords"].count("آيات عن الصبر"), 1)
+
+        # ----- Shots -----
+        def test_shots_after_the_hook_are_bound_to_the_spoken_words_in_order(self):
+            plan = self.validate()["visual_plan"]
+            body = self.validate()["body_text"].split()
+            expected = [next(i for i, word in enumerate(body) if word.startswith(first)) for first in
+                        ("اسمع", "فكرة0", "فكرة15", "فكرة30", "في", "ختام0", "تابعني")]
+            self.assertEqual([s["word_start"] for s in plan["scenes"]], expected)
+            self.assertEqual(len(plan["opening"]["shots"]), 2)
+            self.assertNotIn("closing", plan)
             self.assertEqual(plan["visual_theme"], "warm dusk light, quiet village road, olive trees")
             self.assertTrue(all(s["image_prompt"] for s in plan["scenes"]))
 
-        def test_visual_plan_elements_are_optional_and_default_to_a_neutral_fallback(self):
-            plan = validate_generated_content(self.valid_content())["visual_plan"]
-            self.assertEqual(plan["scenes"][1]["elements"][0]["type"], "light_rays")      # none given -> default
-            self.assertEqual(plan["scenes"][0]["elements"][0]["type"], "cloud")           # given -> kept
+        def test_shot_elements_are_optional_and_default_to_a_neutral_fallback(self):
+            plan = self.validate()["visual_plan"]
+            self.assertEqual(plan["scenes"][2]["elements"][0]["type"], "light_rays")      # none given -> default
+            self.assertEqual(plan["scenes"][1]["elements"][0]["type"], "cloud")           # given -> kept
 
         def test_a_later_shot_with_unfindable_words_is_dropped_but_too_few_shots_are_rejected(self):
             plan = json.loads(json.dumps(self.valid_content()["visual_plan"]))
-            plan["scenes"][2]["text_span"] = "عبارة ليست في الرسالة"
-            result = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]
-            self.assertEqual([s["word_start"] for s in result["scenes"]], [0, 7, 21, 28, 35])
-            plan["scenes"][0]["text_span"] = "كلام مختلف تماما"                             # the first shot always opens the segment
-            first = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]["scenes"][0]
-            self.assertEqual(first["word_start"], 0)
+            plan["scenes"][3]["text_span"] = "عبارة ليست في الكلام"
+            result = self.validate(visual_plan=plan)["visual_plan"]
+            self.assertEqual(len(result["scenes"]), 6)
+            plan["scenes"][0]["text_span"] = "كلام مختلف تماما"                            # the first shot always opens the segment
+            self.assertEqual(self.validate(visual_plan=plan)["visual_plan"]["scenes"][0]["word_start"], 0)
             few = json.loads(json.dumps(self.valid_content()["visual_plan"]))
             for shot in few["scenes"][1:]:
                 shot["text_span"] = "لا شيء هنا إطلاقا"
             with self.assertRaises(ContentValidationError):
-                validate_generated_content(self.valid_content(visual_plan=few))
+                self.validate(visual_plan=few)
 
         def test_visual_plan_rejects_wrong_counts_order_and_bad_vocabulary(self):
             good = self.valid_content()["visual_plan"]
             for name, mutate in (
-                    ("too few message shots", lambda p: p.update(scenes=p["scenes"][:3])),
-                    ("too many message shots", lambda p: p.update(scenes=[dict(p["scenes"][0]) for _ in range(20)])),
+                    ("too few shots", lambda p: p.update(scenes=p["scenes"][:3])),
+                    ("too many shots", lambda p: p.update(scenes=[dict(p["scenes"][0]) for _ in range(25)])),
                     ("reversed order", lambda p: p["scenes"].reverse()),
                     ("no hook shots", lambda p: p["opening"].update(shots=[])),
                     ("too many hook shots", lambda p: p["opening"].update(shots=p["opening"]["shots"] * 3)),
-                    ("too many closing shots", lambda p: p["closing"].update(shots=p["closing"]["shots"] * 3)),
                     ("unknown element", lambda p: p["opening"]["shots"][0]["elements"][0].update(type="dragon")),
-                    ("unknown mood", lambda p: p["closing"]["shots"][0].update(mood="neon")),
+                    ("unknown mood", lambda p: p["opening"]["shots"][1].update(mood="neon")),
                     ("not a dict", lambda p: p.update(opening="x"))):
                 plan = json.loads(json.dumps(good))
                 mutate(plan)
                 with self.assertRaises(ContentValidationError, msg=name):
-                    validate_generated_content(self.valid_content(visual_plan=plan))
+                    self.validate(visual_plan=plan)
 
         def test_unsafe_or_missing_image_prompt_only_removes_that_picture(self):
             plan = json.loads(json.dumps(self.valid_content()["visual_plan"]))
             plan["scenes"][0]["image_prompt"] = "The prophet standing alone in the desert at dawn with light behind him"
             del plan["scenes"][1]["image_prompt"]
             plan["visual_theme"] = "the prophet at sunset"
-            result = validate_generated_content(self.valid_content(visual_plan=plan))["visual_plan"]
+            result = self.validate(visual_plan=plan)["visual_plan"]
             self.assertEqual((result["scenes"][0]["image_prompt"], result["scenes"][1]["image_prompt"]), ("", ""))
             self.assertTrue(result["scenes"][2]["image_prompt"])
             self.assertEqual(result["visual_theme"], "")
 
-        def test_generation_schema_describes_shots_with_an_image_prompt(self):
-            plan = GENERATION_SCHEMA["properties"]["visual_plan"]
-            self.assertEqual(set(plan["required"]), {"visual_theme", "opening", "scenes", "closing"})
+        def test_generation_schema_describes_parts_and_shots(self):
+            props = GENERATION_SCHEMA["properties"]
+            self.assertIn("parts", props)
+            self.assertNotIn("message", props)
+            self.assertEqual(set(GENERATION_SCHEMA["required"]) & {"parts", "message"}, {"parts"})
+            plan = props["visual_plan"]
+            self.assertEqual(set(plan["required"]), {"visual_theme", "opening", "scenes"})
+            self.assertNotIn("closing", plan["properties"])
             shot = plan["properties"]["scenes"]["items"]
             self.assertTrue({"text_span", "mood", "image_prompt"} <= set(shot["required"]))
             self.assertNotIn("elements", shot["required"])
             self.assertIs(plan["properties"]["opening"]["properties"]["shots"]["items"], shot)
 
-        def test_generated_content_rejects_rule_violations(self):
-            good = self.valid_content()
-            def broken(**overrides):
-                with self.assertRaises(ContentValidationError, msg=str(list(overrides))):
-                    validate_generated_content(self.valid_content(**overrides))
-            broken(hook_candidates=good["hook_candidates"][:4])
-            broken(message="كلمات قليلة جدا")
-            broken(message=" ".join(["كلمة"] * 200))
-            broken(call_to_action="هذه عبارة جميلة جدا عن الصبر والأمل في الحياة")      # no share verb
-            broken(title="عنوان #وسم هنا قوي جدا")
-            broken(title="كلمة " * 30)
-            broken(description="وصف قصير")
-            broken(description="نص " + "رابط https://example.org " * 40)
-            broken(message=good["message"] + " صدق الله العظيم")
-            broken(description=good["description"] + " المصدر ابن كثير")
-            broken(keywords=["واحدة", "اثنتان"])
-            broken(hashtags=["#واحد"])
-            same = [dict(good["hook_candidates"][0]) for _ in range(5)]
-            broken(hook_candidates=same)
-            low = [dict(hook, relevance=2) for hook in good["hook_candidates"]]
-            broken(hook_candidates=low)
-
-        def test_the_hook_must_be_a_question_and_clichés_and_greetings_are_rejected_everywhere(self):
-            good = self.valid_content()
-            statement = [dict(h) for h in good["hook_candidates"]]
-            statement[0]["text"] = "تعبك الذي لا يراه أحد يراه الله وحده"
-            with self.assertRaisesRegex(ContentValidationError, "سؤالًا"):
-                validate_generated_content(self.valid_content(hook_candidates=statement))
-            english_mark = [dict(h) for h in good["hook_candidates"]]
-            english_mark[0]["text"] = "لماذا تعبك الذي لا يراه أحد يراه الله وحده?"
-            validate_generated_content(self.valid_content(hook_candidates=english_mark))      # a Latin ? is accepted too
-            for text in ("هل تعلم لماذا تعبك الذي لا يراه أحد يراه الله؟", "لن تصدق لماذا يرى الله تعبك الذي لا يراه أحد؟"):
-                clichéd = [dict(h) for h in good["hook_candidates"]]
-                clichéd[1]["text"] = text
-                with self.assertRaisesRegex(ContentValidationError, "مستهلكة"):
-                    validate_generated_content(self.valid_content(hook_candidates=clichéd))
-            for field, bad in (("message", "السلام عليكم " + good["message"]),
-                               ("message", good["message"] + " عزيزي المشاهد انتبه"),
-                               ("call_to_action", "شارك هذا المقطع الآن يا أصدقاء واجعله صدقة جارية عن والديك"),
-                               ("title", "لن تصدق ما يفعله الله بتعبك الصامت")):
-                with self.assertRaisesRegex(ContentValidationError, "مستهلكة", msg=field):
-                    validate_generated_content(self.valid_content(**{field: bad}))
-
-        def test_generated_content_normalizes_hashtags_and_keywords(self):
-            result = validate_generated_content(self.valid_content(
-                hashtags=["الصبر", "# تدبر القرآن", "#آيات!", "#آيات", "#راحة_نفسية", "#ذكر", "#دعاء", "#أمل", "#"],
-                keywords=["# آيات عن الصبر", "آيات عن الصبر", "تفسير الآية", "تدبر القرآن", "دعاء الفرج", "راحة القلب", "كلمات مؤثرة", "x"]))
-            self.assertIn("#الصبر", result["hashtags"])
-            self.assertIn("#تدبر_القرآن", result["hashtags"])
-            self.assertEqual(result["hashtags"].count("#آيات"), 1)
-            self.assertEqual(result["keywords"].count("آيات عن الصبر"), 1)
+        # ----- Prompt and generation loop -----
+        def test_generation_prompt_carries_the_idea_the_facts_the_verses_and_the_rules(self):
+            prompt = GeminiContentService._generation_prompt(self.sample_topic(), self.sample_verses(), self.sample_tafsirs(), (70, 110))
+            self.assertIn("فكرة الفيديو هي الأساس", prompt)
+            self.assertIn("دليل وبرهان", prompt)
+            self.assertIn("لماذا لم يقل القرآن ثلاثمائة وتسع سنين مباشرة؟", prompt)       # the topic question
+            self.assertIn("ثلاثمائة وخمسة وستين يومًا", prompt)                              # the vetted fact
+            self.assertIn(self.V1, prompt)
+            self.assertIn(self.V2, prompt)
+            self.assertIn("من 70 إلى 110 كلمة", prompt)
+            self.assertIn(EXAMPLE_SCRIPT, prompt)
+            self.assertIn("اسمع، قال تعالى", prompt)
+            self.assertIn("ولا تحسب أرقامًا جديدة", prompt)
+            self.assertIn("ينتهي بعلامة استفهام", prompt)
+            self.assertIn("أسلوب محادثة ذكي", prompt)
+            self.assertIn("قبل الإخراج راجع بصمت", prompt)
+            self.assertIn("image_prompt", prompt)
+            self.assertIn("visual_theme", prompt)
+            self.assertNotIn("الزاوية المقترحة", prompt)
+            bare = GeminiContentService._generation_prompt(
+                self.sample_topic().__class__("t-1", "سؤال طويل بما يكفي هنا؟", self.sample_topic().verses, (), "زاوية خاصة"),
+                self.sample_verses(), {}, (70, 110))
+            self.assertIn("لا توجد حقائق إضافية", bare)
+            self.assertIn("زاوية مقترحة: زاوية خاصة", bare)
 
         def test_content_generation_regenerates_after_a_rule_violation_but_not_after_api_errors(self):
-            verse = QuranVerse(2, 3, "2:3", "كلمة " * 12, 1, "البقرة")
-            tafsir = TafsirSource("تفسير " * 20, "مصدر", 16, "https://x", "https://l", True)
             review_ok = {"grounded_in_source": True, "no_unsupported_claims": True, "no_contradiction": True,
                          "needs_review": False, "reason": "ok"}
             service = object.__new__(GeminiContentService)
@@ -2049,10 +2314,10 @@ if __name__ == "__main__":
                 if schema is REVIEW_SCHEMA:
                     return review_ok
                 if calls.count(True) == 1:
-                    return self.valid_content(message="قصير")
+                    return self.valid_content(parts=[{"type": "speech", "text": "قصير"}])
                 return self.valid_content()
             service._generate_json = flaky
-            result = service.create_and_review(verse, tafsir, topic="الصبر والابتلاء", message_words=(30, 60))
+            result = service.create_and_review(self.sample_topic(), self.sample_verses(), self.sample_tafsirs(), self.BUDGET)
             self.assertEqual(calls.count(True), 2)
             self.assertEqual(result["review"], review_ok)
             self.assertEqual(result["model"], "test-model")
@@ -2060,43 +2325,28 @@ if __name__ == "__main__":
                 raise ServiceError("code=404 model not found")
             service._generate_json = api_down
             with self.assertRaisesRegex(ServiceError, "404"):
-                service.create_and_review(verse, tafsir)
+                service.create_and_review(self.sample_topic(), self.sample_verses(), self.sample_tafsirs(), self.BUDGET)
 
-        def test_content_generation_regenerates_when_the_review_rejects_and_gives_up_after_three(self):
-            verse = QuranVerse(2, 3, "2:3", "كلمة " * 12, 1, "البقرة")
-            tafsir = TafsirSource("تفسير " * 20, "مصدر", 16, "https://x", "https://l", True)
+        def test_the_review_sees_the_facts_the_verses_and_the_tafsir_and_can_reject(self):
+            seen = []
             service = object.__new__(GeminiContentService)
             service.model = "test-model"
             generations = []
             def rejecting(prompt, schema, max_tokens):
                 if schema is REVIEW_SCHEMA:
+                    seen.append(prompt)
                     return {"grounded_in_source": False, "no_unsupported_claims": True, "no_contradiction": True,
                             "needs_review": True, "reason": "unsupported claim"}
                 generations.append(1)
                 return self.valid_content()
             service._generate_json = rejecting
             with self.assertRaisesRegex(ContentValidationError, "unsupported claim"):
-                service.create_and_review(verse, tafsir)
+                service.create_and_review(self.sample_topic(), self.sample_verses(), self.sample_tafsirs(), self.BUDGET)
             self.assertEqual(len(generations), CONTENT_ATTEMPTS)
-
-        def test_generation_prompt_carries_topic_budget_and_rules(self):
-            verse = QuranVerse(2, 3, "2:3", "آية", 1, "البقرة")
-            tafsir = TafsirSource("نص التفسير الموثق", "مصدر", 16, "https://x", "https://l", True)
-            prompt = GeminiContentService._generation_prompt(verse, tafsir, "بر الوالدين", (42, 61))
-            self.assertIn("بر الوالدين", prompt)
-            self.assertIn("42 إلى 61 كلمة", prompt)
-            self.assertIn("نص التفسير الموثق", prompt)
-            self.assertIn("صدقة جارية", prompt)
-            self.assertIn("لا تذكر أي مصدر", prompt)
-            self.assertIn("أسلوب محادثة ذكي", prompt)
-            self.assertIn("بنية الفيديو", prompt)
-            self.assertIn("ينتهي بعلامة استفهام", prompt)
-            self.assertIn("هل تعلم", prompt)                              # named only as something to avoid
-            self.assertIn("قبل الإخراج راجع بصمت", prompt)
-            self.assertIn("image_prompt", prompt)
-            self.assertIn("visual_theme", prompt)
-            self.assertIn("2.5 إلى 3 ثوانٍ", prompt)
-            self.assertNotIn("الموضوع المقترح", GeminiContentService._generation_prompt(verse, tafsir, None, (42, 61)))
+            self.assertIn("ثلاثمائة وخمسة وستين يومًا", seen[0])
+            self.assertIn(self.V2, seen[0])
+            self.assertIn("هذا تفسير عربي موثق", seen[0])
+            self.assertIn("«المفسرين»", seen[0])
 
         # ----- Quran words (waqf signs are not words) -----
         def test_quran_words_attach_waqf_signs_to_the_previous_word(self):
@@ -2150,18 +2400,18 @@ if __name__ == "__main__":
                 with self.assertRaisesRegex(ServiceError, "TAFSIR_ID=169.*TAFSIR_ID=16"):
                     client.get_tafsir("2:3")
 
-        def test_tts_requires_seal_once_in_standalone_segment(self):
+        def test_tts_rejects_empty_text_and_the_reserved_phrase(self):
             import tempfile
             service = object.__new__(TTSService)
             async def fake_save(text, path):
                 Path(path).write_bytes(b"x" * 600)
             service._save = fake_save
             with tempfile.TemporaryDirectory() as temp:
-                with self.assertRaises(ServiceError):
-                    service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم صدق الله العظيم"}, Path(temp))
-                saved = service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم"}, Path(temp))
-                self.assertEqual(set(saved), {"hook", "seal"})
-
+                for bad in ({}, {"hook": "  "}, {"part-1": "كلام صدق الله العظيم"}):
+                    with self.assertRaises(ServiceError, msg=str(bad)):
+                        service.synthesize(bad, Path(temp))
+                saved = service.synthesize({"hook": "هوك", "part-1": "كلام"}, Path(temp))
+                self.assertEqual(set(saved), {"hook", "part-1"})
         def test_quran_key_rejects_out_of_range_chapter(self):
             with self.assertRaises(ServiceError):
                 verse_key(115, 1)
@@ -2273,8 +2523,8 @@ if __name__ == "__main__":
                 Path(path).write_bytes(b"x" * 600)
             service._save = flaky_save
             with tempfile.TemporaryDirectory() as temp:
-                saved = service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
-            self.assertEqual(set(saved), {"seal"})
+                saved = service.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
+            self.assertEqual(set(saved), {"cta"})
             self.assertEqual(len(attempts), 3)
             self.assertEqual(sleeps, list(TTS_RETRY_DELAYS))
 
@@ -2289,7 +2539,7 @@ if __name__ == "__main__":
             service._save = bad_voice
             with tempfile.TemporaryDirectory() as temp:
                 with self.assertRaises(ServiceError):
-                    service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+                    service.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
             self.assertEqual(len(attempts), 1)
             self.assertEqual(sleeps, [])
 
@@ -2345,10 +2595,10 @@ if __name__ == "__main__":
                 service._last_boundaries = [{"text": text, "start_ms": 0, "end_ms": 500}] if text == "هوك" else []
             service._save = fake_save
             with tempfile.TemporaryDirectory() as temp:
-                service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم", "cta": "شارك"}, Path(temp))
+                service.synthesize({"hook": "هوك", "part-1": "كلام", "cta": "شارك"}, Path(temp))
             self.assertEqual(service.word_boundaries["hook"], [{"text": "هوك", "start_ms": 0, "end_ms": 500}])
             self.assertEqual(service.word_boundaries["cta"], [])
-            self.assertEqual(set(service.word_boundaries), {"hook", "seal", "cta"})
+            self.assertEqual(set(service.word_boundaries), {"hook", "part-1", "cta"})
 
         # ----- Gemini text-to-speech -----
         @staticmethod
@@ -2392,23 +2642,22 @@ if __name__ == "__main__":
             service = self.make_gemini_tts()
             service._request_audio = lambda text: (self.pcm(2.0), "audio/L16;rate=24000")
             with tempfile.TemporaryDirectory() as temp:
-                saved = service.synthesize({"hook": "ما هو الإيمان بالغيب", "seal": "صدق الله العظيم"}, Path(temp))
-                self.assertEqual(set(saved), {"hook", "seal"})
+                saved = service.synthesize({"hook": "ما هو الإيمان بالغيب", "cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
+                self.assertEqual(set(saved), {"hook", "cta"})
                 for path in saved.values():
                     self.assertEqual(path.suffix, ".wav")
                     self.assertEqual(path.read_bytes()[:4], b"RIFF")
-            self.assertEqual(service.word_boundaries, {"hook": [], "seal": []})
+            self.assertEqual(service.word_boundaries, {"hook": [], "cta": []})
 
-        def test_gemini_tts_requires_the_seal_exactly_once(self):
+        def test_gemini_tts_rejects_empty_text_and_the_reserved_phrase(self):
             import tempfile
             service = self.make_gemini_tts()
             service._request_audio = lambda text: (self.pcm(2.0), "audio/L16;rate=24000")
             with tempfile.TemporaryDirectory() as temp:
                 with self.assertRaises(ServiceError):
-                    service.synthesize({"hook": "هوك"}, Path(temp))
+                    service.synthesize({"hook": ""}, Path(temp))
                 with self.assertRaises(ServiceError):
-                    service.synthesize({"hook": "صدق الله العظيم", "seal": "صدق الله العظيم"}, Path(temp))
-
+                    service.synthesize({"hook": "صدق الله العظيم"}, Path(temp))
         def test_gemini_tts_retries_implausible_audio_then_succeeds(self):
             import tempfile
             service = self.make_gemini_tts()
@@ -2418,7 +2667,7 @@ if __name__ == "__main__":
                 return (self.pcm(0.1) if len(calls) == 1 else self.pcm(2.0)), "audio/L16;rate=24000"
             service._request_audio = request
             with tempfile.TemporaryDirectory() as temp:
-                service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+                service.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
             self.assertEqual(len(calls), 2)
             self.assertEqual(service.sleeps, [GEMINI_TTS_RETRY_DELAYS[0]])
 
@@ -2433,7 +2682,7 @@ if __name__ == "__main__":
                 service._request_audio = request
                 with tempfile.TemporaryDirectory() as temp:
                     with self.assertRaises(ServiceError, msg=label):
-                        service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+                        service.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
                 self.assertEqual(len(calls), len(GEMINI_TTS_RETRY_DELAYS) + 1, label)
                 self.assertEqual(service.sleeps, list(GEMINI_TTS_RETRY_DELAYS), label)
 
@@ -2447,7 +2696,7 @@ if __name__ == "__main__":
             service._request_audio = request
             with tempfile.TemporaryDirectory() as temp:
                 with self.assertRaisesRegex(ServiceError, "403"):
-                    service.synthesize({"seal": "صدق الله العظيم"}, Path(temp))
+                    service.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path(temp))
             self.assertEqual(len(calls), 1)
             self.assertEqual(service.sleeps, [])
 
@@ -2530,13 +2779,13 @@ if __name__ == "__main__":
             primary, secondary = Fake("gemini", "Algieba", True), Fake("edge", "ar-EG-ShakirNeural", False)
             service = FallbackTTSService(primary, secondary)
             self.assertEqual(service.voice, "Algieba")
-            files = service.synthesize({"hook": "هوك", "seal": "صدق الله العظيم"}, Path("."))
+            files = service.synthesize({"hook": "هوك", "cta": "شارك"}, Path("."))
             self.assertEqual((primary.calls, secondary.calls), (1, 1))
             self.assertTrue(all(str(path).startswith("edge-") for path in files.values()))
             self.assertEqual((service.voice, service.provider), ("ar-EG-ShakirNeural", "edge"))
             self.assertEqual(service.terms_url, "https://edge.example/terms")
             healthy = FallbackTTSService(Fake("gemini", "Algieba", False), secondary)
-            healthy.synthesize({"seal": "صدق الله العظيم"}, Path("."))
+            healthy.synthesize({"cta": "تابعني لنتدبر دقة القرآن"}, Path("."))
             self.assertEqual((healthy.voice, healthy.provider), ("Algieba", "gemini"))
 
         # ----- Make.com publisher -----

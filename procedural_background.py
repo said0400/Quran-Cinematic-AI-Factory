@@ -577,17 +577,18 @@ def _segment_shots(shots: list[dict[str, Any]], timings: list[tuple[float, float
     return entries
 
 
-def _split_long(entries: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
+def _split_long(entries: list[dict[str, Any]], name: str, limit: float = MAX_SHOT_SECONDS,
+                threshold: float = SPLIT_THRESHOLD) -> list[dict[str, Any]]:
     """A shot longer than ~4.3 s becomes several equal parts, each with its own camera move on the same picture."""
     result: list[dict[str, Any]] = []
     for entry in entries:
         length = entry["end"] - entry["start"]
-        parts = 1 if length <= MAX_SHOT_SECONDS * SPLIT_THRESHOLD else math.ceil(length / MAX_SHOT_SECONDS)
+        parts = 1 if length <= limit * threshold else math.ceil(length / limit)
         for part in range(parts):
             result.append({**entry, "name": f"{name}-{len(result) + 1}",
                            "start": round(entry["start"] + length * part / parts, 3),
                            "end": round(entry["start"] + length * (part + 1) / parts, 3),
-                           "image": None, "calm": False})
+                           "image": entry.get("image"), "calm": entry.get("calm", False)})
     return result
 
 
@@ -678,6 +679,75 @@ def build_timeline(plan: dict[str, Any], message_timings: list[tuple[float, floa
                            "scene": {"mood": mood_of[key], "elements": list(DEFAULT_ELEMENTS)},
                            "image_key": key, "image": None, "calm": True})
     entries = [*hook, *recitation, *message, *cta]
+    if images:
+        apply_images(entries, images)
+    return entries
+
+
+MIN_PIECE_SECONDS = 0.8     # a picture is never cut into a piece shorter than this (verse edges excepted)
+
+
+def build_script_timeline(plan: dict[str, Any], segments: list[dict[str, Any]], duration: float,
+                          images: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Gap-free shots for a script that alternates spoken parts and recited verses.
+
+    `segments` are the audio pieces in order, each with absolute `start`/`end`:
+      {"kind": "speech", "timings": [(start, end, index)...]}   timings relative to that piece, one per word
+      {"kind": "verse"}
+    The first segment is the hook: its shots (plan["opening"]) share it evenly. After the hook, the shots in
+    plan["scenes"] open at the words they are bound to; word indexes run over the spoken words of all later
+    speech segments in order. A recited verse keeps the current picture under a dark veil (cut into several
+    crops if it is long), so the picture changes only where the narrator says something new.
+    """
+    if not segments or segments[0].get("kind") != "speech" or segments[0].get("role") != "hook":
+        raise ValueError("يجب أن يبدأ التسلسل بمقطع الهوك المنطوق.")
+    verse_spans = [(seg["start"], seg["end"]) for seg in segments[1:] if seg["kind"] == "verse"]
+    if not verse_spans:
+        raise ValueError("لا توجد آية في التسلسل.")
+    hook = segments[0]
+    hook_entries = _split_long(_segment_shots(plan["opening"]["shots"], None, hook["start"], hook["end"], "opening",
+                                              min_len=OPENING_MIN_SHOT_SECONDS), "hook")
+    body_start, end_time = hook["end"], max(duration, segments[-1]["end"])
+    word_times = [seg["start"] + timing[0] for seg in segments[1:] if seg["kind"] == "speech" for timing in seg["timings"]]
+    starts: list[tuple[float, dict[str, Any], int]] = []
+    for position, shot in enumerate(plan["scenes"]):
+        if position == 0:
+            shot_time = body_start
+        else:
+            index = shot.get("word_start")
+            if not isinstance(index, int) or not 0 <= index < len(word_times):
+                continue
+            shot_time = word_times[index]
+        if starts and shot_time - starts[-1][0] < MIN_SCENE_SECONDS:
+            continue
+        starts.append((shot_time, shot, position))
+    if not starts:
+        raise ValueError("لا توجد لقطات صالحة بعد الهوك.")
+    mandatory = {body_start, end_time} | {edge for span in verse_spans for edge in span}
+    ordered = sorted({cut for cut in ({time for time, _, _ in starts} | mandatory) if body_start <= cut <= end_time})
+    cuts = [ordered[0]]
+    for cut in ordered[1:]:
+        if cut - cuts[-1] < MIN_PIECE_SECONDS:
+            if cut in mandatory and cuts[-1] not in mandatory:
+                cuts[-1] = cut                      # a verse edge wins over a shot cut that sits right next to it
+            elif cut in mandatory:
+                cuts.append(cut)
+            continue
+        cuts.append(cut)
+    body_entries: list[dict[str, Any]] = []
+    for left, right in zip(cuts, cuts[1:]):
+        shot_time, shot, position = [item for item in starts if item[0] <= left + 1e-6][-1]
+        calm = any(a - 1e-6 <= left and right <= b + 1e-6 for a, b in verse_spans)
+        scene = ({"mood": shot["mood"], "elements": list(DEFAULT_ELEMENTS)} if calm
+                 else {**shot, "elements": list(shot.get("elements") or DEFAULT_ELEMENTS)})
+        piece = {"start": round(left, 3), "end": round(right, 3), "scene": scene, "image_key": f"scene-{position + 1}",
+                 "image": None, "calm": calm}
+        body_entries.extend(_split_long([piece], "calm" if calm else "scene",
+                                        RECITATION_SHOT_SECONDS if calm else MAX_SHOT_SECONDS,
+                                        1.5 if calm else SPLIT_THRESHOLD))
+    for number, entry in enumerate(body_entries, start=1):
+        entry["name"] = f"{'recitation' if entry['calm'] else 'scene'}-{number}"
+    entries = [*hook_entries, *body_entries]
     if images:
         apply_images(entries, images)
     return entries
@@ -918,5 +988,85 @@ if __name__ == "__main__":
                 info = render_background(out, 180, 320, 4, 50.0, line, theme="t", render_scale=.5)
                 self.assertEqual(info["image_scenes"], len(line))               # every shot carries a (possibly reused) path
                 self.assertTrue(out.stat().st_size > 1024)
+
+        # ----- script timeline: spoken parts and verses in any order -----
+        @staticmethod
+        def script_segments():
+            def speech(start, end, count, role="body"):
+                step = (end - start) / count
+                return {"kind": "speech", "role": role, "start": start, "end": end,
+                        "timings": [(i * step, i * step + step * .9, i) for i in range(count)]}
+            return [speech(0.0, 5.0, 14, "hook"), speech(5.0, 7.0, 3), {"kind": "verse", "start": 7.0, "end": 15.0},
+                    speech(15.0, 40.0, 50), {"kind": "verse", "start": 40.0, "end": 45.0}, speech(45.0, 50.0, 8, "closing")]
+
+        @staticmethod
+        def script_plan():
+            plan = sample_plan()
+            plan.pop("closing", None)
+            plan["scenes"] = [shot("dawn", element("sun", "right"), start=0), shot("storm", element("cloud"), start=3),
+                              shot("day", element("seed", "center", "grow"), start=13), shot("warm", element("heart"), start=23),
+                              shot("dawn", element("path"), start=33), shot("night", element("moon", "right"), start=43),
+                              shot("warm", element("hands"), start=53)]
+            return plan
+
+        def script_line(self, plan=None, **kwargs):
+            return build_script_timeline(plan or self.script_plan(), self.script_segments(), 50.0, **kwargs)
+
+        def test_script_timeline_is_gap_free_and_cuts_where_the_narrator_starts_a_new_phrase(self):
+            line = self.script_line()
+            self.assertEqual((line[0]["start"], line[-1]["end"]), (0.0, 50.0))
+            for left, right in zip(line, line[1:]):
+                self.assertAlmostEqual(left["end"], right["start"], places=3)
+            starts = {round(e["start"], 1) for e in line}
+            for expected in (5.0, 15.0, 20.0, 25.0, 30.0, 35.0, 45.0):                  # phrase starts bound to words
+                self.assertIn(expected, starts)
+            self.assertEqual(timeline_image_keys([e for e in line if e["name"].startswith("hook")]), ["opening-1", "opening-2"])
+
+        def test_a_recited_verse_keeps_the_current_picture_under_a_veil_and_is_cut_into_crops(self):
+            line = self.script_line()
+            verse1 = [e for e in line if 7.0 <= e["start"] < 15.0]
+            verse2 = [e for e in line if 40.0 <= e["start"] < 45.0]
+            self.assertTrue(all(e["calm"] and e["name"].startswith("recitation") for e in verse1 + verse2))
+            self.assertEqual({e["image_key"] for e in verse1}, {verse1[0]["image_key"]})
+            self.assertEqual(verse1[0]["image_key"], "scene-1")                           # shot 1 is still active at 7 s
+            self.assertEqual(verse2[0]["image_key"], "scene-6")
+            self.assertGreaterEqual(len(verse1), 2)                                       # 8 s of recitation: several crops
+            self.assertTrue(all(e["end"] - e["start"] <= RECITATION_SHOT_SECONDS * 1.5 + .01 for e in verse1))
+            spoken = [e for e in line if not e["calm"] and e["start"] >= 5.0]
+            self.assertTrue(all(e["end"] - e["start"] <= MAX_SHOT_SECONDS * SPLIT_THRESHOLD + .01 for e in spoken))
+
+        def test_a_shot_cut_right_next_to_a_verse_edge_is_dropped_but_the_verse_edge_stays(self):
+            plan = self.script_plan()
+            plan["scenes"][2] = shot("day", element("seed"), start=4)                      # speech 2 word 1 = 15.5 s, 0.5 s after the verse
+            line = self.script_line(plan)
+            self.assertNotIn("scene-3", {e["image_key"] for e in line})
+            self.assertIn(15.0, {e["start"] for e in line})
+            self.assertTrue(all(e["end"] - e["start"] >= MIN_PIECE_SECONDS - 0.01 for e in line))
+
+        def test_script_timeline_rejects_a_sequence_without_hook_or_verse(self):
+            segments = self.script_segments()
+            with self.assertRaises(ValueError):
+                build_script_timeline(self.script_plan(), segments[1:], 50.0)
+            with self.assertRaises(ValueError):
+                build_script_timeline(self.script_plan(), [segments[0], segments[1], segments[3]], 50.0)
+            with self.assertRaises(ValueError):
+                build_script_timeline(self.script_plan(), [], 50.0)
+
+        def test_script_timeline_images_pick_budget_and_reuse(self):
+            line = self.script_line()
+            keys = timeline_image_keys(line)
+            self.assertEqual(keys[:2], ["opening-1", "opening-2"])
+            self.assertEqual(len(pick_image_keys(keys, 5)), 5)
+            apply_images(line, {"opening-1": {"path": "/x/o.jpg"}, "scene-1": {"path": "/x/s1.jpg"}})
+            self.assertTrue(all(e["image"] for e in line))
+            self.assertEqual([e["image"] for e in line if e["image_key"] == "scene-1"][0], "/x/s1.jpg")
+
+        def test_script_timeline_renders_into_a_video(self):
+            with tempfile.TemporaryDirectory() as temp:
+                line = self.script_line(images={"scene-1": {"path": self._photo(Path(temp) / "s1.jpg")}})
+                out = Path(temp) / "bg.mp4"
+                info = render_background(out, 180, 320, 4, 50.0, line, theme="t", render_scale=.5)
+                self.assertTrue(out.stat().st_size > 1024)
+                self.assertEqual(len(info["scenes"]), len(line))
 
     unittest.main()

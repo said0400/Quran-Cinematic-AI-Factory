@@ -284,6 +284,27 @@ def choose_auto_candidates(history_rows: list[dict[str, Any]], date_key: str, to
     return [topic for topic in rotated if topic.row_key not in seen][:limit]
 
 
+LOW_TOPIC_WARNING = 3        # warn when fewer unused topics than this remain
+
+
+def blocked_topics(history_rows: list[dict[str, Any]], topics: list[Topic]) -> list[str]:
+    """Why each unavailable topic is unavailable, e.g. 'cave-309 (published)' or 'x (نشر غير محسوم: make=uploaded_unconfirmed)'."""
+    result = []
+    for topic in topics:
+        rows = [row for row in history_rows if row.get("verse_key") == topic.row_key
+                and (row_has_any_publication(row) or row_has_unresolved_submission(row))]
+        if not rows:
+            continue
+        row = max(rows, key=lambda item: item.get("updated_at", ""))
+        if row_has_any_publication(row):
+            result.append(f"{topic.id} (منشور)")
+        else:
+            states = ", ".join(f"{name}={value.get('status')}" for name, value in row.get("platforms", {}).items()
+                               if isinstance(value, dict) and value.get("status") not in {"not_started", "disabled", "published"})
+            result.append(f"{topic.id} (نشر غير محسوم: {states or 'غير معروف'})")
+    return result
+
+
 def already_processed_today(history_rows: list[dict[str, Any]], local_date: str, daily_target: int = 1) -> bool:
     today = [row for row in history_rows if row.get("mode") == "auto" and row.get("local_date") == local_date]
     completed = sum(1 for row in today if row.get("status") == "published")
@@ -746,7 +767,15 @@ def run(args: argparse.Namespace) -> int:
             if existing and row_has_any_publication(existing) and not args.reprocess:
                 raise FactoryError("هذا الموضوع له منشور مؤكد سابقًا. استخدم --publish-only لإعادة التحقق أو --reprocess لتوليد جديد؛ لن يتكرر النشر تلقائيًا.")
         if not candidates:
-            raise FactoryError("لا توجد مواضيع غير منشورة في ملف المواضيع؛ أضف مواضيع جديدة. لم يُنشأ فيديو.")
+            blocked = blocked_topics(history_rows, topics)
+            raise FactoryError(
+                f"لا توجد مواضيع متاحة في ملف المواضيع ({len(topics)} موضوعًا). "
+                + (("المستبعدة: " + "، ".join(blocked) + ". ") if blocked else "")
+                + "أضف مواضيع جديدة إلى data/topics.json (لكل موضوع فيديو واحد). لم يُنشأ فيديو.")
+        if args.mode == "auto":
+            unused = len(choose_auto_candidates(history_rows, local_date, topics, len(topics)))
+            if unused < LOW_TOPIC_WARNING:
+                print(f"تنبيه: بقي {unused} موضوعًا غير منشور فقط من {len(topics)}؛ أضف مواضيع قبل أن ينفد البنك.", file=sys.stderr)
         candidate_errors = []
         daily_target = config.daily_video_count if args.mode == "auto" else 1
         completed_today = sum(1 for row in history_rows if row.get("mode") == "auto"
@@ -1137,6 +1166,51 @@ if __name__ == "__main__":
                 failed["status"] = "failed"
                 left = [t.id for t in choose_auto_candidates([done, stuck, failed], "2026-01-02", topics, 10)]
                 self.assertEqual(sorted(left), ["topic-3", "topic-4"])                      # a known failure stays eligible
+
+            def test_blocked_topics_explain_why_a_topic_is_unavailable(self):
+                topics = self.sample_topics()
+                done = new_run_record("r1", "topic-1", "auto", "2026-01-01", 1)
+                done["platforms"]["make"] = {"status": "published", "video_id": "v1", "attempts": 1}
+                stuck = new_run_record("r2", "topic-2", "auto", "2026-01-01", 1)
+                stuck["platforms"]["make"] = {"status": "uploaded_unconfirmed", "video_id": "v2", "attempts": 1}
+                failed = new_run_record("r3", "topic-3", "auto", "2026-01-01", 1)
+                failed["status"] = "failed"
+                blocked = blocked_topics([done, stuck, failed], topics)
+                self.assertEqual(len(blocked), 2)                                       # a plain failure is not a block
+                self.assertIn("topic-1 (منشور)", blocked)
+                self.assertTrue(any(item.startswith("topic-2") and "make=uploaded_unconfirmed" in item for item in blocked))
+                self.assertEqual(blocked_topics([], topics), [])
+
+            def test_an_exhausted_topic_bank_says_which_topics_were_used_and_a_low_bank_warns(self):
+                import io as _io
+                import json as _json
+                import tempfile
+                from argparse import Namespace
+                from contextlib import redirect_stderr
+                with tempfile.TemporaryDirectory() as temp:
+                    path = Path(temp) / "topics.json"
+                    path.write_text(_json.dumps({"version": 1, "topics": [
+                        {"id": "topic-1", "question": "سؤال رقم واحد طويل بما يكفي؟", "verses": [{"key": "18:25"}]}]},
+                        ensure_ascii=False), encoding="utf-8")
+                    history = ProductionHistory(Path(temp) / "history.json")
+                    done = new_run_record("r1", "topic-1", "auto", "2026-01-01", 1)
+                    done["platforms"]["make"] = {"status": "published", "video_id": "v1", "attempts": 1}
+                    history.upsert(done)
+                    env = {"OUTPUT_DIR": temp, "HISTORY_FILE": str(Path(temp) / "history.json"), "TOPICS_FILE": str(path)}
+                    args = Namespace(mode="auto", topic=None, reprocess=False, publish_only=False, input_video=None, test=False)
+                    errors = _io.StringIO()
+                    with patch.dict(os.environ, env), redirect_stderr(errors):
+                        self.assertEqual(run(args), 1)
+                    self.assertIn("topic-1 (منشور)", errors.getvalue())
+                    self.assertIn("data/topics.json", errors.getvalue())
+                    path.write_text(_json.dumps({"version": 1, "topics": [
+                        {"id": f"topic-{n}", "question": f"سؤال رقم {n} طويل بما يكفي؟", "verses": [{"key": "18:25"}]} for n in (1, 2)]},
+                        ensure_ascii=False), encoding="utf-8")
+                    warned = _io.StringIO()
+                    with patch.dict(os.environ, env), redirect_stderr(warned), \
+                            patch.object(THIS, "generate_candidate", side_effect=lambda *a, **k: ({"status": "published"}, True)):
+                        run(args)
+                    self.assertIn("بقي 1 موضوعًا", warned.getvalue())
 
             def test_run_record_remembers_the_topic_under_a_topic_key(self):
                 row = new_run_record("run-9", "cave-309", "manual", "2026-01-01", 2)

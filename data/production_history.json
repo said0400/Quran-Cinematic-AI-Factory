@@ -21687,6 +21687,998 @@
         ],
         "visual_theme": "minimalist warm lighting, ancient parchment textures, soft golden hour glow, clean academic aesthetic"
       }
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-07T23:11:43.690157+00:00",
+      "last_error": null,
+      "local_date": "2026-11-07",
+      "media_sources": [
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 77.759,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 27,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 2.59,
+                "image": true,
+                "mood": "night",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 5.181,
+                "image": true,
+                "mood": "night",
+                "name": "hook-2",
+                "start": 2.59
+              },
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 7.771,
+                "image": true,
+                "mood": "night",
+                "name": "hook-3",
+                "start": 5.181
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.471,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 7.771
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 13.171,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 10.471
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.872,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 13.171
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.572,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 15.872
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 21.182,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-5",
+                "start": 18.572
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 24.805,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-6",
+                "start": 21.182
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.428,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-7",
+                "start": 24.805
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.051,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-8",
+                "start": 28.428
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 35.674,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-9",
+                "start": 32.051
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.297,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-10",
+                "start": 35.674
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 42.138,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-11",
+                "start": 39.297
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 44.98,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-12",
+                "start": 42.138
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 47.821,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-13",
+                "start": 44.98
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 50.662,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-14",
+                "start": 47.821
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 53.306,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-15",
+                "start": 50.662
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 55.95,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 53.306
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 58.594,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.95
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 61.012,
+                "image": true,
+                "mood": "day",
+                "name": "scene-18",
+                "start": 58.594
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 63.43,
+                "image": true,
+                "mood": "day",
+                "name": "scene-19",
+                "start": 61.012
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 65.849,
+                "image": true,
+                "mood": "day",
+                "name": "scene-20",
+                "start": 63.43
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 68.267,
+                "image": true,
+                "mood": "day",
+                "name": "scene-21",
+                "start": 65.849
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 71.431,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 68.267
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 74.595,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-23",
+                "start": 71.431
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 77.759,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-24",
+                "start": 74.595
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "theme_hash": "b5bd5628694163c5",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "fragment": "25:59",
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/25:59",
+          "verse_key": "25:59"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/25.mp3",
+          "fragment": "25:59",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/25?segments=true",
+          "verse_key": "25:59"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/25:59",
+          "verse_key": "25:59"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A vast starry night sky with a bright nebula in the center, deep blue and purple hues, cinematic wide shot.",
+          "provider": "cloudflare",
+          "scene": "opening-1",
+          "sha256": "33734a6720afce3865499ed957e80efd60aba998f4bdf005ea3d0db6e496fb7b"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close-up of a calm ocean surface reflecting the moonlight, ripples moving slowly, peaceful atmosphere.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "244e918a6f34c1bf520d8110ac0f9086c1885b7f8e511b12dc2266b22ff33394"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "An ancient stone archway leading into a bright, soft light, warm morning sun rays filtering through.",
+          "provider": "cloudflare",
+          "scene": "scene-2",
+          "sha256": "3a6646d05755737377e256dfd506b800ca252d8e7ab0fe5c11a6bd8b6057ec7f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A small seed beginning to sprout in rich soil, soft focus, macro shot.",
+          "provider": "cloudflare",
+          "scene": "scene-4",
+          "sha256": "b17c4f80e9d78ae92f682e906559cb5ac64cc5fe4ef4c1415be1634ccf076b8e"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A person's hands carefully arranging stones in a balanced stack, focus on the steady movement.",
+          "provider": "cloudflare",
+          "scene": "scene-5",
+          "sha256": "98567d0f7198742fc243752aafdaac948637c6a9a6ee83245079fe293035bc40"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A quiet path winding through a forest at sunset, leading towards the horizon, inviting and serene.",
+          "provider": "cloudflare",
+          "scene": "scene-6",
+          "sha256": "5ae7091f360b4063b2fb5ddab89a2d39bcbcdc8cb446f40141df58a40be5f8e4"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "e0a2ed3a2d46765ba9dadef594579fac2e96b84d5652497ff5216a256a7e61a4",
+          "status": "published",
+          "video_id": "video-e0a2ed3a2d46765b",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-e0a2ed3a2d46765b/video-e0a2ed3a2d46765b.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل فكرت يوماً في الحكمة من وراء خلق السماوات والأرض في ستة أيام رغم قدرة الله المطلقة على الخلق بكلمة كن؟ في هذا الفيديو، نغوص في دلالات هذا التدرج القرآني وكيف يوجهنا نحو قيم التأنّي والتثبّت في حياتنا اليومية. استكشف معنا كيف يربط القرآن بين عظمة الخلق وبين السلوك الإنساني القويم. تابعنا لنتدبر معاً آيات الله ونستلهم منها الدروس العميقة.\n\nالكلمات المفتاحية: خلق السماوات والأرض، ستة أيام، التأني في الأمور، التثبت، حكمة الخلق، تدبر القرآن، القدرة الإلهية، معاني القرآن، التدرج في الخلق، دروس قرآنية\n\n#تدبر #القرآن_الكريم #حكمة #تأملات #خلق_الكون #التأني #آيات #معلومات_دينية",
+        "title": "لماذا خلق الله الكون في ستة أيام؟"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-07-six-days-19b51b84-report.json",
+      "run_id": "2026-11-07-six-days-19b51b84",
+      "script": {
+        "call_to_action": "شاركنا تدبرك لهذه الحكمة في التعليقات وتابعني للمزيد.",
+        "hook": "لماذا خلق الله السماوات والأرض في ستة أيام، وهو قادر أن يقول كن فيكون؟",
+        "parts": [
+          {
+            "text": "لماذا خلق الله السماوات والأرض في ستة أيام، وهو قادر أن يقول كن فيكون؟ الجواب أعمق مما تتخيل. تأمل معي، قال تعالى:",
+            "type": "speech"
+          },
+          {
+            "type": "verse",
+            "verse_index": 1
+          },
+          {
+            "text": "تكررت هذه العبارة في سبعة مواضع من القرآن. الله قادر على خلق كل شيء في لحظة بقوله كن، كما جاء في آخر سورة يس. طيب، لماذا التدرج؟ الحكمة في ذلك تعليم العباد التأنّي والتثبّت في الأمور. فالخلق في مراحل يعلمنا أن الإتقان يحتاج إلى وقت، وأن التمهل في اتخاذ القرارات صفة محمودة. شاركنا تدبرك لهذه الحكمة في التعليقات.",
+            "type": "speech"
+          }
+        ],
+        "spoken_word_budget": [
+          72,
+          96
+        ],
+        "spoken_words": 102
+      },
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/25:59",
+          "verse_key": "25:59"
+        }
+      ],
+      "status": "published",
+      "topic_id": "six-days",
+      "updated_at": "2026-11-07T23:16:34.477396+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 77.759,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 27,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 2.59,
+                "image": true,
+                "mood": "night",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 5.181,
+                "image": true,
+                "mood": "night",
+                "name": "hook-2",
+                "start": 2.59
+              },
+              {
+                "elements": [
+                  "stars"
+                ],
+                "end": 7.771,
+                "image": true,
+                "mood": "night",
+                "name": "hook-3",
+                "start": 5.181
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 10.471,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 7.771
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 13.171,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 10.471
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 15.872,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 13.171
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 18.572,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 15.872
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 21.182,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-5",
+                "start": 18.572
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 24.805,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-6",
+                "start": 21.182
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 28.428,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-7",
+                "start": 24.805
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 32.051,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-8",
+                "start": 28.428
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 35.674,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-9",
+                "start": 32.051
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 39.297,
+                "image": true,
+                "mood": "warm",
+                "name": "recitation-10",
+                "start": 35.674
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 42.138,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-11",
+                "start": 39.297
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 44.98,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-12",
+                "start": 42.138
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 47.821,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-13",
+                "start": 44.98
+              },
+              {
+                "elements": [
+                  "door"
+                ],
+                "end": 50.662,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-14",
+                "start": 47.821
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 53.306,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-15",
+                "start": 50.662
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 55.95,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 53.306
+              },
+              {
+                "elements": [
+                  "seed"
+                ],
+                "end": 58.594,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.95
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 61.012,
+                "image": true,
+                "mood": "day",
+                "name": "scene-18",
+                "start": 58.594
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 63.43,
+                "image": true,
+                "mood": "day",
+                "name": "scene-19",
+                "start": 61.012
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 65.849,
+                "image": true,
+                "mood": "day",
+                "name": "scene-20",
+                "start": 63.43
+              },
+              {
+                "elements": [
+                  "hands"
+                ],
+                "end": 68.267,
+                "image": true,
+                "mood": "day",
+                "name": "scene-21",
+                "start": 65.849
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 71.431,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 68.267
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 74.595,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-23",
+                "start": 71.431
+              },
+              {
+                "elements": [
+                  "path"
+                ],
+                "end": 77.759,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-24",
+                "start": 74.595
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "theme_hash": "b5bd5628694163c5",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 8,
+            "hook_words": 14,
+            "keywords": 10,
+            "parts": [
+              "speech",
+              "verse",
+              "speech"
+            ],
+            "spoken_word_budget": [
+              72,
+              96
+            ],
+            "spoken_words": 102,
+            "visual_shots": 6
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص متوافق تماماً مع المصادر المقدمة، حيث استند إلى الحقائق الموثقة المذكورة في المصدر، واستخدم الآية كدليل، وأجاب على سؤال الهوك بناءً على التفسير والحقائق المتاحة."
+          },
+          "recitation_total_seconds": 18.115,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 6,
+            "notes": [],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 6,
+            "shots": 6,
+            "timeline_entries": 27
+          },
+          "topic": {
+            "facts": 3,
+            "id": "six-days",
+            "question": "لماذا خلق الله السماوات والأرض في ستة أيام، وهو قادر أن يقول «كن» فتكون؟"
+          },
+          "verses": [
+            {
+              "label": "25:59",
+              "seconds": 18.115,
+              "words": 17
+            }
+          ],
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 77.759,
+            "audio_segments": {
+              "closing": {
+                "end": 77.759,
+                "start": 72.708
+              },
+              "hook": {
+                "end": 7.771,
+                "start": 0.0
+              },
+              "talk-1": {
+                "end": 21.182,
+                "start": 7.771
+              },
+              "talk-2": {
+                "end": 72.708,
+                "start": 39.297
+              },
+              "verse-1": {
+                "end": 39.297,
+                "start": 21.182
+              }
+            },
+            "commentary_pages": {
+              "closing": 2,
+              "hook": 3,
+              "talk-1": 5,
+              "talk-2": 12
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 77.767,
+            "file_size_bytes": 36966413,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_total_seconds": 18.115,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "valid": true,
+            "verse_count": 1,
+            "video_codec": "h264",
+            "width": 1080
+          }
+        },
+        "status": "validated"
+      },
+      "verse_key": "topic:six-days",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "e0a2ed3a2d46765ba9dadef594579fac2e96b84d5652497ff5216a256a7e61a4",
+      "visual_plan": {
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "pulse",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "stars"
+                }
+              ],
+              "image_prompt": "A vast starry night sky with a bright nebula in the center, deep blue and purple hues, cinematic wide shot.",
+              "mood": "night"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "float",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A close-up of a calm ocean surface reflecting the moonlight, ripples moving slowly, peaceful atmosphere.",
+            "mood": "calm",
+            "text_span": "الجواب أعمق مما",
+            "word_start": 14
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "door"
+              }
+            ],
+            "image_prompt": "An ancient stone archway leading into a bright, soft light, warm morning sun rays filtering through.",
+            "mood": "warm",
+            "text_span": "تأمل معي، قال",
+            "word_start": 18
+          },
+          {
+            "elements": [
+              {
+                "animation": "none",
+                "position": "center",
+                "size": "medium",
+                "type": "mountain"
+              }
+            ],
+            "image_prompt": "A mountain range under a clear sky, seen from a high angle, majestic and stable.",
+            "mood": "day",
+            "text_span": "تكررت هذه العبارة",
+            "word_start": 22
+          },
+          {
+            "elements": [
+              {
+                "animation": "grow",
+                "position": "center",
+                "size": "medium",
+                "type": "seed"
+              }
+            ],
+            "image_prompt": "A small seed beginning to sprout in rich soil, soft focus, macro shot.",
+            "mood": "calm",
+            "text_span": "طيب، لماذا التدرج؟",
+            "word_start": 46
+          },
+          {
+            "elements": [
+              {
+                "animation": "float",
+                "position": "center",
+                "size": "medium",
+                "type": "hands"
+              }
+            ],
+            "image_prompt": "A person's hands carefully arranging stones in a balanced stack, focus on the steady movement.",
+            "mood": "day",
+            "text_span": "فالخلق في مراحل",
+            "word_start": 58
+          },
+          {
+            "elements": [
+              {
+                "animation": "walk",
+                "position": "center",
+                "size": "medium",
+                "type": "path"
+              }
+            ],
+            "image_prompt": "A quiet path winding through a forest at sunset, leading towards the horizon, inviting and serene.",
+            "mood": "warm",
+            "text_span": "شاركنا تدبرك لهذه",
+            "word_start": 74
+          }
+        ],
+        "visual_theme": "ethereal cosmic light, deep space nebula, soft golden glow, minimalist aesthetic"
+      }
     }
   ],
   "version": 1

@@ -563,8 +563,8 @@ def generate_candidate(topic: Topic, attempt: int, mode: str, config: Config, hi
             raise CandidateRejected(
                 f"زمن التلاوة الكلي أطول من الحد ({recitation_total:.1f}s > {config.max_recitation_seconds}s).")
         checks["topic"] = {"id": topic.id, "question": topic.question, "facts": len(topic.facts)}
-        checks["verses"] = [{"label": item["label"], "words": len(item["timed_words"]), "seconds": round(item["seconds"], 3)}
-                            for item in items]
+        checks["verses"] = [{"label": item["label"], "text": item["text"], "words": len(item["timed_words"]),
+                             "seconds": round(item["seconds"], 3)} for item in items]    # the exact words recited, to verify a fragment
         checks["recitation_total_seconds"] = round(recitation_total, 3)
         checks["audio_content_identity"] = {
             "status": "not_independently_transcribed",
@@ -1361,6 +1361,7 @@ if __name__ == "__main__":
                 self.assertEqual(row["verse_key"], "topic:cave-309")
                 checks = row["verification"]["checks"]
                 self.assertEqual([v["label"] for v in checks["verses"]], ["18:25", "18:26#1-3"])
+                self.assertEqual([v["text"] for v in checks["verses"]], [self.WORDS, "واحد اثنان ثلاثة"])
                 self.assertAlmostEqual(checks["recitation_total_seconds"], 6.0, delta=0.3)
                 self.assertEqual([v.text for v in seen["verses"]], [self.WORDS, "واحد اثنان ثلاثة"])   # the fragment, exactly as recited
                 self.assertEqual([v.index for v in seen["verses"]], [1, 2])

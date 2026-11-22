@@ -26079,6 +26079,206 @@
       "verse_key": "topic:uff-parents",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-22T19:41:17.405571+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25).",
+      "local_date": "2026-11-22",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-22-uff-parents-f368d794-report.json",
+      "run_id": "2026-11-22-uff-parents-f368d794",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-22T19:41:19.918458+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-22T19:41:19.991815+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25).",
+      "local_date": "2026-11-22",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-22-uff-parents-9a13fbeb-report.json",
+      "run_id": "2026-11-22-uff-parents-9a13fbeb",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-22T19:41:21.312205+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "created_at": "2026-11-22T19:41:21.390993+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25).",
+      "local_date": "2026-11-22",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-22-uff-parents-963db756-report.json",
+      "run_id": "2026-11-22-uff-parents-963db756",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-22T19:41:22.768123+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "created_at": "2026-11-22T19:41:22.844096+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25).",
+      "local_date": "2026-11-22",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-22-uff-parents-773bc69e-report.json",
+      "run_id": "2026-11-22-uff-parents-773bc69e",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-22T19:41:23.875353+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "created_at": "2026-11-22T19:41:23.947615+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25).",
+      "local_date": "2026-11-22",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-22-uff-parents-d9061dd7-report.json",
+      "run_id": "2026-11-22-uff-parents-d9061dd7",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-22T19:41:24.715557+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

@@ -26279,6 +26279,46 @@
       "verse_key": "topic:uff-parents",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-23T14:12:04.968588+00:00",
+      "last_error": "عدد توقيتات الآية 17:23 (29) لا يطابق عدد كلمات نصها (25); فهارس التوقيتات من 1 إلى 25 (25 فريدة من 29).",
+      "local_date": "2026-11-23",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": true,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-23-uff-parents-300fcf69-report.json",
+      "run_id": "2026-11-23-uff-parents-300fcf69",
+      "source_tafsir": null,
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-23T14:12:06.253186+00:00",
+      "verification": {
+        "checks": {},
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

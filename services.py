@@ -100,6 +100,10 @@ class ServiceError(RuntimeError):
         self.platform_state = platform_state or {}
 
 
+class RecitationTimingError(ServiceError):
+    """The source's word timings for a verse do not fit its text: retrying the same verse cannot help."""
+
+
 class _GeminiTransient(Exception):
     """Internal marker: a Gemini failure that is worth retrying."""
 
@@ -269,6 +273,23 @@ def _plain_text(markup: str) -> str:
     return html.unescape(" ".join(parser.parts)).strip()
 
 
+def _merge_repeated_word_rows(rows: list[list[int]]) -> list[list[int]]:
+    """Some recitations time one word in several pieces (the same word index repeated in a row): merge each run into one word."""
+    merged: list[list[int]] = []
+    for index, start, end in rows:
+        if merged and merged[-1][0] == index:
+            merged[-1][1] = min(merged[-1][1], start)
+            merged[-1][2] = max(merged[-1][2], end)
+        else:
+            merged.append([index, start, end])
+    return merged
+
+
+def _describe_word_indexes(rows: list[list[int]]) -> str:
+    indexes = [row[0] for row in rows]
+    return f"فهارس التوقيتات من {min(indexes)} إلى {max(indexes)} ({len(set(indexes))} فريدة من {len(indexes)})"
+
+
 class QuranFoundationClient:
     """Server-side Content API client with cached OAuth2 client-credentials tokens."""
     def __init__(self, session: requests.Session | None = None, base_url: str | None = None,
@@ -423,15 +444,20 @@ class QuranFoundationClient:
             absolute_segments.append([word_index, start_ms, end_ms])
         if not absolute_segments:
             raise ServiceError(f"قائمة توقيتات الكلمات للآية {key} فارغة.")
+        raw_row_count = len(absolute_segments)
+        absolute_segments = _merge_repeated_word_rows(absolute_segments)
         if words is not None:
             if not verse_text:
                 raise ServiceError("مقطع الآية يتطلب نص الآية للتحقق من عدد الكلمات.")
             expected = len(quran_words(verse_text))
             first, last = words
             if len(absolute_segments) != expected:
-                raise ServiceError(f"عدد توقيتات الآية {key} ({len(absolute_segments)}) لا يطابق عدد كلمات نصها ({expected}).")
+                raise RecitationTimingError(
+                    f"عدد توقيتات الآية {key} ({len(absolute_segments)}"
+                    + (f" بعد دمج {raw_row_count - len(absolute_segments)} مكرّرًا" if raw_row_count != len(absolute_segments) else "")
+                    + f") لا يطابق عدد كلمات نصها ({expected}); {_describe_word_indexes(absolute_segments)}.")
             if not 1 <= first <= last <= expected:
-                raise ServiceError(f"نطاق كلمات المقطع {first}-{last} خارج الآية {key} ({expected} كلمة).")
+                raise RecitationTimingError(f"نطاق كلمات المقطع {first}-{last} خارج الآية {key} ({expected} كلمة).")
             absolute_segments = [[position + 1, row[1], row[2]]
                                  for position, row in enumerate(absolute_segments[first - 1:last])]
             verse_start = min(row[1] for row in absolute_segments)
@@ -2024,6 +2050,54 @@ if __name__ == "__main__":
                     with patch.object(client, "_get_json", side_effect=[catalog, chapter_data]):
                         with self.assertRaises(ServiceError, msg=str(bad_words)):
                             client.get_recitation(2, 3, Path(temp), words=bad_words, verse_text=text)
+
+        def test_repeated_word_rows_are_merged_and_an_irreconcilable_count_is_a_timing_error_with_a_diagnosis(self):
+            import tempfile
+            class DownloadResponse:
+                url = "https://download.quranicaudio.com/test/chapter.mp3"
+                headers = {"Content-Type": "audio/mpeg"}
+                def raise_for_status(self):
+                    return None
+                def iter_content(self, _size):
+                    return [b"x" * 6000]
+            class DownloadSession:
+                def get(self, *args, **kwargs):
+                    return DownloadResponse()
+            client = self.ready_qf_client(self.FakeResponse(200, {}))
+            client.session = DownloadSession()
+            catalog = {"reciters": [{"id": 7, "name": "Mishari Rashid al-`Afasy"}]}
+            def chapter(rows):
+                return {"audio_file": {"audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
+                                       "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000, "timestamp_to": 14000,
+                                                       "segments": rows}]}}
+            env = {"CHAPTER_RECITER_ID": "7", "RECITATION_LICENSE_URL": "https://example.org/license",
+                   "RECITATION_LICENSE_CONFIRMED": "true", "RECITATION_ALLOWLIST": "7|https://example.org/license",
+                   "RECITATION_REQUIRE_MISHARY": "true"}
+            text = "واحد اثنان ثلاثة أربعة"
+            with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, env):
+                def fake_ffmpeg(command, **kwargs):
+                    Path(command[-1]).write_bytes(b"y" * 5000)
+                # the same word timed in two pieces: merged back into one word
+                repeated = [[1, 10000, 11000], [2, 11000, 11400], [2, 11400, 12000], [3, 12000, 13000], [4, 13000, 14000]]
+                with patch.object(client, "_get_json", side_effect=[catalog, chapter(repeated)]), \
+                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
+                    recitation, _ = client.get_recitation(2, 3, Path(temp), words=(2, 3), verse_text=text)
+                self.assertEqual(recitation.segments, [[1, 200, 1200], [2, 1200, 2200]])
+                self.assertEqual(recitation.duration_hint, 2400)
+                # more distinct indexes than words: no guessing, a clear timing error that says what the source returned
+                too_many = [[i, 10000 + i * 500, 10400 + i * 500] for i in range(1, 8)]
+                with patch.object(client, "_get_json", side_effect=[catalog, chapter(too_many)]), \
+                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
+                    with self.assertRaises(RecitationTimingError) as caught:
+                        client.get_recitation(2, 3, Path(temp), words=(1, 2), verse_text=text)
+                message = str(caught.exception)
+                self.assertIn("(7) لا يطابق عدد كلمات نصها (4)", message)
+                self.assertIn("فهارس التوقيتات من 1 إلى 7 (7 فريدة من 7)", message)
+                self.assertTrue(issubclass(RecitationTimingError, ServiceError))
+                with patch.object(client, "_get_json", side_effect=[catalog, chapter(repeated)]), \
+                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
+                    with self.assertRaises(RecitationTimingError):
+                        client.get_recitation(2, 3, Path(temp), words=(3, 9), verse_text=text)
 
         def test_word_timings_accept_contiguous_one_based_and_map_to_zero_based(self):
             got = validate_word_segments([[1, 0, 250], [2, 250, 700]], "بسم الله", 800)

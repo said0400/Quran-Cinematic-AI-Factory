@@ -18,7 +18,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from services import (
     FacebookReelsPublisher, GeminiContentService, MakeWebhookPublisher,
-    QuranFoundationClient, ScriptVerse, ServiceError, YouTubePublisher, env_bool, make_tts_service,
+    QuranFoundationClient, RecitationTimingError, ScriptVerse, ServiceError, YouTubePublisher, env_bool, make_tts_service,
     quran_words, validate_word_segments,
 )
 from procedural_background import (
@@ -548,7 +548,10 @@ def generate_candidate(topic: Topic, attempt: int, mode: str, config: Config, hi
                 build_verse_layout(fragment_text, verse.chapter_name, verse.verse, config.width, config.height)
             except VideoError as exc:
                 raise CandidateRejected(f"تعذر عرض الآية على البطاقة: {exc}") from None
-            recitation, audio_file = quran.get_recitation(ref.chapter, ref.verse, work_dir, ref.words, verse.text_uthmani)
+            try:
+                recitation, audio_file = quran.get_recitation(ref.chapter, ref.verse, work_dir, ref.words, verse.text_uthmani)
+            except RecitationTimingError as exc:
+                raise CandidateRejected(str(exc)) from None      # the same verse would fail the same way: skip, do not retry
             seconds = media_duration(audio_file)
             try:
                 timed_words = validate_word_segments(recitation.segments, fragment_text, int(round(seconds * 1000)))
@@ -1328,7 +1331,7 @@ if __name__ == "__main__":
                     return row
 
                 patches = [patch.object(THIS, "validate_generation_environment"),
-                           patch.object(THIS, "QuranFoundationClient", FakeQuran),
+                           patch.object(THIS, "QuranFoundationClient", fake.get("quran", FakeQuran)),
                            patch.object(THIS, "GeminiContentService", FakeGemini),
                            patch.object(THIS, "make_tts_service", lambda voice=None: FakeTTS()),
                            patch.object(THIS, "publish_platforms", fake_publish)]
@@ -1434,6 +1437,21 @@ if __name__ == "__main__":
                 manual, _, _ = self._generate(two, mode="manual", paid_call_fails=True, seconds=30.0)      # the cap is for automatic runs only
                 self.assertFalse(manual["permanent_failure"])
                 self.assertIn("paid call", manual["last_error"])
+
+            def test_unreliable_word_timings_for_a_fragment_are_a_permanent_rejection_not_five_retries(self):
+                from topics import VerseRef
+                topic = Topic("t-timing", "سؤال طويل بما يكفي هنا؟", (VerseRef(18, 25, 1, 3),))
+                class Broken:
+                    def get_verse(self, chapter, verse):
+                        class V:
+                            key, chapter_name, text_uthmani = "18:25", "الكهف", "واحد اثنان ثلاثة أربعة"
+                            verse = 25
+                        return V()
+                    def get_recitation(self, *args, **kwargs):
+                        raise RecitationTimingError("عدد توقيتات الآية 18:25 (29) لا يطابق عدد كلمات نصها (25)")
+                row, validated, _ = self._generate(topic, paid_call_fails=True, quran=Broken)
+                self.assertEqual((row["status"], row["permanent_failure"], validated), ("failed", True, False))
+                self.assertIn("(29)", row["last_error"])
 
             def test_a_failing_recitation_source_is_a_normal_retryable_failure(self):
                 from topics import VerseRef

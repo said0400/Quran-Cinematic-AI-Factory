@@ -27089,6 +27089,351 @@
       "verse_key": "topic:uff-parents",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-25T21:42:46.107456+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-6fb93498-report.json",
+      "run_id": "2026-11-25-uff-parents-6fb93498",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T21:43:07.242567+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-25T21:43:07.291892+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-11703112-report.json",
+      "run_id": "2026-11-25-uff-parents-11703112",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T21:43:25.673106+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "created_at": "2026-11-25T21:43:25.721567+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-5fc21ef8-report.json",
+      "run_id": "2026-11-25-uff-parents-5fc21ef8",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T21:43:46.835373+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "created_at": "2026-11-25T21:43:46.889334+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-11f20538-report.json",
+      "run_id": "2026-11-25-uff-parents-11f20538",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T21:44:07.530744+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "created_at": "2026-11-25T21:44:07.588465+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-cb8d3973-report.json",
+      "run_id": "2026-11-25-uff-parents-cb8d3973",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T21:44:26.519881+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

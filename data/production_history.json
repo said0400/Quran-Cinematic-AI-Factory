@@ -27434,6 +27434,1080 @@
       "verse_key": "topic:uff-parents",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-25T23:00:05.990117+00:00",
+      "last_error": "مرشح الهوك يحوي عبارة مستهلكة أو ترحيبًا.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-a4df23fd-report.json",
+      "run_id": "2026-11-25-uff-parents-a4df23fd",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T23:00:27.018064+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-25T23:00:27.087247+00:00",
+      "last_error": null,
+      "local_date": "2026-11-25",
+      "media_sources": [
+        {
+          "external_assets": false,
+          "kind": "procedural_background",
+          "metadata": {
+            "asset_notes": [],
+            "duration_seconds": 71.749,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 26,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.223,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 4.445,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-2",
+                "start": 2.223
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.668,
+                "image": true,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 4.445
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 8.891,
+                "image": true,
+                "mood": "calm",
+                "name": "hook-4",
+                "start": 6.668
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.654,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 8.891
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 14.416,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 11.654
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 17.179,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 14.416
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 19.942,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 17.179
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 23.491,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 19.942
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 27.04,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 23.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 30.589,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 27.04
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 34.138,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-8",
+                "start": 30.589
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.687,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-9",
+                "start": 34.138
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 40.238,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-10",
+                "start": 37.687
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.789,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-11",
+                "start": 40.238
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 45.936,
+                "image": true,
+                "mood": "dawn",
+                "name": "scene-12",
+                "start": 42.789
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 48.155,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-13",
+                "start": 45.936
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 50.373,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-14",
+                "start": 48.155
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 52.592,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-15",
+                "start": 50.373
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 55.739,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 52.592
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.886,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.739
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.428,
+                "image": true,
+                "mood": "day",
+                "name": "scene-18",
+                "start": 58.886
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 63.969,
+                "image": true,
+                "mood": "day",
+                "name": "scene-19",
+                "start": 61.428
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 66.562,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-20",
+                "start": 63.969
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 69.156,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-21",
+                "start": 66.562
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 71.749,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 69.156
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "theme_hash": "e4887f74c577971d",
+            "width": 1080
+          },
+          "provider": "Pillow + FFmpeg"
+        },
+        {
+          "fragment": "17:23#16-25",
+          "kind": "quran_text",
+          "license_status": "operator-confirmed right to reproduce source text in published video",
+          "license_url": "https://quran.foundation/",
+          "provider": "Quran Foundation Content API v4",
+          "source_url": "https://apis.quran.foundation/content/api/v4/verses/by_key/17:23",
+          "verse_key": "17:23"
+        },
+        {
+          "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/17.mp3",
+          "fragment": "17:23#16-25",
+          "kind": "recitation",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "provider": "Quran Foundation Content API v4",
+          "reciter_id": 7,
+          "reciter_name": "Mishari Rashid al-`Afasy",
+          "source_url": "https://apis.quran.foundation/content/api/v4/chapter_recitations/7/17?segments=true",
+          "verse_key": "17:23"
+        },
+        {
+          "kind": "tafsir",
+          "license_status": "operator-confirmed commercial reproduction permission",
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close up of an open wooden book on a table, soft morning sunlight filtering through a window, creating long shadows, a single dried flower resting on the page.",
+          "provider": "cloudflare",
+          "scene": "opening-1",
+          "sha256": "b781b2bb6274080551bfc1737c77b39be6e02afd2ef85350603c2168f800c643"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A wide shot of a quiet room, a single chair facing a window, dust motes dancing in the light, a sense of stillness and contemplation.",
+          "provider": "cloudflare",
+          "scene": "opening-2",
+          "sha256": "cf46fa93a1b32b6dc1c268a439deb47cec64d619147e0959267296a63d2eedba"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close up of a person's hands resting gently on a wooden surface, soft focus, morning light, a symbol of patience represented by a small stone.",
+          "provider": "cloudflare",
+          "scene": "scene-1",
+          "sha256": "5447d9f5864ed9159bb838abf2b194924eed49aa2202890052f9d83d22a1196f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A view from inside a house looking out at a garden, a path winding through trees, early morning mist, a symbol of guidance represented by a small lantern.",
+          "provider": "cloudflare",
+          "scene": "scene-2",
+          "sha256": "1f055dc130375d5880faa663f6975482d5e6c17f9a0cd244870a645d9041704c"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close up of a scale on a wooden table, perfectly balanced, soft light, a symbol of justice represented by a small leaf.",
+          "provider": "cloudflare",
+          "scene": "scene-3",
+          "sha256": "b24595fededc2753a7d4baeb1516dcccc9dcd0f914150a3b22e6b050a494fb5f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A wide shot of a mountain range at dawn, soft colors, a path leading upwards, a symbol of growth represented by a small seed.",
+          "provider": "cloudflare",
+          "scene": "scene-4",
+          "sha256": "d582d0cadbd1d086149980ccfff0f53d5998733fdd6730d610c697251c0a6d11"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A close up of a door slightly ajar, light streaming through the gap, a symbol of opening represented by a bird flying in the distance.",
+          "provider": "cloudflare",
+          "scene": "scene-5",
+          "sha256": "037e8dcb26383fa1219d6d018e8d04d0e108a0f19381ddb8fa121490d3199d2f"
+        },
+        {
+          "kind": "ai_generated_image",
+          "license_status": "operator-confirmed current provider terms; AI-generated",
+          "license_url": "https://developers.cloudflare.com/workers-ai/models/flux-1-schnell/",
+          "model": "@cf/black-forest-labs/flux-1-schnell",
+          "prompt": "A person sitting on a bench in a quiet park, seen from behind, looking at the horizon, a symbol of reflection represented by a heart shape in the clouds.",
+          "provider": "cloudflare",
+          "scene": "scene-6",
+          "sha256": "89144a435b7aa697c8e4c30d47bab8fffb75b2f28d96c0befa25e452fa02e287"
+        },
+        {
+          "kind": "tts",
+          "license_status": "operator-confirmed current usage terms",
+          "license_url": "https://ai.google.dev/gemini-api/terms",
+          "provider": "gemini-tts (gemini-2.5-flash-preview-tts)",
+          "voice": "Algieba"
+        },
+        {
+          "kind": "font",
+          "license": "SIL Open Font License 1.1",
+          "license_url": "https://scripts.sil.org/OFL",
+          "name": "Noto Arabic font package",
+          "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+        }
+      ],
+      "mode": "auto",
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 1,
+          "delivered_to": "make.com",
+          "sha256": "d770a74dbb2eff733d20044c3dcd43ba0da69f121e5b67d68342b0968af84820",
+          "status": "published",
+          "video_id": "video-d770a74dbb2eff73",
+          "video_url": "https://github.com/said0400/Quran-Cinematic-AI-Factory/releases/download/video-d770a74dbb2eff73/video-d770a74dbb2eff73.mp4"
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "disabled",
+          "video_id": null
+        }
+      },
+      "publication_metadata": {
+        "description": "هل تساءلت يوماً عن سر اختيار كلمة أُفّ تحديداً للنهي عن إيذاء الوالدين؟ في هذا الفيديو نكشف كيف أن القرآن الكريم يضع قواعد دقيقة للتعامل، حيث يبدأ النهي بأخف مراتب الضيق ليمتد ليشمل كل أشكال الإيذاء الأشد. نوضح مفهوم الموافقة وكيف أن النهي عن الأدنى هو برهان على منع ما هو أكبر منه، في أسلوب تدبر هادئ ومبسط يربط بين الآية والمعنى المقصود. اكتشف كيف يوجهنا القرآن نحو القول الكريم والرفق بالوالدين من خلال دقة الألفاظ. تابعني لنتدبر دقة القرآن بحسبان.\n\nالكلمات المفتاحية: القرآن الكريم، بر الوالدين، تفسير آيات، تدبر القرآن، مفهوم الموافقة، النهي عن الأذى، أخلاق القرآن، القول الكريم، التعامل مع الوالدين، دقة الألفاظ القرآنية\n\n#القرآن_الكريم #تدبر #بر_الوالدين #آيات #تفسير #أخلاق #القرآن #فائدة",
+        "title": "لماذا نهى القرآن عن كلمة أُفّ للوالدين؟"
+      },
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-a8653387-report.json",
+      "run_id": "2026-11-25-uff-parents-a8653387",
+      "script": {
+        "call_to_action": "تابعني لنتدبر دقة القرآن بحسبان.",
+        "hook": "لماذا اختار القرآن أصغر كلمة ممكنة للنهي عن إيذاء الوالدين؟ الجواب أدق مما تتخيل.",
+        "parts": [
+          {
+            "text": "لماذا اختار القرآن أصغر كلمة ممكنة للنهي عن إيذاء الوالدين؟ الجواب أدق مما تتخيل. اسمع، قال تعالى:",
+            "type": "speech"
+          },
+          {
+            "type": "verse",
+            "verse_index": 1
+          },
+          {
+            "text": "كلمة أُفّ هي أخف ما يخرج من الإنسان عند الضيق والضجر. طيب، لماذا النهي عنها تحديداً؟ هنا تظهر دقة القرآن، فالنهي عن الأدنى يدل على النهي عما هو أشد منه. إذا مُنع التضجر الخفيف، فالإيذاء الأشد أولى بالمنع والتحريم. هذا هو مفهوم الموافقة، حيث يُغلق الباب أمام كل أذى. تابعني لنتدبر دقة القرآن بحسبان.",
+            "type": "speech"
+          }
+        ],
+        "spoken_word_budget": [
+          72,
+          97
+        ],
+        "spoken_words": 90
+      },
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "published",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T23:04:43.448441+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "background": {
+            "asset_notes": [],
+            "duration_seconds": 71.749,
+            "external_assets": false,
+            "fps": 30,
+            "height": 1920,
+            "image_scenes": 26,
+            "kind": "script_synced_scenes",
+            "operator_supplied_assets": [],
+            "render_height": 960,
+            "render_scale": 0.5,
+            "render_width": 540,
+            "scenes": [
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 2.223,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-1",
+                "start": 0.0
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 4.445,
+                "image": true,
+                "mood": "warm",
+                "name": "hook-2",
+                "start": 2.223
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 6.668,
+                "image": true,
+                "mood": "calm",
+                "name": "hook-3",
+                "start": 4.445
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 8.891,
+                "image": true,
+                "mood": "calm",
+                "name": "hook-4",
+                "start": 6.668
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 11.654,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-1",
+                "start": 8.891
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 14.416,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-2",
+                "start": 11.654
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 17.179,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-3",
+                "start": 14.416
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 19.942,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-4",
+                "start": 17.179
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 23.491,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-5",
+                "start": 19.942
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 27.04,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-6",
+                "start": 23.491
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 30.589,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-7",
+                "start": 27.04
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 34.138,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-8",
+                "start": 30.589
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 37.687,
+                "image": true,
+                "mood": "calm",
+                "name": "recitation-9",
+                "start": 34.138
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 40.238,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-10",
+                "start": 37.687
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 42.789,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-11",
+                "start": 40.238
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 45.936,
+                "image": true,
+                "mood": "dawn",
+                "name": "scene-12",
+                "start": 42.789
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 48.155,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-13",
+                "start": 45.936
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 50.373,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-14",
+                "start": 48.155
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 52.592,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-15",
+                "start": 50.373
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 55.739,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-16",
+                "start": 52.592
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 58.886,
+                "image": true,
+                "mood": "calm",
+                "name": "scene-17",
+                "start": 55.739
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 61.428,
+                "image": true,
+                "mood": "day",
+                "name": "scene-18",
+                "start": 58.886
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 63.969,
+                "image": true,
+                "mood": "day",
+                "name": "scene-19",
+                "start": 61.428
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 66.562,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-20",
+                "start": 63.969
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 69.156,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-21",
+                "start": 66.562
+              },
+              {
+                "elements": [
+                  "light_rays"
+                ],
+                "end": 71.749,
+                "image": true,
+                "mood": "warm",
+                "name": "scene-22",
+                "start": 69.156
+              }
+            ],
+            "speech_timing_sources": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "theme_hash": "e4887f74c577971d",
+            "width": 1080
+          },
+          "content": {
+            "hashtags": 8,
+            "hook_words": 14,
+            "keywords": 10,
+            "parts": [
+              "speech",
+              "verse",
+              "speech"
+            ],
+            "spoken_word_budget": [
+              72,
+              97
+            ],
+            "spoken_words": 90,
+            "visual_shots": 6
+          },
+          "honorific_occurrences_in_generated_text": 0,
+          "model_content_schema": true,
+          "model_source_review": {
+            "grounded_in_source": true,
+            "needs_review": false,
+            "no_contradiction": true,
+            "no_unsupported_claims": true,
+            "reason": "النص متوافق تماماً مع المصادر المقدمة، حيث استند إلى تعريف كلمة أُفّ، ومفهوم الموافقة، وتفسير الآية كما ورد في الحقائق الموثقة والتفسير، ولم يضف أي ادعاءات خارجية."
+          },
+          "recitation_total_seconds": 17.745,
+          "scene_images": {
+            "entries_reusing_a_neighbour_picture": 0,
+            "generated": 8,
+            "notes": [],
+            "providers": [
+              "cloudflare"
+            ],
+            "requested": 8,
+            "shots": 8,
+            "timeline_entries": 26
+          },
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ],
+          "video": {
+            "audio_codec": "aac",
+            "audio_duration_seconds": 71.749,
+            "audio_segments": {
+              "closing": {
+                "end": 71.749,
+                "start": 67.538
+              },
+              "hook": {
+                "end": 8.891,
+                "start": 0.0
+              },
+              "talk-1": {
+                "end": 19.942,
+                "start": 8.891
+              },
+              "talk-2": {
+                "end": 67.538,
+                "start": 37.687
+              },
+              "verse-1": {
+                "end": 37.687,
+                "start": 19.942
+              }
+            },
+            "commentary_pages": {
+              "closing": 1,
+              "hook": 3,
+              "talk-1": 4,
+              "talk-2": 12
+            },
+            "commentary_style": "captions",
+            "dim_strength": 0.3,
+            "duration_seconds": 71.767,
+            "file_size_bytes": 35288964,
+            "font_source": {
+              "license": "SIL Open Font License 1.1",
+              "license_url": "https://scripts.sil.org/OFL",
+              "name": "Noto Arabic font package",
+              "path": "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf"
+            },
+            "fps": 30.0,
+            "height": 1920,
+            "padding_seconds": 0,
+            "path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+            "recitation_total_seconds": 17.745,
+            "sha256_ready": true,
+            "target_duration_met": true,
+            "tts_word_timing": {
+              "closing": "estimated",
+              "hook": "estimated",
+              "talk-1": "estimated",
+              "talk-2": "estimated"
+            },
+            "valid": true,
+            "verse_count": 1,
+            "video_codec": "h264",
+            "width": 1080
+          }
+        },
+        "status": "validated"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/final_output.mp4",
+      "video_sha256": "d770a74dbb2eff733d20044c3dcd43ba0da69f121e5b67d68342b0968af84820",
+      "visual_plan": {
+        "opening": {
+          "shots": [
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A close up of an open wooden book on a table, soft morning sunlight filtering through a window, creating long shadows, a single dried flower resting on the page.",
+              "mood": "warm"
+            },
+            {
+              "elements": [
+                {
+                  "animation": "fade_in",
+                  "position": "center",
+                  "size": "medium",
+                  "type": "light_rays"
+                }
+              ],
+              "image_prompt": "A wide shot of a quiet room, a single chair facing a window, dust motes dancing in the light, a sense of stillness and contemplation.",
+              "mood": "calm"
+            }
+          ]
+        },
+        "scenes": [
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A close up of a person's hands resting gently on a wooden surface, soft focus, morning light, a symbol of patience represented by a small stone.",
+            "mood": "calm",
+            "text_span": "كلمة أُفّ هي",
+            "word_start": 17
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A view from inside a house looking out at a garden, a path winding through trees, early morning mist, a symbol of guidance represented by a small lantern.",
+            "mood": "dawn",
+            "text_span": "طيب، لماذا النهي",
+            "word_start": 28
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A close up of a scale on a wooden table, perfectly balanced, soft light, a symbol of justice represented by a small leaf.",
+            "mood": "warm",
+            "text_span": "هنا تظهر دقة",
+            "word_start": 33
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A wide shot of a mountain range at dawn, soft colors, a path leading upwards, a symbol of growth represented by a small seed.",
+            "mood": "calm",
+            "text_span": "إذا مُنع التضجر",
+            "word_start": 47
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A close up of a door slightly ajar, light streaming through the gap, a symbol of opening represented by a bird flying in the distance.",
+            "mood": "day",
+            "text_span": "هذا هو مفهوم",
+            "word_start": 56
+          },
+          {
+            "elements": [
+              {
+                "animation": "fade_in",
+                "position": "center",
+                "size": "medium",
+                "type": "light_rays"
+              }
+            ],
+            "image_prompt": "A person sitting on a bench in a quiet park, seen from behind, looking at the horizon, a symbol of reflection represented by a heart shape in the clouds.",
+            "mood": "warm",
+            "text_span": "تابعني لنتدبر دقة",
+            "word_start": 66
+          }
+        ],
+        "visual_theme": "soft morning light, minimalist interior, warm wooden textures, peaceful atmosphere"
+      }
     }
   ],
   "version": 1

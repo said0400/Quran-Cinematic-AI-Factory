@@ -184,17 +184,21 @@ def quran_words(text: str) -> list[str]:
     return words
 
 
+MAX_REPEATED_WORD_ROWS = 12      # a reciter may repeat the end of a verse; more than this is not a repetition
+
+
 def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: int,
                            end_tolerance_ms: int = 300) -> list[dict[str, int]]:
     """Validate Quran Foundation [word_index,start_ms,end_ms] timing rows.
 
-    Only contiguous 0-based or 1-based word indexes are accepted. No timing is
-    generated or interpolated by this function.
+    Indexes are 0-based or 1-based and every word must appear. The first time each word is said, the words
+    come in order; later rows may repeat a word that was already said (reciters often repeat the end of a
+    verse), and the repeat keeps its own real timing. No timing is generated or interpolated here.
     """
     words = quran_words(text_uthmani)
     if not isinstance(segments, list) or not words:
         raise ServiceError("توقيتات الكلمات غير متاحة أو نص الآية فارغ؛ رُفض المرشح.")
-    if len(segments) != len(words):
+    if not len(words) <= len(segments) <= len(words) + MAX_REPEATED_WORD_ROWS:
         raise ServiceError(f"عدد التوقيتات ({len(segments)}) لا يطابق عدد كلمات الآية ({len(words)}).")
     parsed: list[tuple[int, int, int]] = []
     for row in segments:
@@ -211,19 +215,22 @@ def validate_word_segments(segments: Any, text_uthmani: str, audio_duration_ms: 
             )
         parsed.append((idx, start, end))
     indexes = [row[0] for row in parsed]
-    if indexes == list(range(len(words))):
-        offset = 0
-    elif indexes == list(range(1, len(words) + 1)):
-        offset = 1
-    else:
+    base = min(indexes)
+    if base not in (0, 1) or set(indexes) != set(range(base, base + len(words))):
         raise ServiceError("فهارس توقيت الكلمات ليست متصلة أو متوافقة مع الآية.")
+    highest = base - 1
+    for idx in indexes:
+        if idx == highest + 1:
+            highest = idx                  # a word said for the first time: must be the next one
+        elif idx > highest + 1:
+            raise ServiceError("فهارس توقيت الكلمات ليست متصلة أو متوافقة مع الآية.")
     previous_start = -1
     result = []
     for idx, start, end in parsed:
         if start < previous_start:
             raise ServiceError("توقيتات الكلمات ليست مرتبة.")
         previous_start = start
-        result.append({"word_index": idx - offset, "start_ms": start, "end_ms": end})
+        result.append({"word_index": idx - base, "start_ms": start, "end_ms": end})
     if result[0]["start_ms"] > 1200:
         raise ServiceError("التوقيتات لا تغطي بداية التلاوة بما يكفي للتحقق من المزامنة.")
     if audio_duration_ms - result[-1]["end_ms"] > max(2500, int(audio_duration_ms * 0.18)):
@@ -288,6 +295,34 @@ def _merge_repeated_word_rows(rows: list[list[int]]) -> list[list[int]]:
 def _describe_word_indexes(rows: list[list[int]]) -> str:
     indexes = [row[0] for row in rows]
     return f"فهارس التوقيتات من {min(indexes)} إلى {max(indexes)} ({len(set(indexes))} فريدة من {len(indexes)})"
+
+
+def _first_pass_rows(rows: list[list[int]], expected: int, first: int, last: int, key: str,
+                     raw_count: int) -> list[list[int]]:
+    """Keep what the reciter says from the first time word `first` is said until the first time word `last` is said.
+
+    Reciters often repeat the end of a verse; the extra rows carry indexes already seen and are left out when they come
+    after `last` (a repetition in the middle stays, with its own real timing). The kept rows are numbered 1.. so that
+    word `first` is number 1. Raises RecitationTimingError when the rows cannot be trusted.
+    """
+    base = min(row[0] for row in rows)
+    positions = [row[0] - base + 1 for row in rows]
+    problem = f"عدد توقيتات الآية {key} ({raw_count}) لا يطابق نصها ({expected} كلمة); {_describe_word_indexes(rows)}"
+    if base not in (0, 1) or set(positions) != set(range(1, expected + 1)):
+        raise RecitationTimingError(problem + ".")
+    highest = 0
+    for position in positions:
+        if position == highest + 1:
+            highest = position
+        elif position > highest + 1:
+            raise RecitationTimingError(problem + "، وترتيبها غير متصل.")
+    begin = positions.index(first)
+    end = next((i for i in range(begin, len(positions)) if positions[i] == last), None)
+    if end is None:
+        raise RecitationTimingError(problem + f"، ولا تصل إلى الكلمة {last}.")
+    if any(position < first for position in positions[begin:end + 1]):
+        raise RecitationTimingError(problem + "، وفيها تكرار لكلمة قبل بداية المقطع.")
+    return [[positions[i] - first + 1, rows[i][1], rows[i][2]] for i in range(begin, end + 1)]
 
 
 class QuranFoundationClient:
@@ -446,20 +481,14 @@ class QuranFoundationClient:
             raise ServiceError(f"قائمة توقيتات الكلمات للآية {key} فارغة.")
         raw_row_count = len(absolute_segments)
         absolute_segments = _merge_repeated_word_rows(absolute_segments)
-        if words is not None:
-            if not verse_text:
-                raise ServiceError("مقطع الآية يتطلب نص الآية للتحقق من عدد الكلمات.")
+        if words is not None and not verse_text:
+            raise ServiceError("مقطع الآية يتطلب نص الآية للتحقق من عدد الكلمات.")
+        if verse_text:
             expected = len(quran_words(verse_text))
-            first, last = words
-            if len(absolute_segments) != expected:
-                raise RecitationTimingError(
-                    f"عدد توقيتات الآية {key} ({len(absolute_segments)}"
-                    + (f" بعد دمج {raw_row_count - len(absolute_segments)} مكرّرًا" if raw_row_count != len(absolute_segments) else "")
-                    + f") لا يطابق عدد كلمات نصها ({expected}); {_describe_word_indexes(absolute_segments)}.")
+            first, last = words if words is not None else (1, expected)
             if not 1 <= first <= last <= expected:
                 raise RecitationTimingError(f"نطاق كلمات المقطع {first}-{last} خارج الآية {key} ({expected} كلمة).")
-            absolute_segments = [[position + 1, row[1], row[2]]
-                                 for position, row in enumerate(absolute_segments[first - 1:last])]
+            absolute_segments = _first_pass_rows(absolute_segments, expected, first, last, key, raw_row_count)
             verse_start = min(row[1] for row in absolute_segments)
             verse_end = max(row[2] for row in absolute_segments)
         clip_start_ms = max(0, min(verse_start, min(row[1] for row in absolute_segments)) - 200)
@@ -2051,7 +2080,7 @@ if __name__ == "__main__":
                         with self.assertRaises(ServiceError, msg=str(bad_words)):
                             client.get_recitation(2, 3, Path(temp), words=bad_words, verse_text=text)
 
-        def test_repeated_word_rows_are_merged_and_an_irreconcilable_count_is_a_timing_error_with_a_diagnosis(self):
+        def _recitation_with_rows(self, rows, words, text="واحد اثنان ثلاثة أربعة"):
             import tempfile
             class DownloadResponse:
                 url = "https://download.quranicaudio.com/test/chapter.mp3"
@@ -2066,38 +2095,75 @@ if __name__ == "__main__":
             client = self.ready_qf_client(self.FakeResponse(200, {}))
             client.session = DownloadSession()
             catalog = {"reciters": [{"id": 7, "name": "Mishari Rashid al-`Afasy"}]}
-            def chapter(rows):
-                return {"audio_file": {"audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
-                                       "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000, "timestamp_to": 14000,
-                                                       "segments": rows}]}}
+            chapter = {"audio_file": {"audio_url": "https://download.quranicaudio.com/test/chapter.mp3",
+                                      "timestamps": [{"verse_key": "2:3", "timestamp_from": 10000, "timestamp_to": 20000,
+                                                      "segments": rows}]}}
             env = {"CHAPTER_RECITER_ID": "7", "RECITATION_LICENSE_URL": "https://example.org/license",
                    "RECITATION_LICENSE_CONFIRMED": "true", "RECITATION_ALLOWLIST": "7|https://example.org/license",
                    "RECITATION_REQUIRE_MISHARY": "true"}
-            text = "واحد اثنان ثلاثة أربعة"
-            with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, env):
-                def fake_ffmpeg(command, **kwargs):
-                    Path(command[-1]).write_bytes(b"y" * 5000)
-                # the same word timed in two pieces: merged back into one word
-                repeated = [[1, 10000, 11000], [2, 11000, 11400], [2, 11400, 12000], [3, 12000, 13000], [4, 13000, 14000]]
-                with patch.object(client, "_get_json", side_effect=[catalog, chapter(repeated)]), \
-                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
-                    recitation, _ = client.get_recitation(2, 3, Path(temp), words=(2, 3), verse_text=text)
-                self.assertEqual(recitation.segments, [[1, 200, 1200], [2, 1200, 2200]])
-                self.assertEqual(recitation.duration_hint, 2400)
-                # more distinct indexes than words: no guessing, a clear timing error that says what the source returned
-                too_many = [[i, 10000 + i * 500, 10400 + i * 500] for i in range(1, 8)]
-                with patch.object(client, "_get_json", side_effect=[catalog, chapter(too_many)]), \
-                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
-                    with self.assertRaises(RecitationTimingError) as caught:
-                        client.get_recitation(2, 3, Path(temp), words=(1, 2), verse_text=text)
-                message = str(caught.exception)
-                self.assertIn("(7) لا يطابق عدد كلمات نصها (4)", message)
-                self.assertIn("فهارس التوقيتات من 1 إلى 7 (7 فريدة من 7)", message)
-                self.assertTrue(issubclass(RecitationTimingError, ServiceError))
-                with patch.object(client, "_get_json", side_effect=[catalog, chapter(repeated)]), \
-                        patch("services.subprocess.run", side_effect=fake_ffmpeg):
-                    with self.assertRaises(RecitationTimingError):
-                        client.get_recitation(2, 3, Path(temp), words=(3, 9), verse_text=text)
+            def fake_ffmpeg(command, **kwargs):
+                Path(command[-1]).write_bytes(b"y" * 5000)
+            with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, env), \
+                    patch.object(client, "_get_json", side_effect=[catalog, chapter]), \
+                    patch("services.subprocess.run", side_effect=fake_ffmpeg) as ffmpeg:
+                recitation, _ = client.get_recitation(2, 3, Path(temp), words=words, verse_text=text)
+            return recitation, ffmpeg
+
+        def test_consecutive_pieces_of_one_word_are_merged_into_one_word(self):
+            rows = [[1, 10000, 11000], [2, 11000, 11400], [2, 11400, 12000], [3, 12000, 13000], [4, 13000, 14000]]
+            recitation, _ = self._recitation_with_rows(rows, (2, 3))
+            self.assertEqual(recitation.segments, [[1, 200, 1200], [2, 1200, 2200]])
+            self.assertEqual(recitation.duration_hint, 2400)
+
+        def test_a_repeated_ending_is_left_out_of_the_clip_and_a_repeat_in_the_middle_is_kept_with_its_own_timing(self):
+            # the reciter says the last two words again after finishing the verse
+            ending = [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000], [4, 13000, 14000], [3, 15000, 16000], [4, 16000, 17000]]
+            recitation, ffmpeg = self._recitation_with_rows(ending, (2, 4))
+            self.assertEqual(recitation.segments, [[1, 200, 1200], [2, 1200, 2200], [3, 2200, 3200]])   # the repetition is not in the clip
+            self.assertEqual(recitation.duration_hint, 3400)
+            whole, _ = self._recitation_with_rows(ending, None)
+            self.assertEqual(len(whole.segments), 4)
+            self.assertEqual(whole.duration_hint, 4400)                                               # 10000-200 .. 14000+200
+            self.assertEqual(len(validate_word_segments(whole.segments, "واحد اثنان ثلاثة أربعة", 4400)), 4)
+            # a word repeated before the verse is finished: both timings are real and both are kept
+            middle = [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000], [2, 13000, 14000], [3, 14000, 15000], [4, 15000, 16000]]
+            repeated, _ = self._recitation_with_rows(middle, None)
+            self.assertEqual([row[0] for row in repeated.segments], [1, 2, 3, 2, 3, 4])
+            checked = validate_word_segments(repeated.segments, "واحد اثنان ثلاثة أربعة", int(repeated.duration_hint))
+            self.assertEqual([row["word_index"] for row in checked], [0, 1, 2, 1, 2, 3])
+            self.assertTrue(all(a["start_ms"] <= b["start_ms"] for a, b in zip(checked, checked[1:])))
+
+        def test_timings_that_cannot_be_trusted_are_a_timing_error_that_says_what_the_source_returned(self):
+            too_many = [[i, 10000 + i * 500, 10400 + i * 500] for i in range(1, 8)]
+            with self.assertRaises(RecitationTimingError) as caught:
+                self._recitation_with_rows(too_many, (1, 2))
+            self.assertIn("(7) لا يطابق نصها (4 كلمة)", str(caught.exception))
+            self.assertIn("فهارس التوقيتات من 1 إلى 7 (7 فريدة من 7)", str(caught.exception))
+            self.assertTrue(issubclass(RecitationTimingError, ServiceError))
+            missing = [[1, 10000, 11000], [2, 11000, 12000], [4, 12000, 13000]]                          # word 3 never timed
+            with self.assertRaises(RecitationTimingError):
+                self._recitation_with_rows(missing, (1, 2))
+            skipping = [[1, 10000, 11000], [3, 11000, 12000], [2, 12000, 13000], [4, 13000, 14000]]      # first occurrences out of order
+            with self.assertRaises(RecitationTimingError):
+                self._recitation_with_rows(skipping, None)
+            fine = [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000], [4, 13000, 14000]]
+            with self.assertRaises(RecitationTimingError):
+                self._recitation_with_rows(fine, (3, 9))
+            with self.assertRaises(RecitationTimingError):
+                self._recitation_with_rows(fine, (0, 2))
+            before = [[1, 10000, 11000], [2, 11000, 12000], [3, 12000, 13000], [1, 13000, 14000], [4, 14000, 15000]]
+            with self.assertRaises(RecitationTimingError):                                                # a repeat of a word before the fragment
+                self._recitation_with_rows(before, (2, 4))
+
+        def test_word_timings_may_repeat_a_word_already_said_but_never_skip_or_exceed_the_repetition_limit(self):
+            text = "واحد اثنان ثلاثة"
+            ok = [[1, 0, 300], [2, 300, 600], [3, 600, 900], [2, 900, 1200], [3, 1200, 1500]]
+            self.assertEqual([r["word_index"] for r in validate_word_segments(ok, text, 1600)], [0, 1, 2, 1, 2])
+            for bad in ([[1, 0, 300], [3, 300, 600], [2, 600, 900]],                                     # a first occurrence is skipped
+                        [[1, 0, 300], [2, 300, 600]],                                                    # a word never said
+                        [[1, 0, 100]] + [[2, 100 + i * 10, 105 + i * 10] for i in range(20)] + [[3, 400, 450]]):   # too many rows
+                with self.assertRaises(ServiceError):
+                    validate_word_segments(bad, text, 1600)
 
         def test_word_timings_accept_contiguous_one_based_and_map_to_zero_based(self):
             got = validate_word_segments([[1, 0, 250], [2, 250, 700]], "بسم الله", 800)

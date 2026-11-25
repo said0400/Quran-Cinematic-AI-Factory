@@ -26744,6 +26744,351 @@
       "verse_key": "topic:uff-parents",
       "video_path": null,
       "video_sha256": null
+    },
+    {
+      "attempt_count": 1,
+      "created_at": "2026-11-25T17:20:30.581361+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-ef54eb4f-report.json",
+      "run_id": "2026-11-25-uff-parents-ef54eb4f",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T17:21:40.688095+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 2,
+      "created_at": "2026-11-25T17:21:40.766529+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-bc03920c-report.json",
+      "run_id": "2026-11-25-uff-parents-bc03920c",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T17:22:44.263795+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 3,
+      "created_at": "2026-11-25T17:22:44.339798+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-0b100a35-report.json",
+      "run_id": "2026-11-25-uff-parents-0b100a35",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T17:23:54.587161+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 4,
+      "created_at": "2026-11-25T17:23:54.661732+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-661d61a8-report.json",
+      "run_id": "2026-11-25-uff-parents-661d61a8",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T17:25:03.075712+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
+    },
+    {
+      "attempt_count": 5,
+      "created_at": "2026-11-25T17:25:03.155388+00:00",
+      "last_error": "فشل استدعاء Gemini بعد 5 محاولات: ServerError, code=503, status=UNAVAILABLE: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "local_date": "2026-11-25",
+      "media_sources": [],
+      "mode": "auto",
+      "permanent_failure": false,
+      "platforms": {
+        "facebook": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "make": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        },
+        "youtube": {
+          "attempts": 0,
+          "status": "not_started",
+          "video_id": null
+        }
+      },
+      "publication_metadata": null,
+      "report_path": "/home/runner/work/Quran-Cinematic-AI-Factory/Quran-Cinematic-AI-Factory/output/reports/2026-11-25-uff-parents-6f39ab93-report.json",
+      "run_id": "2026-11-25-uff-parents-6f39ab93",
+      "source_tafsir": [
+        {
+          "commercial_license_verified_by_operator": true,
+          "license_url": "https://quran.com/privacy",
+          "resource_id": 16,
+          "source_name": "المیسر",
+          "source_url": "https://apis.quran.foundation/content/api/v4/tafsirs/16/by_ayah/17:23",
+          "verse_key": "17:23"
+        }
+      ],
+      "status": "failed",
+      "topic_id": "uff-parents",
+      "updated_at": "2026-11-25T17:27:00.265105+00:00",
+      "verification": {
+        "checks": {
+          "audio_content_identity": {
+            "audio_sent_to_gemini": false,
+            "basis": "Quran Foundation verse key and word-level timestamps only",
+            "status": "not_independently_transcribed"
+          },
+          "recitation_total_seconds": 17.745,
+          "topic": {
+            "facts": 4,
+            "id": "uff-parents",
+            "question": "لماذا اختار القرآن أصغر كلمة ممكنة «أُفّ» للنهي عن إيذاء الوالدين؟"
+          },
+          "verses": [
+            {
+              "label": "17:23#16-25",
+              "seconds": 17.745,
+              "text": "فَلَا تَقُل لَّهُمَآ أُفٍّ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًا كَرِيمًا",
+              "words": 14
+            }
+          ]
+        },
+        "status": "failed"
+      },
+      "verse_key": "topic:uff-parents",
+      "video_path": null,
+      "video_sha256": null
     }
   ],
   "version": 1

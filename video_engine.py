@@ -1632,6 +1632,22 @@ if __name__ == "__main__":
                 self.assertGreater(result["padding_seconds"], 4)
                 self.assertAlmostEqual(result["duration_seconds"], 20.0, delta=0.4)
 
+        def test_a_verse_the_reciter_repeats_lights_the_same_word_again_at_its_own_time(self):
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                segments = self._script_inputs(temp_path)
+                # "بسم الله الرحمن" said through, then the last two words said again
+                repeated = [{"word_index": i, "start_ms": start, "end_ms": start + 450}
+                            for i, start in ((0, 100), (1, 600), (2, 1100), (1, 1700), (2, 2200))]
+                segments[2] = dict(segments[2], segments=repeated)
+                output = temp_path / "final_output.mp4"
+                result = build_script_video(temp_path / "bg.mp4", segments, output, width=270, height=480, fps=10,
+                                            target_min_duration=10, target_max_duration=60)
+                self.assertTrue(result["valid"])
+                scene = Scene("v", 0.0, 3.0, build_verse_layout("بسم الله الرحمن", "الفاتحة", 1, 270, 480, discover_font()),
+                              [(s["start_ms"] / 1000, s["end_ms"] / 1000, s["word_index"]) for s in repeated])
+                self.assertEqual([scene_word_at(scene, t) for t in (0.3, 0.8, 1.3, 1.9, 2.4)], [0, 1, 2, 1, 2])
+
         def test_script_video_rejects_malformed_sequences(self):
             with tempfile.TemporaryDirectory() as temp:
                 temp_path = Path(temp)
